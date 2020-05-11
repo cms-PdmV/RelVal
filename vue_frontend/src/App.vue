@@ -10,6 +10,11 @@
       <v-spacer></v-spacer>
       <v-btn
         text
+        href="tickets">
+        <span class="mr-2">Tickets</span>
+      </v-btn>
+      <v-btn
+        text
         href="dashboard">
         <span class="mr-2">Dashboard</span>
       </v-btn>

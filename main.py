@@ -7,8 +7,13 @@ from flask_restful import Api
 from flask_cors import CORS
 from flask import Flask, render_template
 from api.system_api import (LockerStatusAPI,
-                            UserInfoAPI,
-                            ObjectsInfoAPI)
+                            UserInfoAPI)
+from api.search_api import SearchAPI
+from api.ticket_api import (CreateTicketAPI,
+                            DeleteTicketAPI,
+                            UpdateTicketAPI,
+                            GetTicketAPI,
+                            GetEditableTicketAPI)
 
 log_format = '[%(asctime)s][%(levelname)s] %(message)s'
 logging.basicConfig(format=log_format, level=logging.DEBUG)
@@ -71,7 +76,16 @@ def api_documentation(_path):
 
 api.add_resource(LockerStatusAPI, '/api/system/locks')
 api.add_resource(UserInfoAPI, '/api/system/user_info')
-api.add_resource(ObjectsInfoAPI, '/api/system/objects_info')
+
+api.add_resource(SearchAPI, '/api/search')
+
+api.add_resource(CreateTicketAPI, '/api/tickets/create')
+api.add_resource(DeleteTicketAPI, '/api/tickets/delete')
+api.add_resource(UpdateTicketAPI, '/api/tickets/update')
+api.add_resource(GetTicketAPI, '/api/tickets/get/<string:prepid>')
+api.add_resource(GetEditableTicketAPI,
+                 '/api/tickets/get_editable',
+                 '/api/tickets/get_editable/<string:prepid>')
 
 
 def main():

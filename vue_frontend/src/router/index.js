@@ -2,6 +2,8 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '@/components/Home'
 import Dashboard from '@/components/Dashboard'
+import Tickets from '@/components/Tickets'
+import TicketsEdit from '@/components/TicketsEdit'
 import qs from 'qs';
 
 
@@ -17,7 +19,17 @@ const routes = [
     path: '/dashboard',
     name: 'dashboard',
     component: Dashboard
-  }
+  },
+  {
+    path: '/tickets/edit',
+    name: 'tickets_edit',
+    component: TicketsEdit
+  },
+  {
+    path: '/tickets',
+    name: 'tickets',
+    component: Tickets
+  },
 ]
 
 const router = new VueRouter({

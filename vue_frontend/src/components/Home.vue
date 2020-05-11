@@ -1,10 +1,10 @@
 <template>
-  <div class="subcampaigns">
+  <div>
     <h1>Home</h1>
     <div style="margin: 8px">
       <h3>RelVal objects:</h3>
       <ul>
-
+        <li><a :href="'tickets'">Tickets</a></li>
       </ul>
     </div>
   </div>
@@ -21,20 +21,14 @@ export default {
   },
   data () {
     return {
-      objectsInfo: undefined
+
     }
   },
   created () {
-    this.fetchObjectsInfo();
+
   },
   methods: {
-    fetchObjectsInfo () {
-      let component = this;
-      axios.get('api/system/objects_info').then(response => {
-        component.objectsInfo = response.data.response;
 
-      });
-    },
   }
 }
 </script>
