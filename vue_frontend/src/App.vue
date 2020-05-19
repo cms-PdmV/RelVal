@@ -10,6 +10,11 @@
       <v-spacer></v-spacer>
       <v-btn
         text
+        href="relvals">
+        <span class="mr-2">RelVals</span>
+      </v-btn>
+      <v-btn
+        text
         href="tickets">
         <span class="mr-2">Tickets</span>
       </v-btn>

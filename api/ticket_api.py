@@ -14,7 +14,7 @@ ticket_controller = TicketController()
 
 class CreateTicketAPI(APIBase):
     """
-    Endpoint for creating ticket
+    Endpoint for creating a ticket
     """
 
     def __init__(self):
@@ -46,7 +46,7 @@ class DeleteTicketAPI(APIBase):
     @APIBase.ensure_role('manager')
     def delete(self):
         """
-        Delete a with the provided JSON content
+        Delete a ticket with the provided JSON content
         """
         data = flask.request.data
         ticket_json = json.loads(data.decode('utf-8'))
@@ -67,7 +67,7 @@ class UpdateTicketAPI(APIBase):
     @APIBase.ensure_role('manager')
     def post(self):
         """
-        Update a with the provided JSON content
+        Update a ticket with the provided JSON content
         """
         data = flask.request.data
         ticket_json = json.loads(data.decode('utf-8'))
@@ -86,7 +86,7 @@ class GetTicketAPI(APIBase):
     @APIBase.exceptions_to_errors
     def get(self, prepid):
         """
-        Get a single with given prepid
+        Get a single ticket with given prepid
         """
         obj = ticket_controller.get(prepid)
         return self.output_text({'response': obj.get_json(), 'success': True, 'message': ''})
@@ -103,7 +103,7 @@ class GetEditableTicketAPI(APIBase):
     @APIBase.exceptions_to_errors
     def get(self, prepid=None):
         """
-        Get a single with given prepid
+        Endpoint for getting information on which ticket fields are editable
         """
         if prepid:
             ticket = ticket_controller.get(prepid)
@@ -115,3 +115,33 @@ class GetEditableTicketAPI(APIBase):
                                               'editing_info': editing_info},
                                  'success': True,
                                  'message': ''})
+
+
+class CreateRelValsForTicketAPI(APIBase):
+    """
+    Endpoing for creating RelVals from a ticket
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.ensure_request_data
+    @APIBase.exceptions_to_errors
+    @APIBase.ensure_role('manager')
+    def post(self):
+        """
+        Create RelVals for given ticket
+        """
+        data = flask.request.data
+        request_data = json.loads(data.decode('utf-8'))
+        prepid = request_data.get('prepid')
+        if not prepid:
+            self.logger.error('No prepid in given data: %s', json.dumps(request_data, indent=2))
+            raise Exception('No prepid in submitted data')
+
+        ticket = ticket_controller.get(prepid)
+        if not ticket:
+            raise Exception(f'Ticket "{prepid}" does not exist')
+
+        result = ticket_controller.create_relvals_for_ticket(ticket)
+        return self.output_text({'response': result, 'success': True, 'message': ''})

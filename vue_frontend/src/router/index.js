@@ -4,6 +4,8 @@ import Home from '@/components/Home'
 import Dashboard from '@/components/Dashboard'
 import Tickets from '@/components/Tickets'
 import TicketsEdit from '@/components/TicketsEdit'
+import RelVals from '@/components/RelVals'
+import RelValsEdit from '@/components/RelValsEdit'
 import qs from 'qs';
 
 
@@ -29,6 +31,16 @@ const routes = [
     path: '/tickets',
     name: 'tickets',
     component: Tickets
+  },
+  {
+    path: '/relvals/edit',
+    name: 'relvals_edit',
+    component: RelValsEdit
+  },
+  {
+    path: '/relvals',
+    name: 'relvals',
+    component: RelVals
   },
 ]
 

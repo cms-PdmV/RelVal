@@ -13,7 +13,13 @@ from api.ticket_api import (CreateTicketAPI,
                             DeleteTicketAPI,
                             UpdateTicketAPI,
                             GetTicketAPI,
-                            GetEditableTicketAPI)
+                            GetEditableTicketAPI,
+                            CreateRelValsForTicketAPI)
+from api.relval_api import (CreateRelValAPI,
+                            DeleteRelValAPI,
+                            UpdateRelValAPI,
+                            GetRelValAPI,
+                            GetEditableRelValAPI)
 
 log_format = '[%(asctime)s][%(levelname)s] %(message)s'
 logging.basicConfig(format=log_format, level=logging.DEBUG)
@@ -86,6 +92,15 @@ api.add_resource(GetTicketAPI, '/api/tickets/get/<string:prepid>')
 api.add_resource(GetEditableTicketAPI,
                  '/api/tickets/get_editable',
                  '/api/tickets/get_editable/<string:prepid>')
+api.add_resource(CreateRelValsForTicketAPI, '/api/tickets/create_relvals')
+
+api.add_resource(CreateRelValAPI, '/api/relvals/create')
+api.add_resource(DeleteRelValAPI, '/api/relvals/delete')
+api.add_resource(UpdateRelValAPI, '/api/relvals/update')
+api.add_resource(GetRelValAPI, '/api/relvals/get/<string:prepid>')
+api.add_resource(GetEditableRelValAPI,
+                 '/api/relvals/get_editable',
+                 '/api/relvals/get_editable/<string:prepid>')
 
 
 def main():

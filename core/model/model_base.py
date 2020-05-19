@@ -21,12 +21,17 @@ class ModelBase():
     __logger = logging.getLogger()
     __class_name = None
     __cmssw_regex = 'CMSSW_[0-9]{1,3}_[0-9]{1,3}_[0-9]{1,3}.{0,20}'  # CMSSW_ddd_ddd_ddd[_XXX...]
+    __globaltag_regex = '[a-zA-Z0-9_\\-]{0,75}'
     __dataset_regex = '^/[a-zA-Z0-9\\-_]{1,99}/[a-zA-Z0-9\\.\\-_]{1,199}/[A-Z\\-]{1,50}$'
-    __processing_string_regex = '[a-zA-Z0-9_]{1,100}'
+    __ps_regex = '[a-zA-Z0-9_]{1,100}'  # Processing String
+    __sample_tag_regex = '[a-zA-Z0-9_\\-]{0,75}'
     default_lambda_checks = {
         'cmssw_release': lambda cmssw: ModelBase.matches_regex(cmssw, ModelBase.__cmssw_regex),
+        'globaltag': lambda gt: ModelBase.matches_regex(gt, ModelBase.__globaltag_regex),
         'dataset': lambda ds: ModelBase.matches_regex(ds, ModelBase.__dataset_regex),
-        'processing_string': lambda ps: ModelBase.matches_regex(ps, ModelBase.__processing_string_regex),
+        'processing_string': lambda ps: ModelBase.matches_regex(ps, ModelBase.__ps_regex),
+        'relval_set': lambda rs: rs in ('standard', 'upgrade'),
+        'sample_tag': lambda gt: ModelBase.matches_regex(gt, ModelBase.__sample_tag_regex),
     }
     lambda_checks = {}
 

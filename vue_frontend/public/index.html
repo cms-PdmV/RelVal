@@ -9,6 +9,7 @@
     <title>RelVal</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@4.9.95/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="static/pdmv-development-ribbon.css">
   </head>
   <body>
     <noscript>
@@ -16,5 +17,11 @@
     </noscript>
     <div id="app"></div>
     <!-- built files will be auto injected -->
+    <script>
+      const domain = document.location.origin;
+      if (domain && domain.includes('dev')) {
+        document.body.className += ' dev-ribbon';
+      }
+    </script>
   </body>
 </html>

@@ -5,6 +5,7 @@
       <h3>RelVal objects:</h3>
       <ul>
         <li><a :href="'tickets'">Tickets</a></li>
+        <li><a :href="'relvals'">RelVals</a></li>
       </ul>
     </div>
   </div>

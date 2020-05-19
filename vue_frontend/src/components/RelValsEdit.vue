@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 v-if="creatingNew">Creating new Ticket</h1>
+    <h1 v-if="creatingNew">Creating new RelVal</h1>
     <h1 v-else>Editing {{editableObject.prepid}}</h1>
     <v-card raised class="editPageCard">
       <table v-if="editableObject">
@@ -13,10 +13,6 @@
           <td><input type="text" v-model="editableObject.cmssw_release" :disabled="!editingInfo.cmssw_release"></td>
         </tr>
         <tr>
-          <td>GlobalTag</td>
-          <td><input type="text" v-model="editableObject.conditions_globaltag" :disabled="!editingInfo.conditions_globaltag"></td>
-        </tr>
-        <tr>
           <td>Extension Number</td>
           <td>
             <select v-model="editableObject.extension_number" :disabled="!editingInfo.extension_number">
@@ -25,8 +21,8 @@
           </td>
         </tr>
         <tr>
-          <td>High Statistics</td>
-          <td><v-checkbox v-model="editableObject.high_statistics" :disabled="!editingInfo.high_statistics" hide-details class="shrink checkbox-margin"></v-checkbox></td>
+          <td>GlobalTag</td>
+          <td><input type="text" v-model="editableObject.conditions_globaltag" :disabled="!editingInfo.conditions_globaltag"></td>
         </tr>
         <tr>
           <td>Notes</td>
@@ -37,6 +33,15 @@
           <td><input type="text" v-model="editableObject.processing_string" :disabled="!editingInfo.processing_string"></td>
         </tr>
         <tr>
+          <td>RelVal set</td>
+          <td>
+            <select v-model="editableObject.relval_set" :disabled="!editingInfo.relval_set">
+              <option>standard</option>
+              <option>upgrade</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
           <td>Reuse GEN-SIM</td>
           <td><v-checkbox v-model="editableObject.reuse_gensim" :disabled="!editingInfo.reuse_gensim" hide-details class="shrink checkbox-margin"></v-checkbox></td>
         </tr>
@@ -45,17 +50,8 @@
           <td><input type="text" v-model="editableObject.sample_tag" :disabled="!editingInfo.sample_tag"></td>
         </tr>
         <tr>
-          <td>Workflows ({{listLength(editableObject.workflow_ids)}})</td>
-          <td><textarea v-model="editableObject.workflow_ids" :disabled="!editingInfo.workflow_ids"></textarea></td>
-        </tr>
-        <tr>
-          <td>RelVal set</td>
-          <td>
-            <select v-model="editableObject.relval_set" :disabled="!editingInfo.relval_set">
-              <option>standard</option>
-              <option>upgrade</option>
-            </select>
-          </td>
+          <td>Workflow ID</td>
+          <td><input type="number" min="1" v-model="editableObject.workflow_id" :disabled="!editingInfo.workflow_id"></td>
         </tr>
       </table>
       <v-btn small class="mr-1 mb-1" color="primary" @click="save()">Save</v-btn>
@@ -113,9 +109,8 @@ export default {
     this.prepid = query['prepid'];
     this.creatingNew = this.prepid === undefined;
     let component = this;
-    axios.get('api/tickets/get_editable' + (this.creatingNew ? '' : ('/' + this.prepid))).then(response => {
+    axios.get('api/relvals/get_editable' + (this.creatingNew ? '' : ('/' + this.prepid))).then(response => {
       component.editableObject = response.data.response.object;
-      component.editableObject.workflow_ids = component.editableObject.workflow_ids.join('\n')
       component.editingInfo = response.data.response.editing_info;
       component.loading = false;
     });
@@ -125,20 +120,19 @@ export default {
       let editableObject = JSON.parse(JSON.stringify(this.editableObject))
       let component = this;
       editableObject['notes'] = editableObject['notes'].trim();
-      editableObject['workflow_ids'] = editableObject['workflow_ids'].replace(/,/g, '\n').split('\n').map(function(s) { return s.trim() }).filter(Boolean);
       let httpRequest;
       this.loading = true;
       if (this.creatingNew) {
-        httpRequest = axios.put('api/tickets/create', editableObject)
+        httpRequest = axios.put('api/relvals/create', editableObject)
       } else {
-        httpRequest = axios.post('api/tickets/update', editableObject)
+        httpRequest = axios.post('api/relvals/update', editableObject)
       }
       httpRequest.then(response => {
         component.loading = false;
-        window.location = 'tickets?prepid=' + response.data.response.prepid;
+        window.location = 'relvals?prepid=' + response.data.response.prepid;
       }).catch(error => {
         component.loading = false;
-        this.showError('Error saving ticket', error.response.data.message)
+        this.showError('Error saving relval', error.response.data.message)
       });
     },
     clearErrorDialog: function() {

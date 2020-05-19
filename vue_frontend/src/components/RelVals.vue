@@ -4,7 +4,7 @@
       <div style="flex: 1 1 auto;">
         <div>
           <div style="width: calc(100vw - 32px); position: sticky; left: 16px;">
-            <h1>Tickets</h1>
+            <h1>RelVals</h1>
             <ColumnSelector :columns="columns"
                             v-on:updateColumns="updateTableColumns"/>
           </div>
@@ -18,12 +18,11 @@
                       hide-default-footer
                       class="elevation-1">
           <template v-slot:item._actions="{ item }">
-            <a :href="'tickets/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>&nbsp;
+            <a :href="'relvals/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>&nbsp;
             <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager')">Delete</a>&nbsp;
-            <a style="text-decoration: underline;" @click="showCreateRelValsDialog(item)" v-if="role('manager') && item.status == 'new'">Create RelVals</a>&nbsp;
           </template>
           <template v-slot:item.prepid="{ item }">
-            <a :href="'tickets?prepid=' + item.prepid">{{item.prepid}}</a>
+            <a :href="'relvals?prepid=' + item.prepid">{{item.prepid}}</a>
           </template>
           <template v-slot:item.history="{ item }">
             <HistoryCell :data="item.history"/>
@@ -31,11 +30,16 @@
           <template v-slot:item.notes="{ item }">
             <pre v-if="item.notes.length" class="notes">{{item.notes}}</pre>
           </template>
-          <template v-slot:item.workflow_ids="{ item }">
-            <span v-if="item.workflow_ids.length">{{item.workflow_ids.length}} workflows: <small>{{item.workflow_ids.join(', ')}}</small></span>
-          </template>
           <template v-slot:item.cmssw_release="{ item }">
             {{item.cmssw_release.replace('_', ' ').replace(/_/g, '.')}}
+          </template>
+          <template v-slot:item.steps="{ item }">
+            <ul>
+              <li v-for="step in item.steps" :key="step.name">
+                {{step.name}}
+                <small><pre>{{JSON.stringify(Object.keys(step.arguments).length ? step.arguments : step.input, null, 2)}}</pre></small>
+              </li>
+            </ul>
           </template>
         </v-data-table>
       </div>
@@ -81,7 +85,7 @@
     </v-dialog>
 
     <footer>
-      <a :href="'tickets/edit'" style="float: left; margin: 16px;" v-if="role('manager')">New ticket</a>
+      <a :href="'relvals/edit'" style="float: left; margin: 16px;" v-if="role('manager')">New RelVal</a>
       <Paginator style="float: right;"
                  :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
@@ -110,17 +114,16 @@ export default {
         {'dbName': '_actions', 'displayName': 'Actions', 'visible': 1},
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
         {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1},
-        {'dbName': 'conditions_globaltag', 'displayName': 'GlobalTag', 'visible': 1},
         {'dbName': 'processing_string', 'displayName': 'Processing String', 'visible': 1},
-        {'dbName': 'high_statistics', 'displayName': 'High Statistics', 'visible': 1},
+        {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
+        {'dbName': 'workflow_id', 'displayName': 'Workflow ID', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
-        {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
-        {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
         {'dbName': 'extension_number', 'displayName': 'Extension', 'visible': 0},
+        {'dbName': 'conditions_globaltag', 'displayName': 'GlobalTag', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'reuse_gensim', 'displayName': 'Reuse GEN-SIM', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
-        {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 0},
+        {'dbName': 'steps', 'displayName': 'Steps', 'visible': 0},
       ],
       headers: [],
       dataItems: [],
@@ -160,7 +163,7 @@ export default {
           queryParams += '&' + k + '=' + query[k];
         }
       });
-      axios.get('api/search?db_name=tickets' + queryParams).then(response => {
+      axios.get('api/search?db_name=relvals' + queryParams).then(response => {
         component.dataItems = response.data.response.results.map(function (x) { x._actions = undefined; return x});
         component.totalItems = response.data.response.total_rows;
         component.loading = false;
@@ -192,19 +195,19 @@ export default {
       this.errorDialog.description = description;
       this.errorDialog.visible = true;
     },
-    showDeleteDialog: function(ticket) {
+    showDeleteDialog: function(relval) {
       let component = this;
-      this.dialog.title = "Delete " + ticket.prepid + "?";
-      this.dialog.description = "Are you sure you want to delete " + ticket.prepid + " ticket?";
+      this.dialog.title = "Delete " + relval.prepid + "?";
+      this.dialog.description = "Are you sure you want to delete " + relval.prepid + " ticket?";
       this.dialog.ok = function() {
         component.loading = true;
-        axios.delete('api/tickets/delete', {data: {'prepid': ticket.prepid}}).then(() => {
+        axios.delete('api/relvals/delete', {data: {'prepid': relval.prepid}}).then(() => {
           component.clearDialog();
           component.fetchObjects();
         }).catch(error => {
           component.loading = false;
           component.clearDialog();
-          component.showError("Error deleting ticket", error.response.data.message);
+          component.showError("Error deleting relval", error.response.data.message);
         });
       }
       this.dialog.cancel = function() {
@@ -212,26 +215,6 @@ export default {
       }
       this.dialog.visible = true;
     },
-    showCreateRelValsDialog: function(ticket) {
-      let component = this;
-      this.dialog.title = "Create RelVals for " + ticket.prepid + "?";
-      this.dialog.description = "Are you sure you want to generate RelVals for " + ticket.prepid + " ticket?";
-      this.dialog.ok = function() {
-        component.loading = true;
-        axios.post('api/tickets/create_relvals', {'prepid': ticket.prepid}).then(() => {
-          component.clearDialog();
-          component.fetchObjects();
-        }).catch(error => {
-          component.loading = false;
-          component.clearDialog();
-          component.showError("Error creating RelVals", error.response.data.message);
-        });
-      }
-      this.dialog.cancel = function() {
-        component.clearDialog();
-      }
-      this.dialog.visible = true;
-    }
   }
 }
 </script>
