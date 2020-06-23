@@ -43,7 +43,7 @@ class SearchAPI(APIBase):
         query_string = '&&'.join(['%s=%s' % (pair) for pair in args.items()])
         database = Database(db_name)
         query_string = database.build_query_with_types(query_string, self.classes[db_name])
-        results, total_rows = database.query(query_string, page, limit, return_total_rows=True)
+        results, total_rows = database.query_with_total_rows(query_string, page, limit)
 
         return self.output_text({'response': {'results': results,
                                               'total_rows': total_rows},

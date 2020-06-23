@@ -1,20 +1,17 @@
 <template>
-  <div>
-    <div style="display: inline-block; margin: 10px;">
-      Showing {{page * pageSize + 1}} - {{Math.min(totalRows, page * pageSize + pageSize)}} of {{totalRows}}
+  <div style="float: right">
+    <div class="paginator-item">
+      Showing {{pageStart}} - {{pageEnd}} of {{totalRows}}
     </div>
-    <div style="display: inline-block;">
-      Page Size:
+    <div class="paginator-item">
+      Page size:
     </div>
-    <div class="button-group">
+    <div class="button-group paginator-item">
       <button class="button-group-button" v-bind:class="[pageSize === 20 ? 'clicked' : '']" v-on:click="pageSize = 20">20</button>
       <button class="button-group-button" v-bind:class="[pageSize === 50 ? 'clicked' : '']" v-on:click="pageSize = 50">50</button>
       <button class="button-group-button" v-bind:class="[pageSize === 100 ? 'clicked' : '']" v-on:click="pageSize = 100">100</button>
     </div>
-    <div style="display: inline-block;">
-      Page:
-    </div>
-    <div class="button-group">
+    <div class="button-group paginator-item">
       <button class="button-group-button" v-if="page > 0" v-on:click="page -= 1">
         Previous
       </button>
@@ -40,16 +37,31 @@
         limits: [20, 50, 100]
       }
     },
+    computed: {
+      pageStart: function() {
+        return this.totalRows == 0 ? 0 : this.page * this.pageSize + 1;
+      },
+      pageEnd: function() {
+        return Math.min(this.totalRows, this.page * this.pageSize + this.pageSize);
+      }
+    },
     created () {
       let query = Object.assign({}, this.$route.query);
-      if (!('page' in query)) {
-        query['page'] = 0;
+      if ('page' in query) {
+        this.page = Math.max(0, parseInt(query['page']));
+      } else {
+        this.page = 0;
       }
-      this.page = parseInt(query['page']);
-      if (!('limit' in query)) {
-        query['limit'] = this.limits[0];
+      if ('limit' in query) {
+        // Not less than 1 not more than max limit
+        this.pageSize = Math.max(1, parseInt(query['limit']));
+        this.pageSize = Math.min(this.pageSize, this.limits[this.limits.length - 1]);
+      } else {
+        this.pageSize = this.limits[0];
       }
-      this.pageSize = parseInt(query['limit']);
+
+      query['page'] = this.page;
+      query['limit'] = this.pageSize;
       this.$router.replace({query: query}).catch(err => {});
       this.$emit('update', this.page, this.pageSize);
     },
@@ -57,14 +69,12 @@
       pageSize: function (newValue, oldValue) {
         if (oldValue !== undefined) {
           this.updateQuery('limit', newValue);
-          this.updateQuery('page', this.page);
           this.$emit('update', this.page, newValue);
         }
       },
       page: function (newValue, oldValue) {
         if (oldValue !== undefined) {
           this.updateQuery('page', newValue);
-          this.updateQuery('limit', this.pageSize);
           this.$emit('update', newValue, this.pageSize);
         }
       } 
@@ -81,13 +91,19 @@
 
 <style scoped>
 
-.button-group {
-  margin: 10px;
+.paginator-item {
+  margin: 8px 4px;
   height: 36px;
+  display: inline-block;
+  padding: 0;
+  vertical-align: top;
+  line-height: 36px;
+  overflow: hidden;
+}
+
+.button-group {
   border-radius: 6px;
   border: solid 1px #aaa;
-  padding: 0;
-  display: inline-block;
   color: var(--v-accent-base);
 }
 
@@ -106,6 +122,10 @@
   background-color: var(--v-accent-base);
   color: white;
   font-weight: 500;
+}
+
+.display-inline-block {
+  display: inline-block;
 }
 
 </style>

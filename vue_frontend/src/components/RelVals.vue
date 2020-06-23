@@ -85,9 +85,8 @@
     </v-dialog>
 
     <footer>
-      <a :href="'relvals/edit'" style="float: left; margin: 16px;" v-if="role('manager')">New RelVal</a>
-      <Paginator style="float: right;"
-                 :totalRows="totalItems"
+      <a :href="'relvals/edit'" v-if="role('manager')">New RelVal</a>
+      <Paginator :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
     </footer>
   </div>
@@ -114,6 +113,7 @@ export default {
         {'dbName': '_actions', 'displayName': 'Actions', 'visible': 1},
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
         {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1},
+        {'dbName': 'events', 'displayName': 'Events', 'visible': 1},
         {'dbName': 'processing_string', 'displayName': 'Processing String', 'visible': 1},
         {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
         {'dbName': 'workflow_id', 'displayName': 'Workflow ID', 'visible': 1},

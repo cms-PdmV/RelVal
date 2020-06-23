@@ -30,7 +30,7 @@ class CreateTicketAPI(APIBase):
         data = flask.request.data
         ticket_json = json.loads(data.decode('utf-8'))
         obj = ticket_controller.create(ticket_json)
-        return self.output_text({'response': obj, 'success': True, 'message': ''})
+        return self.output_text({'response': obj.get_json(), 'success': True, 'message': ''})
 
 
 class DeleteTicketAPI(APIBase):

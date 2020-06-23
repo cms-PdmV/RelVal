@@ -20,6 +20,7 @@ from api.relval_api import (CreateRelValAPI,
                             UpdateRelValAPI,
                             GetRelValAPI,
                             GetEditableRelValAPI)
+from api.settings_api import SettingsAPI
 
 log_format = '[%(asctime)s][%(levelname)s] %(message)s'
 logging.basicConfig(format=log_format, level=logging.DEBUG)
@@ -82,6 +83,10 @@ def api_documentation(_path):
 
 api.add_resource(LockerStatusAPI, '/api/system/locks')
 api.add_resource(UserInfoAPI, '/api/system/user_info')
+
+api.add_resource(SettingsAPI,
+                 '/api/settings/get',
+                 '/api/settings/get/<string:name>')
 
 api.add_resource(SearchAPI, '/api/search')
 

@@ -14,14 +14,14 @@ class Ticket(ModelBase):
         'prepid': '',
         # CMSSW release
         'cmssw_release': '',
-        # TODO: document
+        # Global tag
         'conditions_globaltag': '',
         # List of prepids of relvals that were created from this ticket
         'created_relvals': [],
+        # Statistics - 9k or 100k events
+        'events': 9000,
         # Extension number is similar sample was already submitted
         'extension_number': 0,
-        # High statistics - 9k or 100k events
-        'high_statistics': False,
         # Action history
         'history': [],
         # User notes
@@ -44,8 +44,8 @@ class Ticket(ModelBase):
         'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,75}'),
         'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'conditions_globaltag': ModelBase.lambda_check('globaltag'),
+        'events': lambda e: e in (9000, 100000),
         'extension_number': lambda number: 0 <= number <= 50,
-        'high_statistics': lambda hs: isinstance(hs, bool),
         'processing_string': ModelBase.lambda_check('processing_string'),
         'relval_set': ModelBase.lambda_check('relval_set'),
         'reuse_gensim': lambda reuse: isinstance(reuse, bool),

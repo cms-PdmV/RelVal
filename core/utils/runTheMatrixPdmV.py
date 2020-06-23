@@ -1,5 +1,5 @@
 """
-Bad solution to a problem that shouldn't exist in the first place
+PdmV's simplified implementation of runTheMatrix.py
 """
 import argparse
 import json
@@ -23,15 +23,17 @@ def split_command_to_dict(command):
 def get_workflows_module(name):
     workflows_module_name = 'Configuration.PyReleaseValidation.relval_' + name
     workflows_module = importlib.import_module(workflows_module_name)
-    print('Loaded %s. Found %s workflows inside' % (workflows_module_name, len(workflows_module.workflows)))
+    print('Loaded %s. Found %s workflows inside' % (workflows_module_name,
+                                                    len(workflows_module.workflows)))
     return workflows_module
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-l', '--list', dest='workflow_ids')
-    parser.add_argument('--what', dest='workflows_file')
-    parser.add_argument('--command', dest='command')
+    parser.add_argument('-w', '--what', dest='workflows_file')
+    parser.add_argument('-c', '--command', dest='command')
+    parser.add_argument('-o', '--output', dest='output_file')
 
     opt = parser.parse_args()
 
@@ -56,7 +58,7 @@ def main():
             # Merge user command, workflow and overrides
             workflow_step = steps_module.steps[workflow_step_name]
             # Because first item in the list has highest priority
-            workflow_step = steps_module.merge([workflow_matrix.overrides, workflow_step, {'--no_exec': ''}])
+            workflow_step = steps_module.merge([workflow_matrix.overrides, workflow_step, {'--no_exec': True}])
             if opt.command:
                 command_dict = split_command_to_dict(opt.command)
                 print('Merging %s' % (command_dict))
@@ -67,6 +69,9 @@ def main():
 
             if '-n' in workflow_step:
                 workflow_step['--number'] = workflow_step.pop('-n')
+
+            if '--data' in workflow_step:	
+                workflow_step['--data'] = True
 
             workflow_step['--fileout'] = 'file:step%s.root' % (workflow_step_index + 1)
             if workflow_step_index > 0:
@@ -105,10 +110,10 @@ def main():
 
     print(json.dumps(workflows, indent=2, sort_keys=True))
     for workflow_id, workflow_dict in workflows.items():
-        with open(f'{workflow_id}.json', 'w') as workflow_file:
+        with open('%s.json' % (workflow_id), 'w') as workflow_file:
             json.dump(workflow_dict, workflow_file)
 
-    with open('workflows.json', 'w') as workflows_file:
+    with open(opt.output_file, 'w') as workflows_file:
         json.dump(workflows, workflows_file)
 
 

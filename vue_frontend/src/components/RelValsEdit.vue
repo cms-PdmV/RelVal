@@ -49,6 +49,69 @@
           <td>Sample Tag</td>
           <td><input type="text" v-model="editableObject.sample_tag" :disabled="!editingInfo.sample_tag"></td>
         </tr>
+        <tr v-if="editableObject.steps">
+          <td>Steps ({{listLength(editableObject.steps)}})</td>
+          <td>
+            <div v-for="(step, index) in editableObject.steps" :key="index">
+              <h3>Step {{index + 1}}</h3>
+              <input type="radio" v-model="step.step_type" :name="'step' + index" :value="'input'">Input Step
+              <input type="radio" v-model="step.step_type" :name="'step' + index" :value="'driver'">Driver Step
+              <table v-if="step.step_type == 'input'">
+                <tr>
+                  <td>Dataset</td><td><input type="text" v-model="step.input.dataset" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>Lumisection</td><td><input type="text" v-model="step.input.lumisection" :disabled="!editingInfo.steps"></td>
+                </tr>
+              </table>
+              <table v-else>
+                <tr>
+                  <td>--conditions</td><td><input type="text" v-model="step.arguments.conditions" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>--customise</td><td><input type="text" v-model="step.arguments.customise" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>--datatier</td><td><input type="text" v-model="step.arguments.datatier" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>--era</td><td><input type="text" v-model="step.arguments.era" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>--eventcontent</td><td><input type="text" v-model="step.arguments.eventcontent" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>--filein</td><td><input type="text" v-model="step.arguments.filein" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>--fileout</td><td><input type="text" v-model="step.arguments.fileout" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>--process</td><td><input type="text" v-model="step.arguments.process" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>--step</td><td><input type="text" v-model="step.arguments.step" :disabled="!editingInfo.steps"></td>
+                </tr>
+                <tr>
+                  <td>--scenario</td>
+                  <td>
+                    <select v-model="step.arguments.scenario" :disabled="!editingInfo.steps">
+                      <option></option>
+                      <option>pp</option>
+                      <option>cosmics</option>
+                      <option>nocoll</option>
+                      <option>HeavyIons</option>
+                    </select>
+                    {{step.arguments.scenario}}
+                  </td>
+                </tr>
+              </table>
+              <v-btn small class="mr-1 mb-1" color="error" @click="deleteStep(index)">Delete step {{index + 1}}</v-btn>
+              <hr>
+            </div>
+            <v-btn small class="mr-1 mb-1 mt-1" color="primary" @click="addStep()">Add step {{listLength(editableObject.steps) + 1}}</v-btn>
+          </td>
+        </tr>
         <tr>
           <td>Workflow ID</td>
           <td><input type="number" min="1" v-model="editableObject.workflow_id" :disabled="!editingInfo.workflow_id"></td>
@@ -110,6 +173,14 @@ export default {
     this.creatingNew = this.prepid === undefined;
     let component = this;
     axios.get('api/relvals/get_editable' + (this.creatingNew ? '' : ('/' + this.prepid))).then(response => {
+      for (let i = 0; i < response.data.response.object.steps.length; i++) {
+        if (Object.keys(response.data.response.object.steps[i].input).length) {
+          response.data.response.object.steps[i].step_type = 'input';
+          response.data.response.object.steps[i].input.lumisection = JSON.stringify(response.data.response.object.steps[i].input.lumisection);
+        } else {
+          response.data.response.object.steps[i].step_type = 'driver';
+        }
+      }
       component.editableObject = response.data.response.object;
       component.editingInfo = response.data.response.editing_info;
       component.loading = false;
@@ -120,6 +191,14 @@ export default {
       let editableObject = JSON.parse(JSON.stringify(this.editableObject))
       let component = this;
       editableObject['notes'] = editableObject['notes'].trim();
+      for (let i = 0; i < editableObject.steps.length; i++) {
+        if (editableObject.steps[i].step_type == 'input') {
+          editableObject.steps.arguments = {};
+          editableObject.steps[i].input.lumisection = JSON.parse(editableObject.steps[i].input.lumisection);
+        } else {
+          editableObject.steps[i].input = {};
+        }
+      }
       let httpRequest;
       this.loading = true;
       if (this.creatingNew) {
@@ -150,7 +229,28 @@ export default {
       if (!l) {
         return 0;
       }
-      return l.split('\n').filter(Boolean).length;
+      if (typeof(l) === "string") {
+        return l.split('\n').filter(Boolean).length;
+      }
+      return l.length;
+    },
+    addStep: function() {
+      this.editableObject['steps'].push({'step_type': 'driver',
+                                         'arguments': {'conditions': '',
+                                                       'customize': '',
+                                                       'datatier': '',
+                                                       'era': '',
+                                                       'event_content': '',
+                                                       'filein': '',
+                                                       'fileout': '',
+                                                       'process': '',
+                                                       'step': '',
+                                                       'scenario': ''},
+                                         'input': {'dataset': '',
+                                                   'lumisection': ''}});
+    },
+    deleteStep: function(index) {
+      this.editableObject['steps'].splice(index, 1);
     },
   }
 }
@@ -161,8 +261,8 @@ h1 {
   margin: 8px;
 }
 td {
-  padding-top: 8px;
-  padding-bottom: 8px;
+  padding-top: 2px;
+  padding-bottom: 2px;
   padding-right: 4px;
 }
 .editPageCard {

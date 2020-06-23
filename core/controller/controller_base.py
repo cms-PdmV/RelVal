@@ -27,9 +27,6 @@ class ControllerBase():
         Create a new object from given json_data
         """
         json_data['history'] = []
-        if '_rev' in json_data:
-            del json_data['_rev']
-
         if '_id' in json_data:
             del json_data['_id']
 
@@ -51,7 +48,7 @@ class ControllerBase():
             self.before_create(new_object)
             database.save(new_object.get_json())
 
-        return new_object.get_json()
+        return new_object
 
     def get(self, prepid):
         """
@@ -64,7 +61,7 @@ class ControllerBase():
 
         return None
 
-    def update(self, json_data):
+    def update(self, json_data, force_update=False):
         """
         Update a single object with given json
         """
@@ -87,11 +84,12 @@ class ControllerBase():
                 self.logger.info('Nothing was updated for %s', prepid)
                 return old_object.get_json()
 
-            self.edit_allowed(old_object, changed_values)
-            new_object.add_history('update', changed_values, None)
-            if not self.check_for_update(old_object, new_object, changed_values):
-                self.logger.error('Error while updating %s', prepid)
-                return None
+            if not force_update:
+                self.edit_allowed(old_object, changed_values)
+                new_object.add_history('update', changed_values, None)
+                if not self.check_for_update(old_object, new_object, changed_values):
+                    self.logger.error('Error while updating %s', prepid)
+                    return None
 
             self.before_update(new_object)
             database.save(new_object.get_json())
@@ -165,7 +163,7 @@ class ControllerBase():
           "notes": True
         }
         """
-        return {k: not k.startswith('_') for k in obj.get_json().keys()}
+        return {k: False for k in obj.get_json().keys()}
 
     def edit_allowed(self, obj, changed_values):
         """

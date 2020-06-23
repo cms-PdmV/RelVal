@@ -1,8 +1,8 @@
 <template>
   <div>
-    <h1 v-if="creatingNew">Creating new Ticket</h1>
-    <h1 v-else>Editing {{editableObject.prepid}}</h1>
-    <v-card raised class="editPageCard">
+    <h1 class="page-title" v-if="creatingNew"><span class="font-weight-light">Creating</span> new ticket</h1>
+    <h1 class="page-title" v-else><span class="font-weight-light">Editing ticket</span> {{prepid}}</h1>
+    <v-card raised class="page-card">
       <table v-if="editableObject">
         <tr>
           <td>PrepID</td>
@@ -25,8 +25,13 @@
           </td>
         </tr>
         <tr>
-          <td>High Statistics</td>
-          <td><v-checkbox v-model="editableObject.high_statistics" :disabled="!editingInfo.high_statistics" hide-details class="shrink checkbox-margin"></v-checkbox></td>
+          <td>Events</td>
+          <td>
+            <select v-model="editableObject.events" :disabled="!editingInfo.events">
+              <option value=9000>9k</option>
+              <option value=100000>100k</option>
+            </select>
+          </td>
         </tr>
         <tr>
           <td>Notes</td>
@@ -60,14 +65,7 @@
       </table>
       <v-btn small class="mr-1 mb-1" color="primary" @click="save()">Save</v-btn>
     </v-card>
-    <v-overlay :absolute="false"
-               :opacity="0.95"
-               :z-index="3"
-               :value="loading"
-               style="text-align: center">
-      <v-progress-circular indeterminate color="primary"></v-progress-circular>
-      <br>Please wait...
-    </v-overlay>
+    <LoadingOverlay :visible="loading"/>
     <v-dialog v-model="errorDialog.visible"
               max-width="50%">
       <v-card>
@@ -89,10 +87,19 @@
 </template>
 
 <script>
+
 import axios from 'axios'
+import { utilsMixin } from '../mixins/UtilsMixin.js'
+import LoadingOverlay from './LoadingOverlay.vue'
+
 export default {
+  name: 'TicketsEdit',
   components: {
+    LoadingOverlay
   },
+  mixins: [
+    utilsMixin
+  ],
   data () {
     return {
       prepid: undefined,
@@ -108,37 +115,45 @@ export default {
     }
   },
   created () {
-    this.loading = true;
     let query = Object.assign({}, this.$route.query);
-    this.prepid = query['prepid'];
-    this.creatingNew = this.prepid === undefined;
+    if (query.prepid && query.prepid.length) {
+      this.prepid = query.prepid;
+    } else {
+      this.prepid = '';
+    }
+    this.creatingNew = this.prepid.length == 0;
+    this.loading = true;
     let component = this;
-    axios.get('api/tickets/get_editable' + (this.creatingNew ? '' : ('/' + this.prepid))).then(response => {
+    axios.get('api/tickets/get_editable/' + this.prepid).then(response => {
       component.editableObject = response.data.response.object;
-      component.editableObject.workflow_ids = component.editableObject.workflow_ids.join('\n')
+      component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
       component.editingInfo = response.data.response.editing_info;
       component.loading = false;
+    }).catch(error => {
+      component.loading = false;
+      console.log(error);
+      this.showError('Error fetching editing information', error.response.data.message);
     });
   },
   methods: {
     save: function() {
-      let editableObject = JSON.parse(JSON.stringify(this.editableObject))
-      let component = this;
-      editableObject['notes'] = editableObject['notes'].trim();
-      editableObject['workflow_ids'] = editableObject['workflow_ids'].replace(/,/g, '\n').split('\n').map(function(s) { return s.trim() }).filter(Boolean);
-      let httpRequest;
       this.loading = true;
+      let editableObject = this.makeCopy(this.editableObject);
+      editableObject.notes = editableObject.notes.trim();
+      editableObject.workflow_ids = editableObject.workflow_ids.replace(/,/g, '\n').split('\n').map(function(s) { return s.trim() }).filter(Boolean);
+      let httpRequest;
       if (this.creatingNew) {
-        httpRequest = axios.put('api/tickets/create', editableObject)
+        httpRequest = axios.put('api/tickets/create', editableObject);
       } else {
-        httpRequest = axios.post('api/tickets/update', editableObject)
+        httpRequest = axios.post('api/tickets/update', editableObject);
       }
+      let component = this;
       httpRequest.then(response => {
         component.loading = false;
         window.location = 'tickets?prepid=' + response.data.response.prepid;
       }).catch(error => {
         component.loading = false;
-        this.showError('Error saving ticket', error.response.data.message)
+        this.showError('Error saving ticket', error.response.data.message);
       });
     },
     clearErrorDialog: function() {
@@ -152,32 +167,6 @@ export default {
       this.errorDialog.description = description;
       this.errorDialog.visible = true;
     },
-    listLength(l) {
-      if (!l) {
-        return 0;
-      }
-      return l.split('\n').filter(Boolean).length;
-    },
   }
 }
 </script>
-
-<style scoped>
-h1 {
-  margin: 8px;
-}
-td {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-right: 4px;
-}
-.editPageCard {
-  margin: auto;
-  padding: 16px;
-  max-width: 750px;
-}
-.checkbox-margin {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-</style>

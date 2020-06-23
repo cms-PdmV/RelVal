@@ -90,8 +90,16 @@ class Database():
     def query(self,
               query_string=None,
               page=0, limit=20,
-              return_total_rows=False,
               sort_attr=None, sort_asc=True):
+        """
+        Same as query_with_total_rows, but return only list of objects
+        """
+        return self.query_with_total_rows(query_string, page, limit, sort_attr, sort_asc)[0]
+
+    def query_with_total_rows(self,
+                              query_string=None,
+                              page=0, limit=20,
+                              sort_attr=None, sort_asc=True):
         """
         Perform a query in a database
         And operator is &&
@@ -147,10 +155,7 @@ class Database():
         result = result.sort(sort_attr, 1 if sort_asc else -1)
         total_rows = result.count()
         result = result.skip(page * limit).limit(limit)
-        if return_total_rows:
-            return list(result), int(total_rows)
-
-        return list(result)
+        return list(result), int(total_rows)
 
     def build_query_with_types(self, query_string, object_class):
         """

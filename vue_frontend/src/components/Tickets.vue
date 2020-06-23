@@ -18,12 +18,12 @@
                       hide-default-footer
                       class="elevation-1">
           <template v-slot:item._actions="{ item }">
-            <a :href="'tickets/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>&nbsp;
-            <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager')">Delete</a>&nbsp;
-            <a style="text-decoration: underline;" @click="showCreateRelValsDialog(item)" v-if="role('manager') && item.status == 'new'">Create RelVals</a>&nbsp;
+            <a :href="'tickets/edit?prepid=' + item.prepid" v-if="role('manager')" title="Edit ticket">Edit</a>&nbsp;
+            <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager')" title="Delete ticket">Delete</a>&nbsp;
+            <a style="text-decoration: underline;" @click="showCreateRelValsDialog(item)" v-if="role('manager') && item.status == 'new'" title="Create RelVals from this ticket">Create RelVals</a>&nbsp;
           </template>
           <template v-slot:item.prepid="{ item }">
-            <a :href="'tickets?prepid=' + item.prepid">{{item.prepid}}</a>
+            <a :href="'tickets?prepid=' + item.prepid" title="Show only this ticket">{{item.prepid}}</a>
           </template>
           <template v-slot:item.history="{ item }">
             <HistoryCell :data="item.history"/>
@@ -35,7 +35,14 @@
             <span v-if="item.workflow_ids.length">{{item.workflow_ids.length}} workflows: <small>{{item.workflow_ids.join(', ')}}</small></span>
           </template>
           <template v-slot:item.cmssw_release="{ item }">
-            {{item.cmssw_release.replace('_', ' ').replace(/_/g, '.')}}
+            <a :href="'tickets?cmssw_release=' + item.cmssw_release" :title="'Show all tickets with ' + item.cmssw_release">{{item.cmssw_release.replace('_', ' ').replace(/_/g, '.')}}</a>
+          </template>
+          <template v-slot:item.created_relvals="{ item }">
+            <ul>
+              <li v-for="relval in item.created_relvals" :key="relval">
+                <a :href="'relvals?prepid=' + relval" :title="'Open ' + relval + ' RelVal'">{{relval}}</a>
+              </li>
+            </ul>
           </template>
         </v-data-table>
       </div>
@@ -81,9 +88,8 @@
     </v-dialog>
 
     <footer>
-      <a :href="'tickets/edit'" style="float: left; margin: 16px;" v-if="role('manager')">New ticket</a>
-      <Paginator style="float: right;"
-                 :totalRows="totalItems"
+      <a :href="'tickets/edit'" v-if="role('manager')">New ticket</a>
+      <Paginator :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
     </footer>
   </div>
@@ -111,8 +117,8 @@ export default {
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
         {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1},
         {'dbName': 'conditions_globaltag', 'displayName': 'GlobalTag', 'visible': 1},
+        {'dbName': 'events', 'displayName': 'Events', 'visible': 1},
         {'dbName': 'processing_string', 'displayName': 'Processing String', 'visible': 1},
-        {'dbName': 'high_statistics', 'displayName': 'High Statistics', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
