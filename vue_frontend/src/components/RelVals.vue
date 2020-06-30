@@ -120,8 +120,6 @@ export default {
         {'dbName': 'campaign', 'displayName': 'Campaign', 'visible': 1},
         {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 1},
-        {'dbName': 'events', 'displayName': 'Events', 'visible': 1},
-        {'dbName': 'processing_string', 'displayName': 'Processing String', 'visible': 1},
         {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
         {'dbName': 'workflow_id', 'displayName': 'Workflow ID', 'visible': 1},
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},

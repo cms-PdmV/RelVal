@@ -21,10 +21,6 @@
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="32"></td>
         </tr>
         <tr>
-          <td>Events</td>
-          <td><input type="number" v-model="editableObject.events" :disabled="!editingInfo.events" min="1" step="1000"></td>
-        </tr>
-        <tr>
           <td>Extension Number</td>
           <td>
             <select v-model="editableObject.extension_number" :disabled="!editingInfo.extension_number">
@@ -37,6 +33,10 @@
           <td><input type="text" v-model="editableObject.conditions_globaltag" :disabled="!editingInfo.conditions_globaltag"></td>
         </tr>
         <tr>
+          <td>Label</td>
+          <td><input type="text" v-model="editableObject.label" :disabled="!editingInfo.label"></td>
+        </tr>
+        <tr>
           <td>Memory</td>
           <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="64000" step="1000"></td>
         </tr>
@@ -45,15 +45,12 @@
           <td><textarea v-model="editableObject.notes" :disabled="!editingInfo.notes"></textarea></td>
         </tr>
         <tr>
-          <td>Processing String</td>
-          <td><input type="text" v-model="editableObject.processing_string" :disabled="!editingInfo.processing_string"></td>
-        </tr>
-        <tr>
           <td>RelVal set</td>
           <td>
             <select v-model="editableObject.relval_set" :disabled="!editingInfo.relval_set">
               <option>standard</option>
               <option>upgrade</option>
+              <option>generator</option>
             </select>
           </td>
         </tr>

@@ -2,6 +2,7 @@
 Module that contains RelValStep class
 """
 import weakref
+import json
 from copy import deepcopy
 from core.model.model_base import ModelBase
 
@@ -13,12 +14,14 @@ class RelValStep(ModelBase):
         'name': '',
         # Arguments if step is a cmsDriver step
         'arguments': {},
+        # Hash of configuration file uploaded to ReqMgr2
+        'config_id': '',
         # Input information if step is list of input files
         'input': {},
     }
 
     lambda_checks = {
-
+        'config_id': lambda cid: ModelBase.matches_regex(cid, '[a-f0-9]{0,50}'),
     }
 
     def __init__(self, json_input=None, parent=None):
@@ -87,6 +90,36 @@ class RelValStep(ModelBase):
 
         return comment + '\n' + command
 
+    def __build_das_command(self):
+        """
+        Build a dasgoclient command to fetch input dataset file names
+        """
+        input_info = self.get('input')
+        index = self.get_index_in_parent()
+        files_name = f'step{index + 1}_files.txt'
+        lumis_name = f'step{index + 1}_lumi_ranges.txt'
+        dataset = input_info['dataset']
+        runs = input_info['lumisection']
+        comment = f'# Arguments for input step:\n'
+        command = f'# Command for input step:\n'
+        comment += f'#   dataset: {dataset}\n'
+        command += f'echo "" > {files_name}\n'
+        for run, run_info in runs.items():
+            for lumi_range in run_info:
+                comment += f'#   run: {run}, range: {lumi_range[0]} - {lumi_range[1]}\n'
+                command += f'dasgoclient --limit 0 --query "lumi,file dataset={dataset} run={run}"'
+                command += ' '
+                command += f'--format json'
+                command += ' | '
+                command += f' das-selected-lumis.py {lumi_range[0]},{lumi_range[1]}'
+                command += ' | '
+                command += f'sort -u >> {files_name}'
+                command += '\n'
+
+        lumi_json = json.dumps(runs)
+        command += f'echo \'{lumi_json}\' > {lumis_name}'
+        return comment + '\n' + command
+
     def get_cmsdriver(self):
         """
         Return a cmsDriver command for this step
@@ -97,16 +130,14 @@ class RelValStep(ModelBase):
         if 'config_id' in arguments_dict:
             del arguments_dict['config_id']
 
-        if 'harvesting_config_id' in arguments_dict:
-            del arguments_dict['harvesting_config_id']
-
         # Handle input/output file names
         index = self.get_index_in_parent()
         name = self.get('name')
         step_type = self.get_step_type()
         if index == 0:
             if step_type == 'input_file':
-                pass
+                # Special case, make a dasgoclient bash command insted of cmsDriver
+                return self.__build_das_command()
             else:
                 arguments_dict['fileout'] = f'"file:step{index + 1}.root"'
                 arguments_dict['python_filename'] = f'{name}.py'

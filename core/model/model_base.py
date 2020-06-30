@@ -35,7 +35,7 @@ class ModelBase():
         'label': lambda label: ModelBase.matches_regex(label, '[a-zA-Z0-9]{0,75}'),
         'memory': lambda mem: 0 <= mem <= 64000,
         'processing_string': lambda ps: ModelBase.matches_regex(ps, ModelBase.__ps_regex),
-        'relval_set': lambda rs: rs in ('standard', 'upgrade'),
+        'relval_set': lambda rs: rs in ('standard', 'upgrade', 'generator'),
         'sample_tag': lambda gt: ModelBase.matches_regex(gt, ModelBase.__sample_tag_regex),
     }
     lambda_checks = {}

@@ -95,7 +95,9 @@ def main():
             if 'INPUT' in workflow_step:
                 print('%s %s' %(workflow_step['INPUT'].dataSet, workflow_step['INPUT'].ls))
                 workflows[workflow_id]['steps'][-1]['input'] = {'dataset': workflow_step['INPUT'].dataSet,
-                                                                'lumisection': workflow_step['INPUT'].ls}
+                                                                'lumisection': workflow_step['INPUT'].ls,
+                                                                'label': workflow_step['INPUT'].label,
+                                                                'events': workflow_step['INPUT'].events}
             else:
                 arguments = ''
                 driver_step_name = 'step%s' % (workflow_step_index + 1)

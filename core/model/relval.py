@@ -11,8 +11,6 @@ class RelVal(ModelBase):
     """
     PrepID example: CMSSW_11_0_0_pre4__data2018C-1564311759-RunDoubleMuon2018C
                     {cmssw_release}__{batch_name}-{timestamp}-{first_step_name}
-    Request string: RVCMSSW_11_0_0_pre4RunDoubleMuon2018C__gcc8_RelVal_2018C
-                    RV{cmssw_release}{first_step_name}__{label?}_...?
     """
 
     _ModelBase__schema = {
@@ -28,18 +26,16 @@ class RelVal(ModelBase):
         'conditions_globaltag': '',
         # CPU cores
         'cpu_cores': 1,
-        # Number of events to run
-        'events': 9000,
         # Extension number is similar sample was already submitted
         'extension_number': 0,
         # Action history
         'history': [],
+        # Label
+        'label': '',
         # Memory in MB
         'memory': 2000,
         # User notes
         'notes': '',
-        # Processing string
-        'processing_string': '',
         # Type of relval: standard, upgrade
         'relval_set': 'standard',
         # TODO: document
@@ -58,10 +54,9 @@ class RelVal(ModelBase):
         'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'conditions_globaltag': ModelBase.lambda_check('globaltag'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
-        'events': lambda e: e > 0,
         'extension_number': lambda number: 0 <= number <= 50,
+        'label': ModelBase.lambda_check('label'),
         'memory': ModelBase.lambda_check('memory'),
-        'processing_string': ModelBase.lambda_check('processing_string'),
         'relval_set': ModelBase.lambda_check('relval_set'),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
         'status': lambda status: status in ('new', 'approved', 'submitting', 'submitted', 'done'),
@@ -88,36 +83,81 @@ class RelVal(ModelBase):
         Get all cmsDriver commands for this RelVal
         """
         built_command = ''
-        for index, step in enumerate(self.get('steps')):
-            input_info = step.get('input')
-            if input_info:
-                dataset_name = input_info['dataset']
-                runs = input_info['lumisection']
-                built_command += f'echo "" > step{index + 1}_files.txt\n'
-                for run, run_info in runs.items():
-                    for lumisection_range in run_info:
-                        built_command += f'dasgoclient --limit 0 --query "lumi,file dataset={dataset_name} run={run}" --format json | das-selected-lumis.py {lumisection_range[0]},{lumisection_range[1]} | sort -u >> step{index + 1}_files.txt 2>&1\n'
-
-                lumi_json = json.dumps(runs)
-                built_command += '\n'
-                built_command += f'echo \'{lumi_json}\' > step{index + 1}_lumi_ranges.txt\n'
-                built_command += '\n'
-            else:
-                built_command += step.get_cmsdriver()
-                built_command += '\n\n'
-
+        for step in self.get('steps'):
+            built_command += step.get_cmsdriver()
+            built_command += '\n\n'
 
         return built_command.strip()
 
+    def get_relval_type(self):
+        """
+        if len( [step for step in s[3] if "HARVESTGEN" in step] )>0:
+            thisLabel=thisLabel+"_gen"
+
+        # for double miniAOD test
+        if len( [step for step in s[3] if "DBLMINIAODMCUP15NODQM" in step] )>0:
+            thisLabel=thisLabel+"_dblMiniAOD"
+
+        if 'FASTSIM' in s[2][index] or '--fast' in s[2][index]:
+            thisLabel+='_FastSim'
+
+        if '--data' in s[2][index] and nextHasDSInput.label:
+            thisLabel+='_RelVal_%s'%nextHasDSInput.label
+
+        RelVal
+        gen
+        FastSim
+        dblMiniAOD
+        """
+        relval_type = ''
+        steps = self.get('steps')
+        if steps[0].get_step_type() == 'input_file':
+            first_step_label = steps[0].get('input').get('label')
+        else:
+            first_step_label = ''
+
+        for step in steps:
+            if 'HARVESTGEN' in step.get('name'):
+                relval_type += '_gen'
+                break
+
+        for step in steps:
+            if 'DBLMINIAODMCUP15NODQM' in step.get('name'):
+                relval_type += '_dblMiniAOD'
+                break
+
+        for step in steps:
+            if step.get('arguments').get('fast', False):
+                relval_type += '_FastSim'
+                break
+
+        for step in steps:
+            if step.get('arguments').get('data', False) and first_step_label:
+                relval_type += f'_RelVal_{first_step_label}_'
+                break
+
+        self.logger.info('RelVal type string: %s', relval_type)
+        return relval_type.strip('_')
+
+
     def get_request_string(self):
         """
-        Return request string made of era, dataset and processing string
+        Return request string made of CMSSW release and various labels
+
+        Example: RVCMSSW_11_0_0_pre4RunDoubleMuon2018C__gcc8_RelVal_2018C
+        RV{cmssw_release}{first_step_name}__{label}_{relval_type}_{first_step_label}
         """
         cmssw_release = self.get('cmssw_release')
+        label = self.get('label')
         steps = self.get('steps')
-        if steps:
-            first_step_name = steps[0].get('name')
-        else:
-            first_step_name = ''
+        first_step_name = steps[0].get('name')
+        relval_type = self.get_relval_type()
 
-        return f'RV{cmssw_release}{first_step_name}'.strip('_')
+        request_string = f'RV{cmssw_release}{first_step_name}__'
+        if label:
+            request_string += f'{label}_'
+
+        if relval_type:
+            request_string += f'{relval_type}_'
+
+        return request_string.strip('_')

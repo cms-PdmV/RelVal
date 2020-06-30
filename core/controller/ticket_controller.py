@@ -59,11 +59,9 @@ class TicketController(ControllerBase):
         editing_info['campaign'] = creating_new
         editing_info['cpu_cores'] = not_done
         editing_info['extension_number'] = not_done
-        editing_info['events'] = not_done
         editing_info['label'] = not_done
         editing_info['memory'] = not_done
         editing_info['notes'] = True
-        editing_info['processing_string'] = not_done
         editing_info['sample_tag'] = not_done
         editing_info['workflow_ids'] = not_done
         editing_info['relval_set'] = not_done
@@ -96,10 +94,11 @@ class TicketController(ControllerBase):
             campaign = Campaign(json_input=campaign_db.get(campaign_name))
             relval_set = ticket.get('relval_set')
             cmssw_release = campaign.get('cmssw_release')
-            processing_string = ticket.get('processing_string')
+            label = ticket.get('label')
             extension_number = ticket.get('extension_number')
             sample_tag = ticket.get('sample_tag')
-            events = ticket.get('events')
+            cpu_cores = ticket.get('cpu_cores')
+            memory = ticket.get('memory')
             try:
                 workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
                 self.logger.info('Creating RelVals %s for %s', workflow_ids, ticket_prepid)
@@ -146,18 +145,32 @@ class TicketController(ControllerBase):
                     workflows = json.load(workflows_file)
 
                 for workflow_id, workflow_dict in workflows.items():
-                    workflow_json = {'workflow_id': workflow_id,
-                                     'relval_set': relval_set,
-                                     'processing_string': processing_string,
-                                     'campaign': campaign_name,
+                    workflow_json = {'campaign': campaign_name,
+                                     'cpu_cores': cpu_cores,
                                      'extension_number': extension_number,
+                                     'label': label,
+                                     'memory': memory,
+                                     'relval_set': relval_set,
                                      'sample_tag': sample_tag,
-                                     'events': events,
-                                     'steps': []}
+                                     'steps': [],
+                                     'workflow_id': workflow_id}
+
                     for step_dict in workflow_dict['steps']:
+                        arguments = step_dict.get('arguments', {})
+                        input_dict = step_dict.get('input', {})
+                        # Delete filein and fileout because they'll be made on the fly
+                        if '--filein' in arguments:
+                            del arguments['--filein']
+
+                        if '--fileout' in arguments:
+                            del arguments['--fileout']
+
+                        if '--lumiToProcess' in arguments:
+                            del arguments['--lumiToProcess']
+
                         workflow_json['steps'].append({'name': step_dict['name'],
-                                                       'arguments': step_dict.get('arguments', {}),
-                                                       'input': step_dict.get('input', {})})
+                                                       'arguments': arguments,
+                                                       'input': input_dict})
 
                     relval = relval_controller.create(workflow_json)
                     created_relvals.append(relval)

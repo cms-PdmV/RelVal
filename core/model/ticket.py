@@ -18,8 +18,6 @@ class Ticket(ModelBase):
         'cpu_cores': 1,
         # List of prepids of relvals that were created from this ticket
         'created_relvals': [],
-        # Statistics - 9k or 100k events
-        'events': 9000,
         # Extension number is similar sample was already submitted
         'extension_number': 0,
         # Action history
@@ -30,8 +28,6 @@ class Ticket(ModelBase):
         'memory': 2000,
         # User notes
         'notes': '',
-        # Processing string
-        'processing_string': '',
         # Type of relval: standard, upgrade
         'relval_set': 'standard',
         # TODO: document
@@ -46,11 +42,9 @@ class Ticket(ModelBase):
         'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,75}'),
         'campaign': ModelBase.lambda_check('campaign'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
-        'events': lambda e: e > 0,
         'extension_number': lambda number: 0 <= number <= 50,
         'label': ModelBase.lambda_check('label'),
         'memory': ModelBase.lambda_check('memory'),
-        'processing_string': ModelBase.lambda_check('processing_string'),
         'relval_set': ModelBase.lambda_check('relval_set'),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
         'status': lambda status: status in ('new', 'done'),

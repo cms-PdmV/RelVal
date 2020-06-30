@@ -119,8 +119,6 @@ export default {
         {'dbName': '_actions', 'displayName': 'Actions', 'visible': 1},
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
         {'dbName': 'campaign', 'displayName': 'Campaign', 'visible': 1},
-        {'dbName': 'events', 'displayName': 'Events', 'visible': 1},
-        {'dbName': 'processing_string', 'displayName': 'Processing String', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 0},

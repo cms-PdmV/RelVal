@@ -55,11 +55,9 @@ class RelValController(ControllerBase):
         editing_info['cmssw_release'] = False
         editing_info['conditions_globaltag'] = is_new
         editing_info['cpu_cores'] = is_new
-        editing_info['events'] = is_new
         editing_info['extension_number'] = True
         editing_info['memory'] = is_new
         editing_info['notes'] = True
-        editing_info['processing_string'] = creating_new
         editing_info['relval_set'] = creating_new
         editing_info['sample_tag'] = is_new
         editing_info['workflow_id'] = False
@@ -78,7 +76,7 @@ class RelValController(ControllerBase):
     def check_for_update(self, old_obj, new_obj, changed_values):
         if 'campaign' in changed_values:
             campaign_database = Database('campaigns')
-            campaign_name = obj.get('campaign')
+            campaign_name = new_obj.get('campaign')
             if not campaign_database.document_exists(campaign_name):
                 raise Exception('Campaign %s does not exist' % (campaign_name))
 
@@ -134,9 +132,12 @@ class RelValController(ControllerBase):
         self.logger.debug('Getting job dict for %s', prepid)
         steps = relval.get('steps')
         database_url = Settings().get('cmsweb_url') + '/couchdb'
-        processing_string = relval.get('processing_string')
         request_string = relval.get_request_string()
         campaign_name = relval.get('campaign')
+        relval_type = relval.get_relval_type()
+        # Get events from --relval attribute
+        events = [int(s.get('arguments').get('relval', '-1').split(',')[0]) for s in steps]
+        events = [e for e in events if e > 0]
         job_dict = {}
         job_dict['CMSSWVersion'] = relval.get('cmssw_release')
         job_dict['Group'] = 'PPD'
@@ -144,7 +145,6 @@ class RelValController(ControllerBase):
         job_dict['ConfigCacheUrl'] = database_url
         job_dict['CouchURL'] = database_url
         job_dict['PrepID'] = relval.get_prepid()
-        job_dict['ProcessingString'] = processing_string
         job_dict['RequestType'] = 'ReReco'
         job_dict['RequestString'] = request_string
         job_dict['EnableHarvesting'] = False
@@ -154,6 +154,48 @@ class RelValController(ControllerBase):
         job_dict['BlockBlacklist'] = []
         job_dict['Campaign'] = campaign_name
         job_dict['Memory'] = relval.get('memory')
-        job_dict['Multicore'] = relval.get('cpu_cores')
+        job_dict['Multicore'] = 1
+
+        task_number = 0
+        task_dict = {}
+        for step_index, step in enumerate(steps):
+            if step_index == 0:
+                if step.get_step_type() == 'input_file':
+                    # Input file step is not a task
+                    # Use this as input in next step
+                    input_info = step.get('input')
+                    task_dict['InputDataset'] = input_info['dataset']
+                    if input_info.get('lumisection'):
+                        task_dict['LumiList'] = input_info['lumisection']
+
+                    continue
+                else:
+                    task_dict['Seeding'] = 'AutomaticSeeding'
+
+            if 'HARVESTING' in step.get('arguments')['step']:
+                # It is harvesting step
+                # It goes in the main job_dict
+                job_dict['DQMConfigCacheID'] = step.get('config_id')
+                continue
+
+            conditions = step.get('arguments')['conditions']
+            task_dict['TaskName'] = step.get('name')
+            task_dict['ConfigCacheID'] = step.get('config_id')
+            task_dict['KeepOutput'] = True
+            task_dict['SplittingAlgo'] = 'LumiBased'
+            task_dict['GlobalTag'] = conditions
+            task_dict['ProcessingString'] = f'{conditions}_{relval_type}'.strip('_')
+            task_dict['Memory'] = relval.get('memory')
+            task_dict['Multicore'] = relval.get('cpu_cores')
+            task_dict['Campaign'] = campaign_name
+            if task_number == 0 and events:
+                task_dict['RequestNumEvents'] = events[0]
+
+            task_number += 1
+            job_dict[f'Task{task_number}'] = task_dict
+            # Next task input is this task
+            task_dict = {'InputTask': step.get('name')}
+
+        job_dict['TaskChain'] = task_number
 
         return job_dict
