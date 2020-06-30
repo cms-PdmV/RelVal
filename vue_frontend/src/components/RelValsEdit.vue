@@ -1,16 +1,28 @@
 <template>
   <div>
-    <h1 v-if="creatingNew">Creating new RelVal</h1>
-    <h1 v-else>Editing {{editableObject.prepid}}</h1>
-    <v-card raised class="editPageCard">
+    <h1 class="page-title" v-if="creatingNew"><span class="font-weight-light">Creating</span> new RelVal</h1>
+    <h1 class="page-title" v-else><span class="font-weight-light">Editing RelVal</span> {{prepid}}</h1>
+    <v-card raised class="page-card">
       <table v-if="editableObject">
         <tr>
           <td>PrepID</td>
           <td><input type="text" v-model="editableObject.prepid" :disabled="!editingInfo.prepid"></td>
         </tr>
         <tr>
+          <td>Campaign</td>
+          <td><input type="text" v-model="editableObject.campaign" :disabled="!editingInfo.campaign"></td>
+        </tr>
+        <tr>
           <td>CMSSW Release</td>
           <td><input type="text" v-model="editableObject.cmssw_release" :disabled="!editingInfo.cmssw_release"></td>
+        </tr>
+        <tr>
+          <td>CPU Cores</td>
+          <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="32"></td>
+        </tr>
+        <tr>
+          <td>Events</td>
+          <td><input type="number" v-model="editableObject.events" :disabled="!editingInfo.events" min="1" step="1000"></td>
         </tr>
         <tr>
           <td>Extension Number</td>
@@ -23,6 +35,10 @@
         <tr>
           <td>GlobalTag</td>
           <td><input type="text" v-model="editableObject.conditions_globaltag" :disabled="!editingInfo.conditions_globaltag"></td>
+        </tr>
+        <tr>
+          <td>Memory</td>
+          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="64000" step="1000"></td>
         </tr>
         <tr>
           <td>Notes</td>
@@ -42,10 +58,6 @@
           </td>
         </tr>
         <tr>
-          <td>Reuse GEN-SIM</td>
-          <td><v-checkbox v-model="editableObject.reuse_gensim" :disabled="!editingInfo.reuse_gensim" hide-details class="shrink checkbox-margin"></v-checkbox></td>
-        </tr>
-        <tr>
           <td>Sample Tag</td>
           <td><input type="text" v-model="editableObject.sample_tag" :disabled="!editingInfo.sample_tag"></td>
         </tr>
@@ -54,57 +66,67 @@
           <td>
             <div v-for="(step, index) in editableObject.steps" :key="index">
               <h3>Step {{index + 1}}</h3>
-              <input type="radio" v-model="step.step_type" :name="'step' + index" :value="'input'">Input Step
-              <input type="radio" v-model="step.step_type" :name="'step' + index" :value="'driver'">Driver Step
-              <table v-if="step.step_type == 'input'">
+              <table>
                 <tr>
-                  <td>Dataset</td><td><input type="text" v-model="step.input.dataset" :disabled="!editingInfo.steps"></td>
+                  <td>Name</td><td><input type="text" v-model="step.name" :disabled="!editingInfo.steps"></td>
                 </tr>
-                <tr>
-                  <td>Lumisection</td><td><input type="text" v-model="step.input.lumisection" :disabled="!editingInfo.steps"></td>
-                </tr>
-              </table>
-              <table v-else>
-                <tr>
-                  <td>--conditions</td><td><input type="text" v-model="step.arguments.conditions" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>--customise</td><td><input type="text" v-model="step.arguments.customise" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>--datatier</td><td><input type="text" v-model="step.arguments.datatier" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>--era</td><td><input type="text" v-model="step.arguments.era" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>--eventcontent</td><td><input type="text" v-model="step.arguments.eventcontent" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>--filein</td><td><input type="text" v-model="step.arguments.filein" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>--fileout</td><td><input type="text" v-model="step.arguments.fileout" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>--process</td><td><input type="text" v-model="step.arguments.process" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>--step</td><td><input type="text" v-model="step.arguments.step" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>--scenario</td>
+                <tr v-if="index == 0">
+                  <td>Step type</td>
                   <td>
-                    <select v-model="step.arguments.scenario" :disabled="!editingInfo.steps">
-                      <option></option>
-                      <option>pp</option>
-                      <option>cosmics</option>
-                      <option>nocoll</option>
-                      <option>HeavyIons</option>
-                    </select>
-                    {{step.arguments.scenario}}
+                    <input type="radio" v-model="step.step_type" :name="'step' + index" :value="'input'">Input dataset
+                    <input type="radio" v-model="step.step_type" :name="'step' + index" :value="'driver'">cmsDriver
                   </td>
                 </tr>
+                <template v-if="step.step_type == 'input'">
+                  <tr>
+                    <td>Dataset</td><td><input type="text" v-model="step.input.dataset" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>Lumisection</td><td><input type="text" v-model="step.input.lumisection" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                </template>
+                <template v-else>
+                  <tr>
+                    <td>--conditions</td><td><input type="text" v-model="step.arguments.conditions" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--customise</td><td><input type="text" v-model="step.arguments.customise" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--datatier</td><td><input type="text" v-model="step.arguments.datatier" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--era</td><td><input type="text" v-model="step.arguments.era" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--eventcontent</td><td><input type="text" v-model="step.arguments.eventcontent" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <!-- <tr>
+                    <td>--filein</td><td><input type="text" v-model="step.arguments.filein" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--fileout</td><td><input type="text" v-model="step.arguments.fileout" :disabled="!editingInfo.steps"></td>
+                  </tr> -->
+                  <tr>
+                    <td>--process</td><td><input type="text" v-model="step.arguments.process" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--step</td><td><input type="text" v-model="step.arguments.step" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--scenario</td>
+                    <td>
+                      <select v-model="step.arguments.scenario" :disabled="!editingInfo.steps">
+                        <option></option>
+                        <option>pp</option>
+                        <option>cosmics</option>
+                        <option>nocoll</option>
+                        <option>HeavyIons</option>
+                      </select>
+                      {{step.arguments.scenario}}
+                    </td>
+                  </tr>
+                </template>
               </table>
               <v-btn small class="mr-1 mb-1" color="error" @click="deleteStep(index)">Delete step {{index + 1}}</v-btn>
               <hr>
@@ -119,14 +141,7 @@
       </table>
       <v-btn small class="mr-1 mb-1" color="primary" @click="save()">Save</v-btn>
     </v-card>
-    <v-overlay :absolute="false"
-               :opacity="0.95"
-               :z-index="3"
-               :value="loading"
-               style="text-align: center">
-      <v-progress-circular indeterminate color="primary"></v-progress-circular>
-      <br>Please wait...
-    </v-overlay>
+    <LoadingOverlay :visible="loading"/>
     <v-dialog v-model="errorDialog.visible"
               max-width="50%">
       <v-card>
@@ -149,9 +164,16 @@
 
 <script>
 import axios from 'axios'
+import { utilsMixin } from '../mixins/UtilsMixin.js'
+import LoadingOverlay from './LoadingOverlay.vue'
+
 export default {
   components: {
+    LoadingOverlay
   },
+  mixins: [
+    utilsMixin
+  ],
   data () {
     return {
       prepid: undefined,
@@ -225,15 +247,6 @@ export default {
       this.errorDialog.description = description;
       this.errorDialog.visible = true;
     },
-    listLength(l) {
-      if (!l) {
-        return 0;
-      }
-      if (typeof(l) === "string") {
-        return l.split('\n').filter(Boolean).length;
-      }
-      return l.length;
-    },
     addStep: function() {
       this.editableObject['steps'].push({'step_type': 'driver',
                                          'arguments': {'conditions': '',
@@ -255,23 +268,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-h1 {
-  margin: 8px;
-}
-td {
-  padding-top: 2px;
-  padding-bottom: 2px;
-  padding-right: 4px;
-}
-.editPageCard {
-  margin: auto;
-  padding: 16px;
-  max-width: 750px;
-}
-.checkbox-margin {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-</style>

@@ -28,14 +28,17 @@
           <template v-slot:item.history="{ item }">
             <HistoryCell :data="item.history"/>
           </template>
+          <template v-slot:item.memory="{ item }">
+            {{item.memory}} MB
+          </template>
           <template v-slot:item.notes="{ item }">
             <pre v-if="item.notes.length" class="notes">{{item.notes}}</pre>
           </template>
           <template v-slot:item.workflow_ids="{ item }">
             <span v-if="item.workflow_ids.length">{{item.workflow_ids.length}} workflows: <small>{{item.workflow_ids.join(', ')}}</small></span>
           </template>
-          <template v-slot:item.cmssw_release="{ item }">
-            <a :href="'tickets?cmssw_release=' + item.cmssw_release" :title="'Show all tickets with ' + item.cmssw_release">{{item.cmssw_release.replace('_', ' ').replace(/_/g, '.')}}</a>
+          <template v-slot:item.campaign="{ item }">
+            <a :href="'tickets?campaign=' + item.campaign" :title="'Show all tickets with ' + item.campaign + ' campaign'">{{item.campaign}}</a>
           </template>
           <template v-slot:item.created_relvals="{ item }">
             <ul>
@@ -115,16 +118,16 @@ export default {
         {'dbName': 'prepid', 'displayName': 'PrepID', 'visible': 1},
         {'dbName': '_actions', 'displayName': 'Actions', 'visible': 1},
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
-        {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1},
-        {'dbName': 'conditions_globaltag', 'displayName': 'GlobalTag', 'visible': 1},
+        {'dbName': 'campaign', 'displayName': 'Campaign', 'visible': 1},
         {'dbName': 'events', 'displayName': 'Events', 'visible': 1},
         {'dbName': 'processing_string', 'displayName': 'Processing String', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
+        {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
         {'dbName': 'extension_number', 'displayName': 'Extension', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
-        {'dbName': 'reuse_gensim', 'displayName': 'Reuse GEN-SIM', 'visible': 0},
+        {'dbName': 'memory', 'displayName': 'Memory', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
         {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 0},
       ],

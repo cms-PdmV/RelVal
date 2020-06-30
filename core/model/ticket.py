@@ -13,9 +13,9 @@ class Ticket(ModelBase):
         # PrepID
         'prepid': '',
         # CMSSW release
-        'cmssw_release': '',
-        # Global tag
-        'conditions_globaltag': '',
+        'campaign': '',
+        # CPU cores
+        'cpu_cores': 1,
         # List of prepids of relvals that were created from this ticket
         'created_relvals': [],
         # Statistics - 9k or 100k events
@@ -24,14 +24,16 @@ class Ticket(ModelBase):
         'extension_number': 0,
         # Action history
         'history': [],
+        # Label to be used in runTheMatrix
+        'label': '',
+        # Memory in MB
+        'memory': 2000,
         # User notes
         'notes': '',
-        # Processing string - "label"
+        # Processing string
         'processing_string': '',
         # Type of relval: standard, upgrade
         'relval_set': 'standard',
-        # Whether to reuse GEN-SIM samples
-        'reuse_gensim': False,
         # TODO: document
         'sample_tag': '',
         # Status is either new or done
@@ -42,13 +44,14 @@ class Ticket(ModelBase):
 
     lambda_checks = {
         'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,75}'),
-        'cmssw_release': ModelBase.lambda_check('cmssw_release'),
-        'conditions_globaltag': ModelBase.lambda_check('globaltag'),
-        'events': lambda e: e in (9000, 100000),
+        'campaign': ModelBase.lambda_check('campaign'),
+        'cpu_cores': ModelBase.lambda_check('cpu_cores'),
+        'events': lambda e: e > 0,
         'extension_number': lambda number: 0 <= number <= 50,
+        'label': ModelBase.lambda_check('label'),
+        'memory': ModelBase.lambda_check('memory'),
         'processing_string': ModelBase.lambda_check('processing_string'),
         'relval_set': ModelBase.lambda_check('relval_set'),
-        'reuse_gensim': lambda reuse: isinstance(reuse, bool),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
         'status': lambda status: status in ('new', 'done'),
         '__workflow_ids': lambda wf: isinstance(wf, (float, int)) and wf > 0,
@@ -62,10 +65,8 @@ class Ticket(ModelBase):
             for workflow_id in json_input['workflow_ids']:
                 if isinstance(workflow_id, (float, int)):
                     workflow_ids.append(workflow_id)
-                elif '.' in workflow_id:
-                    workflow_ids.append(float(workflow_id))
                 else:
-                    workflow_ids.append(int(workflow_id))
+                    workflow_ids.append(float(workflow_id))
 
             json_input['workflow_ids'] = workflow_ids
 

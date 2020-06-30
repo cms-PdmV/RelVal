@@ -70,8 +70,14 @@ def main():
             if '-n' in workflow_step:
                 workflow_step['--number'] = workflow_step.pop('-n')
 
-            if '--data' in workflow_step:	
+            if '--data' in workflow_step:
                 workflow_step['--data'] = True
+
+            if '--runUnscheduled' in workflow_step:
+                workflow_step['--runUnscheduled'] = True
+
+            if '--mc' in workflow_step:
+                workflow_step['--mc'] = True
 
             workflow_step['--fileout'] = 'file:step%s.root' % (workflow_step_index + 1)
             if workflow_step_index > 0:

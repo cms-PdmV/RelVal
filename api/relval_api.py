@@ -30,7 +30,7 @@ class CreateRelValAPI(APIBase):
         data = flask.request.data
         relval_json = json.loads(data.decode('utf-8'))
         obj = relval_controller.create(relval_json)
-        return self.output_text({'response': obj, 'success': True, 'message': ''})
+        return self.output_text({'response': obj.get_json(), 'success': True, 'message': ''})
 
 
 class DeleteRelValAPI(APIBase):
@@ -115,3 +115,59 @@ class GetEditableRelValAPI(APIBase):
                                               'editing_info': editing_info},
                                  'success': True,
                                  'message': ''})
+
+
+class GetCMSDriverAPI(APIBase):
+    """
+    Endpoint for getting a bash script with cmsDriver.py commands of RelVal
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.exceptions_to_errors
+    def get(self, prepid=None):
+        """
+        Get a text file with RelVal's cmsDriver.py commands
+        """
+        relval = relval_controller.get(prepid)
+        commands = relval_controller.get_cmsdriver(relval)
+        return self.output_text(commands, content_type='text/plain')
+
+
+class GetConfigUploadAPI(APIBase):
+    """
+    Endpoint for getting a bash script to upload configs to ReqMgr config cache
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.exceptions_to_errors
+    def get(self, prepid=None):
+        """
+        Get a text file with relval's cmsDriver.py commands
+        """
+        relval = relval_controller.get(prepid)
+        commands = relval_controller.get_config_upload_file(relval)
+        return self.output_text(commands, content_type='text/plain')
+
+
+class GetRelValJobDictAPI(APIBase):
+    """
+    Endpoint for getting a dictionary with job information for ReqMgr2
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.exceptions_to_errors
+    def get(self, prepid=None):
+        """
+        Get a text file with ReqMgr2's dictionary
+        """
+        relval = relval_controller.get(prepid)
+        dict_string = json.dumps(relval_controller.get_job_dict(relval),
+                                 indent=2,
+                                 sort_keys=True)
+        return self.output_text(dict_string, content_type='text/plain')

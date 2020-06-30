@@ -19,7 +19,15 @@ from api.relval_api import (CreateRelValAPI,
                             DeleteRelValAPI,
                             UpdateRelValAPI,
                             GetRelValAPI,
-                            GetEditableRelValAPI)
+                            GetEditableRelValAPI,
+                            GetCMSDriverAPI,
+                            GetConfigUploadAPI,
+                            GetRelValJobDictAPI)
+from api.campaign_api import (CreateCampaignAPI,
+                              DeleteCampaignAPI,
+                              UpdateCampaignAPI,
+                              GetCampaignAPI,
+                              GetEditableCampaignAPI)
 from api.settings_api import SettingsAPI
 
 log_format = '[%(asctime)s][%(levelname)s] %(message)s'
@@ -106,6 +114,17 @@ api.add_resource(GetRelValAPI, '/api/relvals/get/<string:prepid>')
 api.add_resource(GetEditableRelValAPI,
                  '/api/relvals/get_editable',
                  '/api/relvals/get_editable/<string:prepid>')
+api.add_resource(GetCMSDriverAPI, '/api/relvals/get_cmsdriver/<string:prepid>')
+api.add_resource(GetConfigUploadAPI, '/api/relvals/get_config_upload/<string:prepid>')
+api.add_resource(GetRelValJobDictAPI, '/api/relvals/get_dict/<string:prepid>')
+
+api.add_resource(CreateCampaignAPI, '/api/campaigns/create')
+api.add_resource(DeleteCampaignAPI, '/api/campaigns/delete')
+api.add_resource(UpdateCampaignAPI, '/api/campaigns/update')
+api.add_resource(GetCampaignAPI, '/api/campaigns/get/<string:prepid>')
+api.add_resource(GetEditableCampaignAPI,
+                 '/api/campaigns/get_editable',
+                 '/api/campaigns/get_editable/<string:prepid>')
 
 
 def main():

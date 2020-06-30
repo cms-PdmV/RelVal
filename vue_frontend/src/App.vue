@@ -11,6 +11,12 @@
       <v-btn
         text
         class="mr-2"
+        href="campaigns">
+        <span>Campaigns</span>
+      </v-btn>
+      <v-btn
+        text
+        class="mr-2"
         href="tickets">
         <span>Tickets</span>
       </v-btn>
@@ -200,6 +206,18 @@ h1.page-title {
   background: #dadada !important;
   color: rgba(0, 0, 0, 0.65);
   cursor: not-allowed;
+}
+
+@media all and (max-width:650px){
+  .page-card td{
+      display: block;
+      width: 100%;
+      padding: 1px 0;
+  }
+  .page-card tr{
+      display: block;
+      margin-bottom: 6px;
+  }
 }
 
 </style>

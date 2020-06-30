@@ -6,6 +6,8 @@ import Tickets from '@/components/Tickets'
 import TicketsEdit from '@/components/TicketsEdit'
 import RelVals from '@/components/RelVals'
 import RelValsEdit from '@/components/RelValsEdit'
+import Campaigns from '@/components/Campaigns'
+import CampaignsEdit from '@/components/CampaignsEdit'
 import qs from 'qs';
 
 
@@ -41,6 +43,16 @@ const routes = [
     path: '/relvals',
     name: 'relvals',
     component: RelVals
+  },
+  {
+    path: '/campaigns/edit',
+    name: 'campaigns_edit',
+    component: CampaignsEdit
+  },
+  {
+    path: '/campaigns',
+    name: 'campaigns',
+    component: Campaigns
   },
 ]
 

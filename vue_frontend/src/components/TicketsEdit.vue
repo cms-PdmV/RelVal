@@ -9,12 +9,12 @@
           <td><input type="text" v-model="editableObject.prepid" :disabled="!editingInfo.prepid"></td>
         </tr>
         <tr>
-          <td>CMSSW Release</td>
-          <td><input type="text" v-model="editableObject.cmssw_release" :disabled="!editingInfo.cmssw_release"></td>
+          <td>Campaign</td>
+          <td><input type="text" v-model="editableObject.campaign" :disabled="!editingInfo.campaign"></td>
         </tr>
         <tr>
-          <td>GlobalTag</td>
-          <td><input type="text" v-model="editableObject.conditions_globaltag" :disabled="!editingInfo.conditions_globaltag"></td>
+          <td>CPU Cores</td>
+          <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="32"></td>
         </tr>
         <tr>
           <td>Extension Number</td>
@@ -26,12 +26,15 @@
         </tr>
         <tr>
           <td>Events</td>
-          <td>
-            <select v-model="editableObject.events" :disabled="!editingInfo.events">
-              <option value=9000>9k</option>
-              <option value=100000>100k</option>
-            </select>
-          </td>
+          <td><input type="number" v-model="editableObject.events" :disabled="!editingInfo.events" min="1" step="1000"></td>
+        </tr>
+        <tr>
+          <td>Label</td>
+          <td><input type="text" v-model="editableObject.label" :disabled="!editingInfo.label"></td>
+        </tr>
+        <tr>
+          <td>Memory</td>
+          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="64000" step="1000"></td>
         </tr>
         <tr>
           <td>Notes</td>
@@ -40,10 +43,6 @@
         <tr>
           <td>Processing String</td>
           <td><input type="text" v-model="editableObject.processing_string" :disabled="!editingInfo.processing_string"></td>
-        </tr>
-        <tr>
-          <td>Reuse GEN-SIM</td>
-          <td><v-checkbox v-model="editableObject.reuse_gensim" :disabled="!editingInfo.reuse_gensim" hide-details class="shrink checkbox-margin"></v-checkbox></td>
         </tr>
         <tr>
           <td>Sample Tag</td>
