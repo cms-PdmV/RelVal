@@ -17,14 +17,6 @@
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="32"></td>
         </tr>
         <tr>
-          <td>Extension Number</td>
-          <td>
-            <select v-model="editableObject.extension_number" :disabled="!editingInfo.extension_number">
-              <option v-for="i in 10" :key="i" :value="i - 1">{{i - 1}}</option>
-            </select>
-          </td>
-        </tr>
-        <tr>
           <td>Label</td>
           <td><input type="text" v-model="editableObject.label" :disabled="!editingInfo.label"></td>
         </tr>
@@ -37,12 +29,18 @@
           <td><textarea v-model="editableObject.notes" :disabled="!editingInfo.notes"></textarea></td>
         </tr>
         <tr>
+          <td>Recycle GS</td>
+          <td><input type="checkbox" v-model="editableObject.recycle_gs" :disabled="!editingInfo.recycle_gs"/></td>
+        </tr>
+        <tr>
           <td>RelVal set</td>
           <td>
             <select v-model="editableObject.relval_set" :disabled="!editingInfo.relval_set">
               <option>standard</option>
               <option>upgrade</option>
               <option>generator</option>
+              <option>pileup</option>
+              <option>premix</option>
             </select>
           </td>
         </tr>

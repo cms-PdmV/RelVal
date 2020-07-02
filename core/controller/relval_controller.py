@@ -55,7 +55,6 @@ class RelValController(ControllerBase):
         editing_info['cmssw_release'] = False
         editing_info['conditions_globaltag'] = is_new
         editing_info['cpu_cores'] = is_new
-        editing_info['extension_number'] = True
         editing_info['memory'] = is_new
         editing_info['notes'] = True
         editing_info['relval_set'] = creating_new

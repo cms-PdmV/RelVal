@@ -10,7 +10,7 @@ from core.model.relval_step import RelValStep
 class RelVal(ModelBase):
     """
     PrepID example: CMSSW_11_0_0_pre4__data2018C-1564311759-RunDoubleMuon2018C
-                    {cmssw_release}__{batch_name}-{timestamp}-{first_step_name}
+                    {cmssw_release}__{batch_name}-{timestamp}-{label/first_step_name}
     """
 
     _ModelBase__schema = {
@@ -26,8 +26,6 @@ class RelVal(ModelBase):
         'conditions_globaltag': '',
         # CPU cores
         'cpu_cores': 1,
-        # Extension number is similar sample was already submitted
-        'extension_number': 0,
         # Action history
         'history': [],
         # Label
@@ -46,6 +44,8 @@ class RelVal(ModelBase):
         'steps': [],
         # Workflow ID
         'workflow_id': 0.0,
+        # Workflows name
+        'workflow_name': ''
     }
 
     lambda_checks = {
@@ -54,7 +54,6 @@ class RelVal(ModelBase):
         'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'conditions_globaltag': ModelBase.lambda_check('globaltag'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
-        'extension_number': lambda number: 0 <= number <= 50,
         'label': ModelBase.lambda_check('label'),
         'memory': ModelBase.lambda_check('memory'),
         'relval_set': ModelBase.lambda_check('relval_set'),

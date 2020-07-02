@@ -21,14 +21,6 @@
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="32"></td>
         </tr>
         <tr>
-          <td>Extension Number</td>
-          <td>
-            <select v-model="editableObject.extension_number" :disabled="!editingInfo.extension_number">
-              <option v-for="i in 10" :key="i" :value="i - 1">{{i - 1}}</option>
-            </select>
-          </td>
-        </tr>
-        <tr>
           <td>GlobalTag</td>
           <td><input type="text" v-model="editableObject.conditions_globaltag" :disabled="!editingInfo.conditions_globaltag"></td>
         </tr>

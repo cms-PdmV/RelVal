@@ -123,11 +123,12 @@ export default {
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
-        {'dbName': 'extension_number', 'displayName': 'Extension', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
         {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 0},
+        {'dbName': 'recycle_gs', 'displayName': 'Recycle GS', 'visible': 0},
+        {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
       ],
       headers: [],
       dataItems: [],
@@ -242,12 +243,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-h1 {
-  margin: 8px;
-}
-input[type="text"]:disabled {
-  background: #dddddd;
-}
-</style>

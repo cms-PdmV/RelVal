@@ -124,7 +124,6 @@ export default {
         {'dbName': 'workflow_id', 'displayName': 'Workflow ID', 'visible': 1},
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
-        {'dbName': 'extension_number', 'displayName': 'Extension', 'visible': 0},
         {'dbName': 'conditions_globaltag', 'displayName': 'GlobalTag', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},

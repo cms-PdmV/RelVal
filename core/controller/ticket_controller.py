@@ -58,13 +58,13 @@ class TicketController(ControllerBase):
         editing_info['prepid'] = False
         editing_info['campaign'] = creating_new
         editing_info['cpu_cores'] = not_done
-        editing_info['extension_number'] = not_done
         editing_info['label'] = not_done
         editing_info['memory'] = not_done
         editing_info['notes'] = True
         editing_info['sample_tag'] = not_done
         editing_info['workflow_ids'] = not_done
         editing_info['relval_set'] = not_done
+        editing_info['recycle_gs'] = not_done
         
         return editing_info
 
@@ -95,10 +95,11 @@ class TicketController(ControllerBase):
             relval_set = ticket.get('relval_set')
             cmssw_release = campaign.get('cmssw_release')
             label = ticket.get('label')
-            extension_number = ticket.get('extension_number')
             sample_tag = ticket.get('sample_tag')
             cpu_cores = ticket.get('cpu_cores')
             memory = ticket.get('memory')
+            recycle_gs = ticket.get('recycle_gs')
+            recycle_gs_flag = '-r ' if recycle_gs else ''
             try:
                 workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
                 self.logger.info('Creating RelVals %s for %s', workflow_ids, ticket_prepid)
@@ -128,9 +129,7 @@ class TicketController(ControllerBase):
                            f'cd {cmssw_release}/src',
                            'eval `scram runtime -sh`',
                            f'cd ../../{ticket_prepid}',
-                           'python runTheMatrixPdmV.py -l %s -w %s -o %s' % (workflow_ids,
-                                                                             relval_set,
-                                                                             file_name)]
+                           f'python runTheMatrixPdmV.py -l {workflow_ids} -w {relval_set} -o {file_name} {recycle_gs_flag} -g']
                 out, err, code = ssh_executor.execute_command(command)
                 if code != 0:
                     self.logger.error('Exit code %s creating RelVals:\nError:%s\nOutput:%s',
@@ -147,13 +146,13 @@ class TicketController(ControllerBase):
                 for workflow_id, workflow_dict in workflows.items():
                     workflow_json = {'campaign': campaign_name,
                                      'cpu_cores': cpu_cores,
-                                     'extension_number': extension_number,
                                      'label': label,
                                      'memory': memory,
                                      'relval_set': relval_set,
                                      'sample_tag': sample_tag,
                                      'steps': [],
-                                     'workflow_id': workflow_id}
+                                     'workflow_id': workflow_id,
+                                     'workflow_name': workflow_dict['name']}
 
                     for step_dict in workflow_dict['steps']:
                         arguments = step_dict.get('arguments', {})

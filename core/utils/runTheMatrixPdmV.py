@@ -1,10 +1,12 @@
 """
 PdmV's simplified implementation of runTheMatrix.py
 """
+import sys
 import argparse
 import json
 import importlib
 import Configuration.PyReleaseValidation.relval_steps as steps_module
+from Configuration.AlCa.autoCond import autoCond as auto_globaltag
 
 
 def split_command_to_dict(command):
@@ -28,18 +30,48 @@ def get_workflows_module(name):
     return workflows_module
 
 
+def resolve_globaltag(tag):
+    if not tag.startswith('auto:'):
+        return tag
+
+    tag = tag.replace('auto:', '', 1)
+    return auto_globaltag[tag]
+
+
+def build_cmsdriver(arguments, step_index):
+    built_arguments = ''
+    driver_step_name = 'step%s' % (step_index + 1)
+    for arg_name in sorted(arguments.keys(), key=lambda x: x.replace('-', '', 2).lower()):
+        arg_value = arguments[arg_name]
+        if arg_name.lower() == 'cfg':
+            driver_step_name = arg_value
+            continue
+
+        if isinstance(arg_value, bool):
+            if arg_value:
+                built_arguments += '%s ' % (arg_name)
+            else:
+                built_arguments += '%s %s ' % (arg_name, arg_value)
+
+    return 'cmsDriver.py %s %s' % (driver_step_name, built_arguments.strip())
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-l', '--list', dest='workflow_ids')
-    parser.add_argument('-w', '--what', dest='workflows_file')
-    parser.add_argument('-c', '--command', dest='command')
-    parser.add_argument('-o', '--output', dest='output_file')
-
+    parser.add_argument('-l', '--list', dest='workflow_ids', help='Comma separated list of workflow ids')
+    parser.add_argument('-w', '--what', dest='workflows_file', help='RelVal workflows file: standard, upgrade, ...')
+    parser.add_argument('-c', '--command', dest='command', help='Additional command to add to each cmsDriver')
+    parser.add_argument('-o', '--output', dest='output_file', help='Output file name')
+    parser.add_argument('-r', '--recycle_gs', dest='recycle_gs', action='store_true', help='Recycle GS')
+    parser.add_argument('-g', '--resolve_gt', dest='resolve_gt', action='store_true', help='Resolve auto: conditions to global tags')
     opt = parser.parse_args()
 
     workflow_ids = [float(x) for x in opt.workflow_ids.split(',')]
     workflow_ids = sorted(list(set(workflow_ids)))
     print('Given workflow ids (%s): %s' % (len(workflow_ids), ', '.join([str(x) for x in workflow_ids])))
+    print('Workflows file: %s' % (opt.workflows_file))
+    print('Output file: %s' % (opt.output_file))
+    print('Recycle GS: %s' % (opt.recycle_gs))
 
     workflows_module = get_workflows_module(opt.workflows_file)
 
@@ -47,14 +79,27 @@ def main():
     for workflow_id in workflow_ids:
         workflow_dict = {}
         print('Getting %s workflow' % (workflow_id))
+        # workflow_matrix is a list where first element is the name of workflow
+        # and second element is list of step names
+        # if workflow name is not present, first step name is used
         workflow_matrix = workflows_module.workflows[workflow_id]
         print('Matrix: %s' % (workflow_matrix))
-        workflows[workflow_id] = {'steps': []}
+        workflows[workflow_id] = {'steps': [], 'name': workflow_matrix[0]}
         if workflow_matrix.overrides:
             print('Overrides: %s' % (workflow_matrix.overrides))
 
+        # Go through steps and get the arguments
         for workflow_step_index, workflow_step_name in enumerate(workflow_matrix[1]):
             print('Step %s. %s' % (workflow_step_index + 1, workflow_step_name))
+            if workflow_step_index == 0 and opt.recycle_gs:
+                # Add INPUT to step name to recycle GS
+                workflow_step_name += 'INPUT'
+                print('Step name changed to %s to recycle input' % (workflow_step_name))
+
+            if workflow_step_name not in steps_module.steps:
+                print('Could not find %s in %s module' % (workflow_step_name, opt.workflows_file))
+                sys.exit(1)
+
             # Merge user command, workflow and overrides
             workflow_step = steps_module.steps[workflow_step_name]
             # Because first item in the list has highest priority
@@ -79,6 +124,9 @@ def main():
             if '--mc' in workflow_step:
                 workflow_step['--mc'] = True
 
+            if opt.resolve_gt and '--conditions' in workflow_step:
+                workflow_step['--conditions'] = resolve_globaltag(workflow_step['--conditions'])
+
             workflow_step['--fileout'] = 'file:step%s.root' % (workflow_step_index + 1)
             if workflow_step_index > 0:
                 if 'HARVESTING' in workflow_step.get('--step', ''):
@@ -90,39 +138,27 @@ def main():
                     else:
                         workflow_step['--filein'] = 'file:step%s.root' % (workflow_step_index)
 
-            workflows[workflow_id]['steps'].append({'name': workflow_step_name})
-            print('%s (%s)' % (workflow_step, type(workflow_step)))
+            workflows[workflow_id]['steps'].append({'workflow_name': workflow_step_name})
             if 'INPUT' in workflow_step:
-                print('%s %s' %(workflow_step['INPUT'].dataSet, workflow_step['INPUT'].ls))
+                print('Dataset: %s' % (workflow_step['INPUT'].dataSet))
+                print('Lumisections: %s' % (workflow_step['INPUT'].ls))
+                print('Label: %s' % (workflow_step['INPUT'].label))
+                print('Events: %s' % (workflow_step['INPUT'].events))
                 workflows[workflow_id]['steps'][-1]['input'] = {'dataset': workflow_step['INPUT'].dataSet,
                                                                 'lumisection': workflow_step['INPUT'].ls,
                                                                 'label': workflow_step['INPUT'].label,
                                                                 'events': workflow_step['INPUT'].events}
             else:
-                arguments = ''
-                driver_step_name = 'step%s' % (workflow_step_index + 1)
-                for arg_name in sorted(workflow_step.keys(), key=lambda x: x.replace('-', '', 2)):
-                    arg_value = workflow_step[arg_name]
-                    if arg_name.lower() == 'cfg':
-                        driver_step_name = arg_value
-                        continue
-
-                    if arg_value == '':
-                        arguments += '%s ' % (arg_name)
-                    else:
-                        arguments += '%s %s ' % (arg_name, arg_value)
-
-                arguments = arguments.rstrip()
                 workflows[workflow_id]['steps'][-1]['arguments'] = workflow_step
-                print('cmsDriver.py %s %s' % (driver_step_name, arguments))
+                print(build_cmsdriver(workflow_step, workflow_step_index))
 
     print(json.dumps(workflows, indent=2, sort_keys=True))
-    for workflow_id, workflow_dict in workflows.items():
-        with open('%s.json' % (workflow_id), 'w') as workflow_file:
-            json.dump(workflow_dict, workflow_file)
-
-    with open(opt.output_file, 'w') as workflows_file:
-        json.dump(workflows, workflows_file)
+    if opt.output_file:
+        # for workflow_id, workflow_dict in workflows.items():
+        #     with open('%s.json' % (workflow_id), 'w') as workflow_file:
+        #         json.dump(workflow_dict, workflow_file)
+        with open(opt.output_file, 'w') as workflows_file:
+            json.dump(workflows, workflows_file)
 
 
 if __name__ == '__main__':

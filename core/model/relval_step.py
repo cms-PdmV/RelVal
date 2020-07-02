@@ -100,6 +100,9 @@ class RelValStep(ModelBase):
         lumis_name = f'step{index + 1}_lumi_ranges.txt'
         dataset = input_info['dataset']
         runs = input_info['lumisection']
+        if not runs:
+            return f'# Nothing to do for step {index + 1}, input dataset for next step: {dataset}'
+
         comment = f'# Arguments for input step:\n'
         command = f'# Command for input step:\n'
         comment += f'#   dataset: {dataset}\n'
@@ -146,8 +149,12 @@ class RelValStep(ModelBase):
             previous_step = self.parent().get('steps')[index - 1]
             previous_step_type = previous_step.get_step_type()
             if previous_step_type == 'input_file':
-                arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
-                arguments_dict['lumiToProcess'] = f'"step{index}_lumi_ranges.txt"'
+                if previous_step.get('input')['lumisection']:
+                    arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
+                    arguments_dict['lumiToProcess'] = f'"step{index}_lumi_ranges.txt"'
+                else:
+                    previous_step_dataset = previous_step.get('input')['dataset']
+                    arguments_dict['filein'] = f'"dbs:{previous_step_dataset}"'
             else:
                 if 'HARVESTING' in arguments_dict['step']:
                     arguments_dict['filein'] = f'"file:step{index}_inDQM.root"'
