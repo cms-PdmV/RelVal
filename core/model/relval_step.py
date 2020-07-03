@@ -59,6 +59,8 @@ class RelValStep(ModelBase):
         Build a cmsDriver command from given arguments
         Add comment in front of the command
         """
+        # cfg attribyte might have step name
+        cmsdriver_type = arguments.get('cfg', cmsdriver_type)
         self.logger.info('Generating %s cmdDriver', cmsdriver_type)
         # Actual command
         command = f'# Command for {cmsdriver_type}:\ncmsDriver.py {cmsdriver_type}'
@@ -68,7 +70,7 @@ class RelValStep(ModelBase):
             if not arguments[key]:
                 continue
 
-            if key in 'extra':
+            if key in ('extra', 'cfg'):
                 continue
 
             if isinstance(arguments[key], bool):

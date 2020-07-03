@@ -152,7 +152,7 @@ class TicketController(ControllerBase):
                                      'sample_tag': sample_tag,
                                      'steps': [],
                                      'workflow_id': workflow_id,
-                                     'workflow_name': workflow_dict['name']}
+                                     'workflow_name': workflow_dict['workflow_name']}
 
                     for step_dict in workflow_dict['steps']:
                         arguments = step_dict.get('arguments', {})

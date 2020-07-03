@@ -50,8 +50,8 @@ def build_cmsdriver(arguments, step_index):
         if isinstance(arg_value, bool):
             if arg_value:
                 built_arguments += '%s ' % (arg_name)
-            else:
-                built_arguments += '%s %s ' % (arg_name, arg_value)
+        else:
+            built_arguments += '%s %s ' % (arg_name, arg_value)
 
     return 'cmsDriver.py %s %s' % (driver_step_name, built_arguments.strip())
 
@@ -66,31 +66,31 @@ def main():
     parser.add_argument('-g', '--resolve_gt', dest='resolve_gt', action='store_true', help='Resolve auto: conditions to global tags')
     opt = parser.parse_args()
 
-    workflow_ids = [float(x) for x in opt.workflow_ids.split(',')]
-    workflow_ids = sorted(list(set(workflow_ids)))
-    print('Given workflow ids (%s): %s' % (len(workflow_ids), ', '.join([str(x) for x in workflow_ids])))
+    workflow_ids = sorted(list(set([float(x) for x in opt.workflow_ids.split(',')])))
+    print('Given workflow ids (%s): %s' % (len(workflow_ids), workflow_ids))
     print('Workflows file: %s' % (opt.workflows_file))
+    print('User given command: %s' % (opt.command))
     print('Output file: %s' % (opt.output_file))
     print('Recycle GS: %s' % (opt.recycle_gs))
+    print('Resolve globaltag: %s' % (opt.resolve_gt))
 
     workflows_module = get_workflows_module(opt.workflows_file)
 
     workflows = {}
     for workflow_id in workflow_ids:
-        workflow_dict = {}
         print('Getting %s workflow' % (workflow_id))
         # workflow_matrix is a list where first element is the name of workflow
         # and second element is list of step names
         # if workflow name is not present, first step name is used
         workflow_matrix = workflows_module.workflows[workflow_id]
         print('Matrix: %s' % (workflow_matrix))
-        workflows[workflow_id] = {'steps': [], 'name': workflow_matrix[0]}
+        workflows[workflow_id] = {'steps': [], 'workflow_name': workflow_matrix[0]}
         if workflow_matrix.overrides:
             print('Overrides: %s' % (workflow_matrix.overrides))
 
         # Go through steps and get the arguments
         for workflow_step_index, workflow_step_name in enumerate(workflow_matrix[1]):
-            print('Step %s. %s' % (workflow_step_index + 1, workflow_step_name))
+            print('\nStep %s. %s' % (workflow_step_index + 1, workflow_step_name))
             if workflow_step_index == 0 and opt.recycle_gs:
                 # Add INPUT to step name to recycle GS
                 workflow_step_name += 'INPUT'
@@ -109,54 +109,62 @@ def main():
                 print('Merging %s' % (command_dict))
                 workflow_step = steps_module.merge([command_dict, workflow_step])
 
-            if '-s' in workflow_step:
-                workflow_step['--step'] = workflow_step.pop('-s')
-
-            if '-n' in workflow_step:
-                workflow_step['--number'] = workflow_step.pop('-n')
-
-            if '--data' in workflow_step:
-                workflow_step['--data'] = True
-
-            if '--runUnscheduled' in workflow_step:
-                workflow_step['--runUnscheduled'] = True
-
-            if '--mc' in workflow_step:
-                workflow_step['--mc'] = True
-
-            if opt.resolve_gt and '--conditions' in workflow_step:
-                workflow_step['--conditions'] = resolve_globaltag(workflow_step['--conditions'])
-
-            workflow_step['--fileout'] = 'file:step%s.root' % (workflow_step_index + 1)
-            if workflow_step_index > 0:
-                if 'HARVESTING' in workflow_step.get('--step', ''):
-                    workflow_step['--filein'] = 'file:step%s_inDQM.root' % (workflow_step_index)
-                else:
-                    if 'input' in workflows[workflow_id]['steps'][-1]:
-                        workflow_step['--filein'] = 'filelist:step%s_files.txt' % (workflow_step_index)
-                        workflow_step['--lumiToProcess'] = ' step%s_lumi_ranges.txt' % (workflow_step_index)
-                    else:
-                        workflow_step['--filein'] = 'file:step%s.root' % (workflow_step_index)
-
-            workflows[workflow_id]['steps'].append({'workflow_name': workflow_step_name})
+            step = {'name': workflow_step_name}
+            workflows[workflow_id]['steps'].append(step)
             if 'INPUT' in workflow_step:
-                print('Dataset: %s' % (workflow_step['INPUT'].dataSet))
-                print('Lumisections: %s' % (workflow_step['INPUT'].ls))
-                print('Label: %s' % (workflow_step['INPUT'].label))
-                print('Events: %s' % (workflow_step['INPUT'].events))
-                workflows[workflow_id]['steps'][-1]['input'] = {'dataset': workflow_step['INPUT'].dataSet,
-                                                                'lumisection': workflow_step['INPUT'].ls,
-                                                                'label': workflow_step['INPUT'].label,
-                                                                'events': workflow_step['INPUT'].events}
+                # This step has input dataset
+                step['input'] = {'dataset': workflow_step['INPUT'].dataSet,
+                                 'lumisection': workflow_step['INPUT'].ls,
+                                 'label': workflow_step['INPUT'].label,
+                                 'events': workflow_step['INPUT'].events}
+                print(step)
             else:
-                workflows[workflow_id]['steps'][-1]['arguments'] = workflow_step
-                print(build_cmsdriver(workflow_step, workflow_step_index))
+                # This is cmsDriver step
+                # Rename some arguments
+                if '-s' in workflow_step:
+                    workflow_step['--step'] = workflow_step.pop('-s')
+
+                if '-n' in workflow_step:
+                    workflow_step['--number'] = workflow_step.pop('-n')
+
+                if 'cfg' in workflow_step:
+                    workflow_step['_cfg'] = workflow_step.pop('cfg')
+
+                # Change "flags" value to True, e.g. --data, --mc, --fast
+                for arg_name, arg_value in workflow_step.items():
+                    if arg_value == '':
+                        workflow_step[arg_name] = True
+
+                if opt.resolve_gt and '--conditions' in workflow_step:
+                    workflow_step['--conditions'] = resolve_globaltag(workflow_step['--conditions'])
+
+                step['arguments'] = workflow_step
+                print(build_cmsdriver(step['arguments'], workflow_step_index))
+
+            # workflow_step['--fileout'] = 'file:step%s.root' % (workflow_step_index + 1)
+            # if workflow_step_index > 0:
+            #     if 'HARVESTING' in workflow_step.get('--step', ''):
+            #         # Find a DQM step
+            #         for dqm_step_index, dqm_step in enumerate(workflows[workflow_id]['steps']):
+            #             print('%s %s' % (dqm_step_index, dqm_step))
+            #             if 'DQM' in dqm_step.get('arguments', {}).get('--step', ''):
+            #                 workflow_step['--filein'] = 'file:step%s_inDQM.root' % (dqm_step_index + 1)
+            #                 break
+            #         else:
+            #             print('Could not find DQM step?')
+            #    else:
+            #         if 'input' in workflows[workflow_id]['steps'][-1]:
+            #             workflow_step['--filein'] = 'filelist:step%s_files.txt' % (workflow_step_index)
+            #             workflow_step['--lumiToProcess'] = ' step%s_lumi_ranges.txt' % (workflow_step_index)
+            #         else:
+            #             for step_index, step in enumerate(workflows[workflow_id]['steps']):
+            #                 print('%s %s'% (step_index, step))
+            #                 if 'HARVESTING' not in step.get('arguments', {}).get('--step', ''):
+            #                     workflow_step['--filein'] = 'file:step%s.root' % (step_index + 1)
+
 
     print(json.dumps(workflows, indent=2, sort_keys=True))
     if opt.output_file:
-        # for workflow_id, workflow_dict in workflows.items():
-        #     with open('%s.json' % (workflow_id), 'w') as workflow_file:
-        #         json.dump(workflow_dict, workflow_file)
         with open(opt.output_file, 'w') as workflows_file:
             json.dump(workflows, workflows_file)
 

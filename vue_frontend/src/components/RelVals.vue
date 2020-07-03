@@ -1,10 +1,10 @@
 <template>
-  <div style="height: calc(100vh - 128px); overflow: auto;">
+  <div style="height: calc(100vh - 118px); overflow: auto;">
     <div style="display: flex;">
       <div style="flex: 1 1 auto;">
         <div>
-          <div style="width: calc(100vw - 32px); position: sticky; left: 16px;">
-            <h1>RelVals</h1>
+          <div style="width: calc(100vw - 16px); position: sticky; left: 8px;">
+            <h1 class="page-title">RelVals</h1>
             <ColumnSelector :columns="columns"
                             v-on:updateColumns="updateTableColumns"/>
           </div>
@@ -45,6 +45,9 @@
                 <small><pre>{{JSON.stringify(Object.keys(step.arguments).length ? step.arguments : step.input, null, 2)}}</pre></small>
               </li>
             </ul>
+          </template>
+          <template v-slot:item._workflow="{ item }">
+            {{item.workflow_id}} <span v-if="item.workflow_name">({{item.workflow_name}})</span>
           </template>
         </v-data-table>
       </div>
@@ -121,13 +124,14 @@ export default {
         {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 1},
         {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
-        {'dbName': 'workflow_id', 'displayName': 'Workflow ID', 'visible': 1},
+        {'dbName': '_workflow', 'displayName': 'Workflow', 'visible': 1},
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
         {'dbName': 'conditions_globaltag', 'displayName': 'GlobalTag', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
         {'dbName': 'steps', 'displayName': 'Steps', 'visible': 0},
+        {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
       ],
       headers: [],
       dataItems: [],
@@ -222,12 +226,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-h1 {
-  margin: 8px;
-}
-input[type="text"]:disabled {
-  background: #dddddd;
-}
-</style>

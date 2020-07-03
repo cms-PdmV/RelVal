@@ -1,10 +1,10 @@
 <template>
-  <div style="height: calc(100vh - 128px); overflow: auto;">
+  <div style="height: calc(100vh - 118px); overflow: auto;">
     <div style="display: flex;">
       <div style="flex: 1 1 auto;">
         <div>
-          <div style="width: calc(100vw - 32px); position: sticky; left: 16px;">
-            <h1>Tickets</h1>
+          <div style="width: calc(100vw - 16px); position: sticky; left: 8px;">
+            <h1 class="page-title">Tickets</h1>
             <ColumnSelector :columns="columns"
                             v-on:updateColumns="updateTableColumns"/>
           </div>

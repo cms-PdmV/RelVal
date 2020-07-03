@@ -1,5 +1,5 @@
 <template>
-  <v-card class="ma-2 pa-2">
+  <v-card class="mb-2 pa-2">
     <h4>Columns</h4>
     <v-row style="margin: 2px;">
       <v-col style="padding: 4px;"
