@@ -63,14 +63,11 @@ class ModelBase():
                     raise Exception('PrepID cannot be empty')
 
                 self.set('prepid', prepid)
-                # CouchDB legacy, can be removed if CouchDB is not used
-                if '_rev' in self.__schema and '_rev' in json_input:
-                    self.__json['_rev'] = json_input['_rev']
 
         else:
             json_input = {}
 
-        ignore_keys = set(['_id', '_rev', 'prepid'])
+        ignore_keys = set(['_id', 'prepid'])
         keys = set(self.__schema.keys())
         if json_input:
             # Just to show errors if any incorrect keys are passed

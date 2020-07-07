@@ -115,10 +115,27 @@ export default {
     this.loading = true;
     let component = this;
     axios.get('api/tickets/get_editable/' + this.prepid).then(response => {
-      component.editableObject = response.data.response.object;
-      component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
-      component.editingInfo = response.data.response.editing_info;
-      component.loading = false;
+      if (query.clone && query.clone.length) {
+        axios.get('api/tickets/get_editable/' + query.clone).then(templateResponse => {
+          templateResponse.data.response.object.prepid = response.data.response.object.prepid;
+          templateResponse.data.response.object.history = response.data.response.object.history;
+          templateResponse.data.response.object.status = response.data.response.object.status;
+          templateResponse.data.response.object.created_relvals = response.data.response.object.created_relvals;
+          component.editableObject = templateResponse.data.response.object;
+          component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
+          component.editingInfo = response.data.response.editing_info;
+          component.loading = false;
+        }).catch(error => {
+          component.loading = false;
+          console.log(error);
+          this.showError('Error fetching editing information', error.response.data.message);
+        });
+      } else {
+        component.editableObject = response.data.response.object;
+        component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
+        component.editingInfo = response.data.response.editing_info;
+        component.loading = false;
+      }
     }).catch(error => {
       component.loading = false;
       console.log(error);

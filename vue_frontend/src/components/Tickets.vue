@@ -20,6 +20,7 @@
           <template v-slot:item._actions="{ item }">
             <a :href="'tickets/edit?prepid=' + item.prepid" v-if="role('manager')" title="Edit ticket">Edit</a>&nbsp;
             <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager')" title="Delete ticket">Delete</a>&nbsp;
+            <a :href="'tickets/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone ticket">Clone</a>&nbsp;
             <a style="text-decoration: underline;" @click="showCreateRelValsDialog(item)" v-if="role('manager') && item.status == 'new'" title="Create RelVals from this ticket">Create RelVals</a>&nbsp;
           </template>
           <template v-slot:item.prepid="{ item }">

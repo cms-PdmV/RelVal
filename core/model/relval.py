@@ -83,7 +83,7 @@ class RelVal(ModelBase):
         """
         built_command = ''
         for step in self.get('steps'):
-            built_command += step.get_cmsdriver()
+            built_command += step.get_command()
             built_command += '\n\n'
 
         return built_command.strip()

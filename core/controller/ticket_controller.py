@@ -5,13 +5,13 @@ import json
 import os
 from random import Random
 from core.model.ticket import Ticket
-from core.model.relval import RelVal
 from core.model.campaign import Campaign
 from core.controller.controller_base import ControllerBase
 from core.controller.relval_controller import RelValController
 from core.database.database import Database
 from core.utils.ssh_executor import SSHExecutor
 from core.utils.settings import Settings
+from core.utils.common_utils import clean_split
 
 
 class TicketController(ControllerBase):
@@ -143,6 +143,8 @@ class TicketController(ControllerBase):
                 with open(f'/tmp/{file_name}', 'r') as workflows_file:
                     workflows = json.load(workflows_file)
 
+                os.remove(f'/tmp/{file_name}')
+                # Iterate through workflows and create RelVals
                 for workflow_id, workflow_dict in workflows.items():
                     workflow_json = {'campaign': campaign_name,
                                      'cpu_cores': cpu_cores,
@@ -167,6 +169,15 @@ class TicketController(ControllerBase):
                         if '--lumiToProcess' in arguments:
                             del arguments['--lumiToProcess']
 
+                        if '--step' in arguments:
+                            arguments['--step'] = clean_split(arguments['--step'])
+
+                        if '--eventcontent' in arguments:
+                            arguments['--eventcontent'] = clean_split(arguments['--eventcontent'])
+
+                        if '--datatier' in arguments:
+                            arguments['--datatier'] = clean_split(arguments['--datatier'])
+
                         workflow_json['steps'].append({'name': step_dict['name'],
                                                        'arguments': arguments,
                                                        'input': input_dict})
@@ -175,7 +186,6 @@ class TicketController(ControllerBase):
                     created_relvals.append(relval)
                     self.logger.info('Created %s', relval.get_prepid())
 
-                os.remove(f'/tmp/{file_name}')
                 created_relval_prepids = [r.get('prepid') for r in created_relvals]
                 ticket.set('created_relvals', created_relval_prepids)
                 ticket.set('status', 'done')

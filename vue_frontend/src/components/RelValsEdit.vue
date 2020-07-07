@@ -3,6 +3,7 @@
     <h1 class="page-title" v-if="creatingNew"><span class="font-weight-light">Creating</span> new RelVal</h1>
     <h1 class="page-title" v-else><span class="font-weight-light">Editing RelVal</span> {{prepid}}</h1>
     <v-card raised class="page-card">
+      <small style="font-size: 0.7em"><pre>{{JSON.stringify(editableObject, null, 2)}}</pre></small>
       <table v-if="editableObject">
         <tr>
           <td>PrepID</td>

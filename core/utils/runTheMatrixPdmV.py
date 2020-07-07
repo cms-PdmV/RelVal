@@ -1,6 +1,7 @@
 """
 PdmV's simplified implementation of runTheMatrix.py
 """
+from __future__ import print_function
 import sys
 import argparse
 import json
@@ -82,6 +83,11 @@ def main():
         # workflow_matrix is a list where first element is the name of workflow
         # and second element is list of step names
         # if workflow name is not present, first step name is used
+        if workflow_id not in workflows_module.workflows:
+            print('Could not find %s in %s module' % (workflow_id, opt.workflows_file),
+                  file=sys.stderr)
+            sys.exit(1)
+
         workflow_matrix = workflows_module.workflows[workflow_id]
         print('Matrix: %s' % (workflow_matrix))
         workflows[workflow_id] = {'steps': [], 'workflow_name': workflow_matrix[0]}
@@ -97,7 +103,8 @@ def main():
                 print('Step name changed to %s to recycle input' % (workflow_step_name))
 
             if workflow_step_name not in steps_module.steps:
-                print('Could not find %s in %s module' % (workflow_step_name, opt.workflows_file))
+                print('Could not find %s in steps module' % (workflow_step_name),
+                      file=sys.stderr)
                 sys.exit(1)
 
             # Merge user command, workflow and overrides
