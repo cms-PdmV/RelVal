@@ -10,41 +10,44 @@ from core.model.model_base import ModelBase
 class RelValStep(ModelBase):
 
     _ModelBase__schema = {
-        # PrepID
+        # Step name
         'name': '',
-        # Arguments if step is a cmsDriver step
-        'arguments': {
-            "beamspot": "",
-            "conditions": "",
-            "customise": "",
-            "data": False,
-            "datatier": [],
-            "era": "",
-            "eventcontent": [],
-            "fast": False,
-            "filetype": "",
-            "hltProcess": "",
-            "mc": False,
-            "no_exec": False,
-            "number": 1,
-            "pileup": "",
-            "pileup_input": "",
-            "process": "",
-            "relval": "",
-            "runUnscheduled": False,
-            "scenario": "",
-            "step": [],
-        },
+        # Step name
+        'cfg': '',
         # Hash of configuration file uploaded to ReqMgr2
         'config_id': '',
+        # Below are cmsDriver arguments or input file info
+        'beamspot': '',
+        # CMSSW version
+        'cmssw_release': '',
+        'conditions': '',
+        'customise': '',
+        'data': False,
+        'datatier': [],
+        'era': '',
+        'eventcontent': [],
+        'fast': False,
+        'filetype': '',
+        'hltProcess': '',
         # Input information if step is list of input files
-        'input': {
-            "dataset": "",
-            "lumisections": {},
-            "label": "",
-            "events": 0,
-        },
+        'input_dataset': '',
+        'input_lumisection': {},
+        'input_label': '',
+        'input_events': '',
+        'lumis_per_job': '',
+        'mc': False,
+        'no_exec': False,
+        'number': '',
+        'pileup': '',
+        'pileup_input': '',
+        'process': '',
+        'relval': '',
+        'runUnscheduled': False,
+        'scenario': '',
+        'step': [],
     }
+
+    __common_attributes = {'extra', 'cfg', 'name', 'cmssw_release', 'lumis_per_job'}
 
     lambda_checks = {
         'config_id': lambda cid: ModelBase.matches_regex(cid, '[a-f0-9]{0,50}'),
@@ -55,13 +58,11 @@ class RelValStep(ModelBase):
         if json_input:
             json_input = deepcopy(json_input)
             # Remove -- from argument names
-            if json_input.get('input', {}).get('dataset'):
-                # Input step
-                json_input['arguments'] = {}
+            json_input = {k.lstrip('-'): v for k, v in json_input.items()}
+            if json_input.get('input_dataset'):
+                json_input = {k: v for k, v in json_input.items() if k.startswith('input_') or k in RelValStep.__common_attributes}
             else:
-                # cmsDriver step
-                json_input['arguments'] = {k.lstrip('-'): v for k, v in json_input['arguments'].items()}
-                json_input['input'] = {}
+                json_input = {k: v for k, v in json_input.items() if not k.startswith('input_')}
 
         ModelBase.__init__(self, json_input)
         if parent:
@@ -81,7 +82,7 @@ class RelValStep(ModelBase):
         """
         Return whether this is cmsDriver or input file step
         """
-        if self.get('input').get('dataset'):
+        if self.get('input_dataset'):
             return 'input_file'
 
         return 'cmsDriver'
@@ -92,7 +93,10 @@ class RelValStep(ModelBase):
         Add comment in front of the command
         """
         # cfg attribyte might have step name
-        cmsdriver_type = arguments.get('cfg', f'step{step_index}')
+        cmsdriver_type = arguments.get('cfg')
+        if not cmsdriver_type:
+            cmsdriver_type = f'step{step_index + 1}'
+
         self.logger.info('Generating %s cmsDriver for step %s', cmsdriver_type, step_index)
         # Actual command
         command = f'# Command for step {step_index + 1}:\ncmsDriver.py {cmsdriver_type}'
@@ -102,7 +106,7 @@ class RelValStep(ModelBase):
             if not arguments[key]:
                 continue
 
-            if key in ('extra', 'cfg'):
+            if key in RelValStep.__common_attributes:
                 continue
 
             if isinstance(arguments[key], bool):
@@ -114,8 +118,8 @@ class RelValStep(ModelBase):
             command += f' --{key} {arguments[key]}'.rstrip()
             comment += f'# --{key} {arguments[key]}'.rstrip() + '\n'
 
-        if arguments.get('extra'):
-            extra_value = arguments['extra']
+        extra_value = arguments.get('extra')
+        if extra_value:
             command += f' {extra_value}'
             comment += f'# <extra> {extra_value}\n'
 
@@ -124,12 +128,12 @@ class RelValStep(ModelBase):
 
         return comment + '\n' + command
 
-    def __build_das_command(self, step_index, input_info):
+    def __build_das_command(self, step_index, arguments):
         """
         Build a dasgoclient command to fetch input dataset file names
         """
-        dataset = input_info['dataset']
-        runs = input_info['lumisection']
+        dataset = arguments['input_dataset']
+        runs = arguments['input_lumisection']
         if not runs:
             return f'# Step {step_index + 1} is input dataset for next step: {dataset}'
 
@@ -156,13 +160,12 @@ class RelValStep(ModelBase):
         Return a cmsDriver command for this step
         Config file is named like this
         """
-        input_dict = self.get('input')
+        arguments_dict = self.get_json()
         step_type = self.get_step_type()
         index = self.get_index_in_parent()
         if index == 0 and step_type == 'input_file':
-            return self.__build_das_command(index, input_dict)
+            return self.__build_das_command(index, arguments_dict)
 
-        arguments_dict = dict(self.get('arguments'))
         # Delete sequence metadata
         if 'config_id' in arguments_dict:
             del arguments_dict['config_id']
@@ -174,46 +177,87 @@ class RelValStep(ModelBase):
         arguments_dict['python_filename'] = f'{name}.py'
         arguments_dict['no_exec'] = True
 
-        skip_eventcontent = {'DQM'}
         if index != 0:
             previous = all_steps[index - 1]
             previous_type = previous.get_step_type()
             if previous_type == 'input_file':
-                previous_input = previous.get('input')
-                if previous_input['lumisection']:
+                previous_lumisection = previous.get('input_lumisection')
+                if previous_lumisection:
                     # If there are lumi ranges, add a file with them and list of files as input
                     arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
                     arguments_dict['lumiToProcess'] = f'"step{index}_lumi_ranges.txt"'
                 else:
                     # If there are no lumi ranges, use input file normally
-                    previous_dataset = previous_input['dataset']
+                    previous_dataset = previous.get('input_dataset')
                     arguments_dict['filein'] = f'"dbs:{previous_dataset}"'
             else:
-                previous_arguments = previous.get('arguments')
-                previous_eventcontent = previous_arguments.get('eventcontent', [])
-                previous_eventcontent = [x for x in previous_eventcontent if x not in skip_eventcontent]
-                if self.__has_step('HARVESTING', arguments_dict['step']):
-                    arguments_dict['filein'] = f'"file:{self.__dqm_step_output(all_steps)}"'
+                input_step_index = self.get_input_step_index()
+                input_eventcontent = self.get_input_eventcontent()
+                if not input_eventcontent:
+                    arguments_dict['filein'] = f'file:step{input_step_index + 1}.root"'
                 else:
-                    arguments_dict['filein'] = f'"file:step{index}.root"'
+                    arguments_dict['filein'] = f'file:step{input_step_index + 1}_in{input_eventcontent}.root"'
 
         cms_driver_command = self.__build_cmsdriver(index, arguments_dict)
         return cms_driver_command
 
-    def __has_step(self, step, list_of_steps):
-        if isinstance(list_of_steps, str):
-            self.logger.warning('Conversting str steps to a list')
-            list_of_steps = list_of_steps.split(',')
-
-        for one_step in list_of_steps:
+    def has_step(self, step):
+        for one_step in self.get('step'):
             if one_step.startswith(step):
                 return True
 
         return False
 
-    def __dqm_step_output(self, all_steps):
-        for step_index, step in enumerate(all_steps):
-            if self.__has_step('DQM', step.get('arguments').get('step', [])):
-                return f'step{step_index + 1}_inDQM.root'
+    def get_input_step_index(self):
+        all_steps = self.parent().get('steps')
+        index = self.get_index_in_parent()
+        this_is_harvesting = self.has_step('HARVESTING')
+        self.logger.info('Get input for step %s, harvesting: %s', index, this_is_harvesting)
+        for step_index in reversed(range(0, index)):
+            step = all_steps[step_index]
+            if step.has_step('HARVESTING'):
+                continue
 
-        raise Exception('No DQM step could be found')
+            if step.get('step')[0].startswith('ALCA'):
+                continue
+
+            self.logger.info(step.get('step'))
+            if this_is_harvesting and not step.has_step('DQM'):
+                continue
+
+            return step_index
+
+        raise Exception('No input step could be found')
+
+    def get_input_eventcontent(self):
+        all_steps = self.parent().get('steps')
+        this_is_harvesting = self.has_step('HARVESTING')
+        this_is_alca = self.get('step')[0].startswith('ALCA')
+        input_step_index = self.get_input_step_index()
+        input_step = all_steps[input_step_index]
+        input_step_eventcontent = input_step.get('eventcontent')
+        if this_is_harvesting:
+            for eventcontent_index, eventcontent in enumerate(input_step_eventcontent):
+                if eventcontent == 'DQM':
+                    if eventcontent_index == 0:
+                        return ''
+                    else:
+                        return 'DQM'
+
+            raise Exception('No in the input step')
+
+        if this_is_alca:
+            for eventcontent_index, eventcontent in enumerate(input_step_eventcontent):
+                if eventcontent.startswith('RECO'):
+                    if eventcontent_index == 0:
+                        return ''
+                    else:
+                        return eventcontent
+
+            raise Exception('No in the input step')
+
+        input_step_eventcontent = [x for x in input_step_eventcontent if not x.startswith('DQM')]
+        if len(input_step_eventcontent) < 2:
+            return ''
+        else:
+            return input_step_eventcontent[-1]

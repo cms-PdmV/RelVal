@@ -22,7 +22,8 @@ from api.relval_api import (CreateRelValAPI,
                             GetEditableRelValAPI,
                             GetCMSDriverAPI,
                             GetConfigUploadAPI,
-                            GetRelValJobDictAPI)
+                            GetRelValJobDictAPI,
+                            GetDefaultRelValStepAPI)
 from api.campaign_api import (CreateCampaignAPI,
                               DeleteCampaignAPI,
                               UpdateCampaignAPI,
@@ -117,6 +118,7 @@ api.add_resource(GetEditableRelValAPI,
 api.add_resource(GetCMSDriverAPI, '/api/relvals/get_cmsdriver/<string:prepid>')
 api.add_resource(GetConfigUploadAPI, '/api/relvals/get_config_upload/<string:prepid>')
 api.add_resource(GetRelValJobDictAPI, '/api/relvals/get_dict/<string:prepid>')
+api.add_resource(GetDefaultRelValStepAPI, '/api/relvals/get_default_step')
 
 api.add_resource(CreateCampaignAPI, '/api/campaigns/create')
 api.add_resource(DeleteCampaignAPI, '/api/campaigns/delete')

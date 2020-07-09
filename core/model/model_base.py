@@ -7,6 +7,7 @@ import re
 import time
 from copy import deepcopy
 from core.utils.user_info import UserInfo
+from core.utils.common_utils import clean_split
 
 
 class ModelBase():
@@ -45,8 +46,12 @@ class ModelBase():
         self.logger = ModelBase.__logger
         self.__class_name = self.__class__.__name__
 
-        self.logger.debug('Creating %s object. JSON input present: %s',
+        if json_input is None:
+            json_input = {}
+
+        self.logger.debug('Creating %s object. JSON input present: %s, check values: %s',
                           self.__class_name,
+                          'YES' if json_input else 'NO',
                           'YES' if json_input else 'NO')
         self.__fill_values(json_input)
         self.logger.debug('%s', str(self))
@@ -57,15 +62,12 @@ class ModelBase():
         Initialize default values from schema if any are missing
         """
         if json_input:
-            if ('prepid' in self.__schema or '_id' in self.__schema):
+            if 'prepid' in self.__schema or '_id' in self.__schema:
                 prepid = json_input.get('prepid')
                 if not prepid:
                     raise Exception('PrepID cannot be empty')
 
                 self.set('prepid', prepid)
-
-        else:
-            json_input = {}
 
         ignore_keys = set(['_id', 'prepid'])
         keys = set(self.__schema.keys())
@@ -78,32 +80,17 @@ class ModelBase():
                                     ', '.join(bad_keys))
                 # raise Exception(f'Invalid key "{", ".join(bad_keys)}" for {self.__class_name}')
 
-        for key in keys - ignore_keys:
-            if key not in json_input:
-                self.__json[key] = deepcopy(self.__schema[key])
-            else:
-                self.set(key, json_input[key])
+        self.__fill_values_dict(self.__json, json_input, self.__schema, '')
 
-    def set(self, attribute, value=None):
-        """
-        Set attribute of the object
-        """
+    def __set(self, attribute, target_dict, value):
         prepid = self.get_prepid()
-        if not prepid:
-            prepid = self.__class_name
-
-        if not attribute:
-            raise Exception('Attribute name not specified')
-
-        if attribute not in self.__schema:
-            raise Exception(f'Attribute {attribute} could not be '
-                            f'found in {self.__class_name} schema')
-
-        if not isinstance(value, type(self.__schema[attribute])):
+        attribute = attribute.strip('.')
+        attribute_in_schema = self.__attribute_in_schema(attribute)
+        if not isinstance(value, type(attribute_in_schema)):
             self.logger.debug('%s of %s is not expected (%s) type (got %s). Will try to cast',
                               attribute,
                               prepid,
-                              type(self.__schema[attribute]),
+                              type(attribute_in_schema),
                               type(value))
             value = self.cast_value_to_correct_type(attribute, value)
 
@@ -115,11 +102,52 @@ class ModelBase():
                               self.__class_name)
             raise Exception(f'Invalid {attribute} value {value} for {prepid}')
 
-        self.__json[attribute] = value
+        target_dict[attribute.split('.')[-1]] = value
+
+    def __fill_values_dict(self, target_dict, source_dict, schema_dict, attribute_prefix):
+        attribute_prefix = attribute_prefix.strip('.')
+
+        for key, default_value in schema_dict.items():
+            if key == '_id':
+                continue
+
+            if isinstance(default_value, dict) and default_value:
+                target_dict[key] = {}
+                self.__fill_values_dict(target_dict[key],
+                                        source_dict.get(key, {}),
+                                        default_value,
+                                        f'{attribute_prefix}.{key}')
+            elif key not in source_dict:
+                target_dict[key] = default_value
+            else:
+                self.__set(f'{attribute_prefix}.{key}', target_dict, source_dict[key])
+
+    def set(self, attribute, value=None):
+        """
+        Set attribute of the object
+        """
+        if not attribute:
+            raise Exception('Attribute name not specified')
+
+        attribute = attribute.strip('.')
+        self.__set(attribute, self.__json, value)
+        self.logger.debug(f'Set attribute {attribute} to {value}')
         if attribute == 'prepid':
             self.__json['_id'] = value
 
         return self.__json
+
+    def __attribute_in_schema(self, attribute_name):
+        schema = self.__schema
+        attribute_path = clean_split(attribute_name, '.')
+        for attribute in attribute_path:
+            if attribute not in schema:
+                raise Exception(f'Attribute {attribute_name} could not be '
+                                f'found in {self.__class_name} schema')
+
+            schema = schema[attribute]
+
+        return schema
 
     def get(self, attribute):
         """
@@ -128,8 +156,7 @@ class ModelBase():
         if not attribute:
             raise Exception('Attribute name not specified')
 
-        if attribute not in self.__schema:
-            raise Exception(f'Attribute {attribute} does not exist in {self.__class_name} schema')
+        self.__attribute_in_schema(attribute)
 
         return self.__json[attribute]
 
@@ -170,7 +197,7 @@ class ModelBase():
         If value is not correct type, try to cast it to
         correct type according to schema
         """
-        expected_type = type(self.__schema[attribute_name])
+        expected_type = type(self.__attribute_in_schema(attribute_name))
         got_type = type(attribute_value)
         if expected_type == list and got_type == str:
             return [x.strip() for x in attribute_value.split(',') if x.strip()]

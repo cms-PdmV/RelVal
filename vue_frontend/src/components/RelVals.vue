@@ -16,7 +16,10 @@
                       :loading="loading"
                       disable-sort
                       hide-default-footer
-                      class="elevation-1">
+                      class="elevation-1"
+                      show-select
+                      item-key="prepid"
+                      v-model="selectedItems">
           <template v-slot:item._actions="{ item }">
             <a :href="'relvals/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>&nbsp;
             <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager')">Delete</a>&nbsp;
@@ -39,12 +42,7 @@
             {{item.memory}} MB
           </template>
           <template v-slot:item.steps="{ item }">
-            <ul>
-              <li v-for="step in item.steps" :key="step.name">
-                {{step.name}}
-                <small><pre>{{JSON.stringify(Object.keys(step.arguments).length ? step.arguments : step.input, null, 2)}}</pre></small>
-              </li>
-            </ul>
+            <StepsCell :data="item.steps"/>
           </template>
           <template v-slot:item._workflow="{ item }">
             {{item.workflow_id}} <span v-if="item.workflow_name">({{item.workflow_name}})</span>
@@ -93,7 +91,9 @@
     </v-dialog>
 
     <footer>
-      <a :href="'relvals/edit'" v-if="role('manager')">New RelVal</a>
+      <a :href="'relvals/edit'" v-if="role('manager') && !selectedItems.length">New RelVal</a>
+      <span v-if="role('manager') && selectedItems.length">Selected items ({{selectedItems.length}}) actions:</span>
+      <a v-if="role('manager') && selectedItems.length" @click="deleteManyRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
       <Paginator :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
     </footer>
@@ -105,12 +105,14 @@ import axios from 'axios'
 import ColumnSelector from './ColumnSelector'
 import Paginator from './Paginator'
 import HistoryCell from './HistoryCell'
+import StepsCell from './StepsCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js'
 export default {
   components: {
     ColumnSelector,
     Paginator,
-    HistoryCell
+    HistoryCell,
+    StepsCell
   },
   mixins: [roleMixin],
   data () {
@@ -135,6 +137,7 @@ export default {
       ],
       headers: [],
       dataItems: [],
+      selectedItems: [],
       loading: false,
       itemsPerPage: 1,  // If initial value is 0, table does not appear after update
       totalItems: 0,
@@ -150,11 +153,6 @@ export default {
         title: '',
         description: ''
       }
-    }
-  },
-  computed: {
-    visibleColumns: function () {
-      return this.columns.filter(col => col.visible)
     }
   },
   created () {
@@ -216,6 +214,28 @@ export default {
           component.loading = false;
           component.clearDialog();
           component.showError("Error deleting relval", error.response.data.message);
+        });
+      }
+      this.dialog.cancel = function() {
+        component.clearDialog();
+      }
+      this.dialog.visible = true;
+    },
+    deleteManyRelVals: function(relvals) {
+      let component = this;
+      this.dialog.title = "Delete " + relvals.length + " RelVals?";
+      this.dialog.description = "Are you sure you want to delete " + relvals.length + " RelVals?";
+      this.dialog.ok = function() {
+        component.loading = true;
+        axios.delete('api/relvals/delete', {data: relvals.slice()}).then(() => {
+          component.clearDialog();
+          component.fetchObjects();
+          component.selectedItems = [];
+        }).catch(error => {
+          component.loading = false;
+          component.clearDialog();
+          component.showError("Error deleting RelVals", error.response.data.message);
+          component.selectedItems =  [];
         });
       }
       this.dialog.cancel = function() {

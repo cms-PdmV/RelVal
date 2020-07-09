@@ -35,7 +35,7 @@ class CreateRelValAPI(APIBase):
 
 class DeleteRelValAPI(APIBase):
     """
-    Endpoint for deleting relvals
+    Endpoint for deleting one or multiple relvals
     """
 
     def __init__(self):
@@ -50,8 +50,16 @@ class DeleteRelValAPI(APIBase):
         """
         data = flask.request.data
         relval_json = json.loads(data.decode('utf-8'))
-        obj = relval_controller.delete(relval_json)
-        return self.output_text({'response': obj, 'success': True, 'message': ''})
+        if isinstance(relval_json, dict):
+            results = relval_controller.delete(relval_json)
+        elif isinstance(relval_json, list):
+            results = []
+            for single_relval_json in relval_json:
+                results.append(relval_controller.delete(single_relval_json))
+        else:
+            raise Exception('Expected a single RelVal dict or a list of RelVal dicts')
+
+        return self.output_text({'response': results, 'success': True, 'message': ''})
 
 
 class UpdateRelValAPI(APIBase):
@@ -171,3 +179,22 @@ class GetRelValJobDictAPI(APIBase):
                                  indent=2,
                                  sort_keys=True)
         return self.output_text(dict_string, content_type='text/plain')
+
+
+class GetDefaultRelValStepAPI(APIBase):
+    """
+    Endpoint for getting a default (empty) step that could be used as a template
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.exceptions_to_errors
+    def get(self):
+        """
+        Get a default sequence that could be used as a template
+        """
+        sequence = relval_controller.get_default_step()
+        return self.output_text({'response': sequence,
+                                 'success': True,
+                                 'message': ''})

@@ -3,7 +3,6 @@
     <h1 class="page-title" v-if="creatingNew"><span class="font-weight-light">Creating</span> new RelVal</h1>
     <h1 class="page-title" v-else><span class="font-weight-light">Editing RelVal</span> {{prepid}}</h1>
     <v-card raised class="page-card">
-      <small style="font-size: 0.7em"><pre>{{JSON.stringify(editableObject, null, 2)}}</pre></small>
       <table v-if="editableObject">
         <tr>
           <td>PrepID</td>
@@ -31,7 +30,7 @@
         </tr>
         <tr>
           <td>Memory</td>
-          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="64000" step="1000"></td>
+          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="64000" step="1000">MB</td>
         </tr>
         <tr>
           <td>Notes</td>
@@ -60,61 +59,100 @@
                 <tr>
                   <td>Name</td><td><input type="text" v-model="step.name" :disabled="!editingInfo.steps"></td>
                 </tr>
+                <tr>
+                  <td>CMSSW Release</td><td><input type="text" v-model="step.cmssw_release" :disabled="!editingInfo.steps"></td>
+                </tr>
                 <tr v-if="index == 0">
                   <td>Step type</td>
                   <td>
-                    <input type="radio" v-model="step.step_type" :name="'step' + index" :value="'input'">Input dataset
-                    <input type="radio" v-model="step.step_type" :name="'step' + index" :value="'driver'">cmsDriver
+                    <input type="radio" class="mr-1" v-model="step.step_type" :name="'step' + index" :value="'input'">Input dataset
+                    <input type="radio" class="mr-1 ml-2" v-model="step.step_type" :name="'step' + index" :value="'driver'">cmsDriver
                   </td>
                 </tr>
                 <template v-if="step.step_type == 'input'">
                   <tr>
-                    <td>Dataset</td><td><input type="text" v-model="step.input.dataset" :disabled="!editingInfo.steps"></td>
+                    <td>Dataset</td><td><input type="text" v-model="step.input_dataset" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>Lumisection</td><td><input type="text" v-model="step.input.lumisection" :disabled="!editingInfo.steps"></td>
+                    <td>Events</td><td><input type="number" v-model="step.input_events" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>Label</td><td><input type="text" v-model="step.input_label" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>Lumisection</td><td><input type="text" v-model="step.input_lumisection" :disabled="!editingInfo.steps"></td>
                   </tr>
                 </template>
                 <template v-else>
                   <tr>
-                    <td>--conditions</td><td><input type="text" v-model="step.arguments.conditions" :disabled="!editingInfo.steps"></td>
+                    <td>--beamspot</td><td><input type="text" v-model="step.beamspot" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>--customise</td><td><input type="text" v-model="step.arguments.customise" :disabled="!editingInfo.steps"></td>
+                    <td>--conditions</td><td><input type="text" v-model="step.conditions" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>--datatier</td><td><input type="text" v-model="step.arguments.datatier" :disabled="!editingInfo.steps"></td>
+                    <td>--customise</td><td><input type="text" v-model="step.customise" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>--era</td><td><input type="text" v-model="step.arguments.era" :disabled="!editingInfo.steps"></td>
+                    <td>--datatier</td><td><input type="text" v-model="step.datatier" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>--eventcontent</td><td><input type="text" v-model="step.arguments.eventcontent" :disabled="!editingInfo.steps"></td>
-                  </tr>
-                  <!-- <tr>
-                    <td>--filein</td><td><input type="text" v-model="step.arguments.filein" :disabled="!editingInfo.steps"></td>
+                    <td>--data</td><td><input type="checkbox" v-model="step.data" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>--fileout</td><td><input type="text" v-model="step.arguments.fileout" :disabled="!editingInfo.steps"></td>
-                  </tr> -->
-                  <tr>
-                    <td>--process</td><td><input type="text" v-model="step.arguments.process" :disabled="!editingInfo.steps"></td>
+                    <td>--era</td><td><input type="text" v-model="step.era" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>--step</td><td><input type="text" v-model="step.arguments.step" :disabled="!editingInfo.steps"></td>
+                    <td>--eventcontent</td><td><input type="text" v-model="step.eventcontent" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--fast</td><td><input type="checkbox" v-model="step.fast" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--filetype</td><td><input type="text" v-model="step.filetype" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--hltProcess</td><td><input type="text" v-model="step.hltProcess" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--mc</td><td><input type="checkbox" v-model="step.mc" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--no_exec</td><td><input type="checkbox" v-model="step.no_exec" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--number</td><td><input type="number" v-model="step.number" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--pileup</td><td><input type="text" v-model="step.pileup" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--pileup_input</td><td><input type="text" v-model="step.pileup_input" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--process</td><td><input type="text" v-model="step.process" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--relval</td><td><input type="text" v-model="step.relval" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>--runUnscheduled</td><td><input type="checkbox" v-model="step.runUnscheduled" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
                     <td>--scenario</td>
                     <td>
-                      <select v-model="step.arguments.scenario" :disabled="!editingInfo.steps">
+                      <select v-model="step.scenario" :disabled="!editingInfo.steps">
                         <option></option>
                         <option>pp</option>
                         <option>cosmics</option>
                         <option>nocoll</option>
                         <option>HeavyIons</option>
                       </select>
-                      {{step.arguments.scenario}}
+                      {{step.scenario}}
                     </td>
+                  </tr>
+                  <tr>
+                    <td>--step</td><td><input type="text" v-model="step.step" :disabled="!editingInfo.steps"></td>
                   </tr>
                 </template>
               </table>
@@ -127,6 +165,10 @@
         <tr>
           <td>Workflow ID</td>
           <td><input type="number" min="1" v-model="editableObject.workflow_id" :disabled="!editingInfo.workflow_id"></td>
+        </tr>
+        <tr>
+          <td>Workflow Name</td>
+          <td><input type="text" v-model="editableObject.workflow_name" :disabled="!editingInfo.workflow_name"></td>
         </tr>
       </table>
       <v-btn small class="mr-1 mb-1" color="primary" @click="save()">Save</v-btn>
@@ -185,13 +227,16 @@ export default {
     this.creatingNew = this.prepid === undefined;
     let component = this;
     axios.get('api/relvals/get_editable' + (this.creatingNew ? '' : ('/' + this.prepid))).then(response => {
-      for (let i = 0; i < response.data.response.object.steps.length; i++) {
-        if (Object.keys(response.data.response.object.steps[i].input).length) {
-          response.data.response.object.steps[i].step_type = 'input';
-          response.data.response.object.steps[i].input.lumisection = JSON.stringify(response.data.response.object.steps[i].input.lumisection);
+      for (let step of response.data.response.object.steps) {
+        if (step.input_dataset.length) {
+          step.step_type = 'input';
         } else {
-          response.data.response.object.steps[i].step_type = 'driver';
+          step.step_type = 'driver';
         }
+        step.input_lumisection = JSON.stringify(step.input_lumisection);
+        step.datatier = step.datatier.join(',');
+        step.eventcontent = step.eventcontent.join(',');
+        step.step = step.step.join(',');
       }
       component.editableObject = response.data.response.object;
       component.editingInfo = response.data.response.editing_info;
@@ -202,14 +247,12 @@ export default {
     save: function() {
       let editableObject = JSON.parse(JSON.stringify(this.editableObject))
       let component = this;
-      editableObject['notes'] = editableObject['notes'].trim();
-      for (let i = 0; i < editableObject.steps.length; i++) {
-        if (editableObject.steps[i].step_type == 'input') {
-          editableObject.steps.arguments = {};
-          editableObject.steps[i].input.lumisection = JSON.parse(editableObject.steps[i].input.lumisection);
-        } else {
-          editableObject.steps[i].input = {};
-        }
+      editableObject.notes = editableObject.notes.trim();
+      for (let step of editableObject.steps) {
+        step.input_lumisection = JSON.parse(step.input_lumisection);
+        step.datatier = this.cleanSplit(step.datatier);
+        step.eventcontent = this.cleanSplit(step.eventcontent);
+        step.step = this.cleanSplit(step.step);
       }
       let httpRequest;
       this.loading = true;
@@ -223,7 +266,7 @@ export default {
         window.location = 'relvals?prepid=' + response.data.response.prepid;
       }).catch(error => {
         component.loading = false;
-        this.showError('Error saving relval', error.response.data.message)
+        component.showError('Error saving relval', error.response.data.message)
       });
     },
     clearErrorDialog: function() {
@@ -238,19 +281,24 @@ export default {
       this.errorDialog.visible = true;
     },
     addStep: function() {
-      this.editableObject['steps'].push({'step_type': 'driver',
-                                         'arguments': {'conditions': '',
-                                                       'customize': '',
-                                                       'datatier': '',
-                                                       'era': '',
-                                                       'event_content': '',
-                                                       'filein': '',
-                                                       'fileout': '',
-                                                       'process': '',
-                                                       'step': '',
-                                                       'scenario': ''},
-                                         'input': {'dataset': '',
-                                                   'lumisection': ''}});
+      this.loading = true;
+      let component = this;
+      axios.get('api/relvals/get_default_step').then(response => {
+        let steps = component.editableObject['steps'];
+        let newStep = response.data.response;
+        if (steps.length > 0) {
+          let previousStep = steps[steps.length - 1];
+          newStep['cmssw_release'] = previousStep['cmssw_release'];
+          newStep['conditions'] = previousStep['conditions'];
+          newStep['no_exec'] = previousStep['no_exec'];
+          newStep['number'] = previousStep['number'];
+        }
+        steps.push(newStep);
+        component.loading = false;
+      }).catch(error => {
+        component.loading = false;
+        component.showError('Error getting step information', error.response.data.message);
+      });
     },
     deleteStep: function(index) {
       this.editableObject['steps'].splice(index, 1);

@@ -22,7 +22,7 @@
         </tr>
         <tr>
           <td>Memory</td>
-          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="64000" step="1000"></td>
+          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="64000" step="1000">MB</td>
         </tr>
         <tr>
           <td>Notes</td>
@@ -127,8 +127,7 @@ export default {
           component.loading = false;
         }).catch(error => {
           component.loading = false;
-          console.log(error);
-          this.showError('Error fetching editing information', error.response.data.message);
+          component.showError('Error fetching editing information', error.response.data.message);
         });
       } else {
         component.editableObject = response.data.response.object;
@@ -138,8 +137,7 @@ export default {
       }
     }).catch(error => {
       component.loading = false;
-      console.log(error);
-      this.showError('Error fetching editing information', error.response.data.message);
+      component.showError('Error fetching editing information', error.response.data.message);
     });
   },
   methods: {
@@ -147,7 +145,7 @@ export default {
       this.loading = true;
       let editableObject = this.makeCopy(this.editableObject);
       editableObject.notes = editableObject.notes.trim();
-      editableObject.workflow_ids = editableObject.workflow_ids.replace(/,/g, '\n').split('\n').map(function(s) { return s.trim() }).filter(Boolean);
+      editableObject.workflow_ids = this.cleanSplit(editableObject.workflow_ids);
       let httpRequest;
       if (this.creatingNew) {
         httpRequest = axios.put('api/tickets/create', editableObject);
@@ -160,7 +158,7 @@ export default {
         window.location = 'tickets?prepid=' + response.data.response.prepid;
       }).catch(error => {
         component.loading = false;
-        this.showError('Error saving ticket', error.response.data.message);
+        component.showError('Error saving ticket', error.response.data.message);
       });
     },
     clearErrorDialog: function() {

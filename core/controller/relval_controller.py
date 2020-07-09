@@ -5,6 +5,7 @@ import json
 from core.database.database import Database
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
+from core.model.relval_step import RelValStep
 from core.utils.settings import Settings
 from core.controller.controller_base import ControllerBase
 
@@ -135,8 +136,8 @@ class RelValController(ControllerBase):
         campaign_name = relval.get('campaign')
         relval_type = relval.get_relval_type()
         # Get events from --relval attribute
-        events = [int(s.get('arguments').get('relval', '-1').split(',')[0]) for s in steps]
-        events = [e for e in events if e > 0]
+        events = [s.get('relval').split(',')[0] for s in steps]
+        events = [int(e) for e in events if e and int(e) > 0]
         job_dict = {}
         job_dict['CMSSWVersion'] = relval.get('cmssw_release')
         job_dict['Group'] = 'PPD'
@@ -162,22 +163,21 @@ class RelValController(ControllerBase):
                 if step.get_step_type() == 'input_file':
                     # Input file step is not a task
                     # Use this as input in next step
-                    input_info = step.get('input')
-                    task_dict['InputDataset'] = input_info['dataset']
-                    if input_info.get('lumisection'):
-                        task_dict['LumiList'] = input_info['lumisection']
+                    task_dict['InputDataset'] = step['input_dataset']
+                    if step.get('input_lumisection'):
+                        task_dict['LumiList'] = step['input_lumisection']
 
                     continue
                 else:
                     task_dict['Seeding'] = 'AutomaticSeeding'
 
-            if 'HARVESTING' in step.get('arguments')['step']:
+            if step.has_step('HARVESTING'):
                 # It is harvesting step
                 # It goes in the main job_dict
                 job_dict['DQMConfigCacheID'] = step.get('config_id')
                 continue
 
-            conditions = step.get('arguments')['conditions']
+            conditions = step.get('conditions')
             task_dict['TaskName'] = step.get('name')
             task_dict['ConfigCacheID'] = step.get('config_id')
             task_dict['KeepOutput'] = True
@@ -198,3 +198,7 @@ class RelValController(ControllerBase):
         job_dict['TaskChain'] = task_number
 
         return job_dict
+
+    def get_default_step(self):
+        step = RelValStep.schema()
+        return step

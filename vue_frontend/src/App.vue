@@ -168,6 +168,14 @@ h1.page-title {
   padding: 6px 0;
 }
 
+.page-card td:nth-child(2) {
+  width: 100%;
+}
+
+.page-card td:nth-child(1) {
+  padding-right: 16px;
+}
+
 .page-card input,
 .page-card select,
 .page-card textarea {

@@ -46,7 +46,8 @@ class ControllerBase():
                 return None
 
             self.before_create(new_object)
-            database.save(new_object.get_json())
+            if not database.save(new_object.get_json()):
+                raise Exception(f'Error saving {prepid} to database')
 
         return new_object
 

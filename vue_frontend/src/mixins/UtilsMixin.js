@@ -15,6 +15,9 @@ export const utilsMixin = {
       },
       makeDASLink(dataset) {
         return 'https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod%2Fglobal&input=dataset%3D' + dataset;
+      },
+      cleanSplit(str) {
+        return str.replace(/,/g, '\n').split('\n').map(function(s) { return s.trim() }).filter(Boolean);
       }
     }
   }

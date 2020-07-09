@@ -178,9 +178,21 @@ class TicketController(ControllerBase):
                         if '--datatier' in arguments:
                             arguments['--datatier'] = clean_split(arguments['--datatier'])
 
-                        workflow_json['steps'].append({'name': step_dict['name'],
-                                                       'arguments': arguments,
-                                                       'input': input_dict})
+                        if '_cfg' in arguments:
+                            arguments['cfg'] = arguments.pop('_cfg')
+
+                        # Add input info to arguments dict
+                        arguments['input_dataset'] = input_dict.get('dataset', '')
+                        arguments['input_lumisection'] = input_dict.get('lumisection', {})
+                        arguments['input_label'] = input_dict.get('label', '')
+                        arguments['input_events'] = input_dict.get('events', 0)
+                        # Set step name
+                        arguments['name'] = step_dict['name']
+                        arguments['lumis_per_job'] = step_dict.get('lumis_per_job', '')
+                        # Set CMSSW for each step
+                        arguments['cmssw_release'] = cmssw_release
+                        self.logger.debug('Will create %s', arguments)
+                        workflow_json['steps'].append(arguments)
 
                     relval = relval_controller.create(workflow_json)
                     created_relvals.append(relval)

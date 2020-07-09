@@ -6,8 +6,25 @@ import sys
 import argparse
 import json
 import importlib
+import inspect
+import re
 import Configuration.PyReleaseValidation.relval_steps as steps_module
 from Configuration.AlCa.autoCond import autoCond as auto_globaltag
+from Configuration.PyReleaseValidation.MatrixInjector import MatrixInjector
+
+
+def get_wmsplit():
+    try:
+        src = inspect.getsource(MatrixInjector.prepare)
+        src = [x.strip() for x in src.split('\n') if 'wmsplit' in x]
+        src = [x.replace(' ', '') for x in src if not x.startswith('#')]
+        src = [x for x in src if re.match('wmsplit\[.*\]=', x)]
+        src = [x.replace('wmsplit[\'', '').replace('\']', '') for x in src]
+        src = {x[0]: x[1] for x in [x.split('=') for x in src]}
+        return src
+    except Exception as ex:
+        print(ex)
+        return {}
 
 
 def split_command_to_dict(command):
@@ -77,6 +94,8 @@ def main():
 
     workflows_module = get_workflows_module(opt.workflows_file)
 
+    # wmsplit is a dictionary with LumisPerJob values
+    wmsplit = get_wmsplit()
     workflows = {}
     for workflow_id in workflow_ids:
         print('Getting %s workflow' % (workflow_id))
@@ -117,6 +136,9 @@ def main():
                 workflow_step = steps_module.merge([command_dict, workflow_step])
 
             step = {'name': workflow_step_name}
+            if workflow_step_name in wmsplit:
+                step['lumis_per_job'] = wmsplit[workflow_step_name]
+
             workflows[workflow_id]['steps'].append(step)
             if 'INPUT' in workflow_step:
                 # This step has input dataset

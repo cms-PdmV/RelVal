@@ -87,7 +87,7 @@ export default {
       component.loading = false;
     }).catch(error => {
       component.loading = false;
-      this.showError('Error fetching editing information', error.response.data.message);
+      component.showError('Error fetching editing information', error.response.data.message);
     });
   },
   methods: {
@@ -106,8 +106,8 @@ export default {
         component.loading = false;
         window.location = 'campaigns?prepid=' + response.data.response.prepid;
       }).catch(error => {
-        this.showError('Error saving campaign', error.response.data.message);
         component.loading = false;
+        component.showError('Error saving campaign', error.response.data.message);
       });
     },
     clearErrorDialog: function() {

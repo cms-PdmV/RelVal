@@ -49,7 +49,7 @@ class RelVal(ModelBase):
     }
 
     lambda_checks = {
-        'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,75}'),
+        'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,99}'),
         'campaign': ModelBase.lambda_check('campaign'),
         'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'conditions_globaltag': ModelBase.lambda_check('globaltag'),
@@ -77,14 +77,38 @@ class RelVal(ModelBase):
 
         ModelBase.__init__(self, json_input)
 
+    def get_cmssw_setup(self, cmssw_release):
+        """
+        Return code needed to set up CMSSW environment for given CMSSW release
+        Basically, cmsrel and cmsenv commands
+        """
+        commands = ['source /cvmfs/cms.cern.ch/cmsset_default.sh',
+                    f'if [ -r {cmssw_release}/src ] ; then',
+                    f'  echo {cmssw_release} already exist',
+                    'else',
+                    f'  scram p CMSSW {cmssw_release}',
+                    'fi',
+                    f'cd {cmssw_release}/src',
+                    'eval `scram runtime -sh`',
+                    'cd ../..']
+
+        return '\n'.join(commands)
+
     def get_cmsdrivers(self):
         """
         Get all cmsDriver commands for this RelVal
         """
         built_command = ''
+        previous_step_cmssw = None
         for step in self.get('steps'):
+            step_cmssw = step.get('cmssw_release')
+            if step_cmssw != previous_step_cmssw:
+                built_command += self.get_cmssw_setup(step_cmssw)
+                built_command += '\n\n'
+
+            previous_step_cmssw = step_cmssw
             built_command += step.get_command()
-            built_command += '\n\n'
+            built_command += '\n\n\n\n'
 
         return built_command.strip()
 
@@ -126,12 +150,12 @@ class RelVal(ModelBase):
                 break
 
         for step in steps:
-            if step.get('arguments').get('fast', False):
+            if step.get('fast'):
                 relval_type += '_FastSim'
                 break
 
         for step in steps:
-            if step.get('arguments').get('data', False) and first_step_label:
+            if step.get('data') and first_step_label:
                 relval_type += f'_RelVal_{first_step_label}_'
                 break
 

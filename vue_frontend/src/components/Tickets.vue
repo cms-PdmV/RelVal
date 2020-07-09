@@ -150,11 +150,6 @@ export default {
       }
     }
   },
-  computed: {
-    visibleColumns: function () {
-      return this.columns.filter(col => col.visible)
-    }
-  },
   created () {
     this.clearDialog();
   },
