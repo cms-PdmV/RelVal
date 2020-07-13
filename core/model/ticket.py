@@ -6,6 +6,9 @@ from core.model.model_base import ModelBase
 
 
 class Ticket(ModelBase):
+    """
+    Ticket allows to create multiple similar RelVals in the same campaign
+    """
 
     _ModelBase__schema = {
         # Database id (required by database)

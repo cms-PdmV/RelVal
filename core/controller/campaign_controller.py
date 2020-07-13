@@ -1,14 +1,15 @@
 """
 Module that contains CampaignController class
 """
-import json
 from core.database.database import Database
 from core.model.campaign import Campaign
-from core.utils.settings import Settings
 from core.controller.controller_base import ControllerBase
 
 
 class CampaignController(ControllerBase):
+    """
+    Campaign controller performs all actions with campaigns
+    """
 
     def __init__(self):
         ControllerBase.__init__(self)
@@ -16,7 +17,6 @@ class CampaignController(ControllerBase):
         self.model_class = Campaign
 
     def create(self, json_data):
-        # Clean up the input
         cmssw_release = json_data.get('cmssw_release')
         batch_name = json_data.get('batch_name')
         prepid = f'{cmssw_release}__{batch_name}'

@@ -5,6 +5,11 @@ from core.model.model_base import ModelBase
 
 
 class Campaign(ModelBase):
+    """
+    Campaign is the same campaign as in computing
+    It's name consists of CMSSW release and batch name
+    """
+
     _ModelBase__schema = {
         # Database id (required by database)
         '_id': '',

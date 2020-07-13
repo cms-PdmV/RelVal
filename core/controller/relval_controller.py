@@ -11,6 +11,9 @@ from core.controller.controller_base import ControllerBase
 
 
 class RelValController(ControllerBase):
+    """
+    RelVal controller performs all actions with RelVal objects
+    """
 
     def __init__(self):
         ControllerBase.__init__(self)
@@ -119,7 +122,7 @@ class RelValController(ControllerBase):
         Get bash script that would upload config files to ReqMgr2
         """
         self.logger.debug('Getting config upload script for %s', relval.get_prepid())
-        database_url = Settings().get('cmsweb_url') + '/couchdb'
+        # database_url = Settings().get('cmsweb_url') + '/couchdb'
         command = '#!/bin/bash\n'
 
         return command
@@ -207,5 +210,9 @@ class RelValController(ControllerBase):
         return job_dict
 
     def get_default_step(self):
+        """
+        Get a default empty RelVal step
+        """
+        self.logger.info('Getting a default RelVal step')
         step = RelValStep.schema()
         return step

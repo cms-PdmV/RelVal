@@ -11,10 +11,13 @@ from core.controller.relval_controller import RelValController
 from core.database.database import Database
 from core.utils.ssh_executor import SSHExecutor
 from core.utils.settings import Settings
-from core.utils.common_utils import clean_split
+from core.utils.common_utils import clean_split, cmssw_setup
 
 
 class TicketController(ControllerBase):
+    """
+    Ticket controller performs all actions with tickets
+    """
 
     def __init__(self):
         ControllerBase.__init__(self)
@@ -65,7 +68,7 @@ class TicketController(ControllerBase):
         editing_info['workflow_ids'] = not_done
         editing_info['relval_set'] = not_done
         editing_info['recycle_gs'] = not_done
-        
+
         return editing_info
 
     def check_for_delete(self, obj):
@@ -108,10 +111,7 @@ class TicketController(ControllerBase):
                            f'mkdir -p ~/relval_work/{ticket_prepid}']
                 out, err, code = ssh_executor.execute_command(command)
                 if code != 0:
-                    self.logger.error('Exit code %s preparing workspace:\nError:%s\nOutput:%s',
-                                      code,
-                                      err,
-                                      out)
+                    self.logger.error('Exit code %s:\nError:%s\nOutput:%s', code, err, out)
                     raise Exception(f'Error code {code} preparing workspace: {err}')
 
                 ssh_executor.upload_file('core/utils/runTheMatrixPdmV.py',
@@ -121,15 +121,14 @@ class TicketController(ControllerBase):
                 file_name = f'{ticket_prepid}_{int(random.randint(1000, 9999))}.json'
                 self.logger.info('Random file name %s', file_name)
                 # Execute runTheMatrixPdmV.py
-                command = ['cd ~/relval_work/',
-                           'source /cvmfs/cms.cern.ch/cmsset_default.sh',
-                           f'if [ -r {cmssw_release}/src ] ; then echo {cmssw_release} already exist',
-                           f'else scram p CMSSW {cmssw_release}',
-                           'fi',
-                           f'cd {cmssw_release}/src',
-                           'eval `scram runtime -sh`',
-                           f'cd ../../{ticket_prepid}',
-                           f'python runTheMatrixPdmV.py -l {workflow_ids} -w {relval_set} -o {file_name} {recycle_gs_flag} -g']
+                command = ['cd ~/relval_work/']
+                command.extend(cmssw_setup(cmssw_release).split('\n'))
+                command += [f'cd {ticket_prepid}',
+                            'python runTheMatrixPdmV.py -g '
+                            f'-l {workflow_ids} '
+                            f'-w {relval_set} '
+                            f'-o {file_name} '
+                            f'{recycle_gs_flag}']
                 out, err, code = ssh_executor.execute_command(command)
                 if code != 0:
                     self.logger.error('Exit code %s creating RelVals:\nError:%s\nOutput:%s',

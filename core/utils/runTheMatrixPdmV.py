@@ -14,11 +14,14 @@ from Configuration.PyReleaseValidation.MatrixInjector import MatrixInjector
 
 
 def get_wmsplit():
+    """
+    Get wmsplit dictionary from MatrixInjector prepare() method
+    """
     try:
         src = inspect.getsource(MatrixInjector.prepare)
         src = [x.strip() for x in src.split('\n') if 'wmsplit' in x]
         src = [x.replace(' ', '') for x in src if not x.startswith('#')]
-        src = [x for x in src if re.match('wmsplit\[.*\]=', x)]
+        src = [x for x in src if re.match('wmsplit\\[.*\\]=', x)]
         src = [x.replace('wmsplit[\'', '').replace('\']', '') for x in src]
         src = {x[0]: x[1] for x in [x.split('=') for x in src]}
         return src
@@ -28,6 +31,9 @@ def get_wmsplit():
 
 
 def split_command_to_dict(command):
+    """
+    Split string command into a dictionary
+    """
     command_dict = {}
     command = [x for x in command.strip().split(' ') if x.strip()]
     for i in range(len(command)):
@@ -41,6 +47,9 @@ def split_command_to_dict(command):
 
 
 def get_workflows_module(name):
+    """
+    Load a specified module from Configuration.PyReleaseValidation
+    """
     workflows_module_name = 'Configuration.PyReleaseValidation.relval_' + name
     workflows_module = importlib.import_module(workflows_module_name)
     print('Loaded %s. Found %s workflows inside' % (workflows_module_name,
@@ -49,6 +58,9 @@ def get_workflows_module(name):
 
 
 def resolve_globaltag(tag):
+    """
+    Translate auto:... to an actual globaltag
+    """
     if not tag.startswith('auto:'):
         return tag
 
@@ -57,6 +69,9 @@ def resolve_globaltag(tag):
 
 
 def build_cmsdriver(arguments, step_index):
+    """
+    Make a cmsDriver command string out of given arguments
+    """
     built_arguments = ''
     driver_step_name = 'step%s' % (step_index + 1)
     for arg_name in sorted(arguments.keys(), key=lambda x: x.replace('-', '', 2).lower()):
@@ -75,16 +90,33 @@ def build_cmsdriver(arguments, step_index):
 
 
 def main():
+    """
+    Main
+    """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-l', '--list', dest='workflow_ids', help='Comma separated list of workflow ids')
-    parser.add_argument('-w', '--what', dest='workflows_file', help='RelVal workflows file: standard, upgrade, ...')
-    parser.add_argument('-c', '--command', dest='command', help='Additional command to add to each cmsDriver')
-    parser.add_argument('-o', '--output', dest='output_file', help='Output file name')
-    parser.add_argument('-r', '--recycle_gs', dest='recycle_gs', action='store_true', help='Recycle GS')
-    parser.add_argument('-g', '--resolve_gt', dest='resolve_gt', action='store_true', help='Resolve auto: conditions to global tags')
+    parser.add_argument('-l', '--list',
+                        dest='workflow_ids',
+                        help='Comma separated list of workflow ids')
+    parser.add_argument('-w', '--what',
+                        dest='workflows_file',
+                        help='RelVal workflows file: standard, upgrade, ...')
+    parser.add_argument('-c', '--command',
+                        dest='command',
+                        help='Additional command to add to each cmsDriver')
+    parser.add_argument('-o', '--output',
+                        dest='output_file',
+                        help='Output file name')
+    parser.add_argument('-r', '--recycle_gs',
+                        dest='recycle_gs',
+                        action='store_true',
+                        help='Recycle GS')
+    parser.add_argument('-g', '--resolve_gt',
+                        dest='resolve_gt',
+                        action='store_true',
+                        help='Resolve auto:... conditions to global tags')
     opt = parser.parse_args()
 
-    workflow_ids = sorted(list(set([float(x) for x in opt.workflow_ids.split(',')])))
+    workflow_ids = sorted(list({float(x) for x in opt.workflow_ids.split(',')}))
     print('Given workflow ids (%s): %s' % (len(workflow_ids), workflow_ids))
     print('Workflows file: %s' % (opt.workflows_file))
     print('User given command: %s' % (opt.command))
@@ -129,7 +161,9 @@ def main():
             # Merge user command, workflow and overrides
             workflow_step = steps_module.steps[workflow_step_name]
             # Because first item in the list has highest priority
-            workflow_step = steps_module.merge([workflow_matrix.overrides, workflow_step, {'--no_exec': True}])
+            workflow_step = steps_module.merge([workflow_matrix.overrides,
+                                                workflow_step,
+                                                {'--no_exec': True}])
             if opt.command:
                 command_dict = split_command_to_dict(opt.command)
                 print('Merging %s' % (command_dict))
@@ -141,7 +175,8 @@ def main():
             elif 'INPUT' in workflow_step:
                 step['lumis_per_job'] = workflow_step['INPUT'].split
             elif workflow_step_index > 0:
-                step['lumis_per_job'] = workflows[workflow_id]['steps'][-1].get('lumis_per_job', 10)
+                last_step = workflows[workflow_id]['steps'][-1]
+                step['lumis_per_job'] = last_step.get('lumis_per_job', 10)
             else:
                 # Default to 10
                 step['lumis_per_job'] = 10
@@ -172,32 +207,11 @@ def main():
                         workflow_step[arg_name] = True
 
                 if opt.resolve_gt and '--conditions' in workflow_step:
-                    workflow_step['--conditions'] = resolve_globaltag(workflow_step['--conditions'])
+                    conditions = resolve_globaltag(workflow_step['--conditions'])
+                    workflow_step['--conditions'] = conditions
 
                 step['arguments'] = workflow_step
                 print(build_cmsdriver(step['arguments'], workflow_step_index))
-
-            # workflow_step['--fileout'] = 'file:step%s.root' % (workflow_step_index + 1)
-            # if workflow_step_index > 0:
-            #     if 'HARVESTING' in workflow_step.get('--step', ''):
-            #         # Find a DQM step
-            #         for dqm_step_index, dqm_step in enumerate(workflows[workflow_id]['steps']):
-            #             print('%s %s' % (dqm_step_index, dqm_step))
-            #             if 'DQM' in dqm_step.get('arguments', {}).get('--step', ''):
-            #                 workflow_step['--filein'] = 'file:step%s_inDQM.root' % (dqm_step_index + 1)
-            #                 break
-            #         else:
-            #             print('Could not find DQM step?')
-            #    else:
-            #         if 'input' in workflows[workflow_id]['steps'][-1]:
-            #             workflow_step['--filein'] = 'filelist:step%s_files.txt' % (workflow_step_index)
-            #             workflow_step['--lumiToProcess'] = ' step%s_lumi_ranges.txt' % (workflow_step_index)
-            #         else:
-            #             for step_index, step in enumerate(workflows[workflow_id]['steps']):
-            #                 print('%s %s'% (step_index, step))
-            #                 if 'HARVESTING' not in step.get('arguments', {}).get('--step', ''):
-            #                     workflow_step['--filein'] = 'file:step%s.root' % (step_index + 1)
-
 
     print(json.dumps(workflows, indent=2, sort_keys=True))
     if opt.output_file:

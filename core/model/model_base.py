@@ -131,7 +131,6 @@ class ModelBase():
 
         attribute = attribute.strip('.')
         self.__set(attribute, self.__json, value)
-        self.logger.debug(f'Set attribute {attribute} to {value}')
         if attribute == 'prepid':
             self.__json['_id'] = value
 

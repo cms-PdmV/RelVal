@@ -8,6 +8,10 @@ from core.model.model_base import ModelBase
 
 
 class RelValStep(ModelBase):
+    """
+    RelVal is one step of RelVal - either a call to DAS for list of input files
+    or a cmsDriver command
+    """
 
     _ModelBase__schema = {
         # Step name
@@ -60,9 +64,11 @@ class RelValStep(ModelBase):
             # Remove -- from argument names
             json_input = {k.lstrip('-'): v for k, v in json_input.items()}
             if json_input.get('input_dataset'):
-                json_input = {k: v for k, v in json_input.items() if k.startswith('input_') or k in RelValStep.__common_attributes}
+                k_filter = lambda k: k.startswith('input_') or k in RelValStep.__common_attributes
             else:
-                json_input = {k: v for k, v in json_input.items() if not k.startswith('input_')}
+                k_filter = lambda k: not k.startswith('input_')
+
+            json_input = {k: v for k, v in json_input.items() if k_filter}
 
         ModelBase.__init__(self, json_input)
         if parent:
@@ -137,6 +143,7 @@ class RelValStep(ModelBase):
         if not runs:
             return f'# Step {step_index + 1} is input dataset for next step: {dataset}'
 
+        self.logger.info('Making a DAS command for step %s', step_index)
         files_name = f'step{step_index + 1}_files.txt'
         lumis_name = f'step{step_index + 1}_lumi_ranges.txt'
         comment = f'# Arguments for step {step_index + 1}:\n'
@@ -202,6 +209,9 @@ class RelValStep(ModelBase):
         return cms_driver_command
 
     def has_step(self, step):
+        """
+        Return if this RelVal step has step (--step)
+        """
         for one_step in self.get('step'):
             if one_step.startswith(step):
                 return True
@@ -209,6 +219,9 @@ class RelValStep(ModelBase):
         return False
 
     def get_input_step_index(self):
+        """
+        Get index of step that will be used as input step for current step
+        """
         all_steps = self.parent().get('steps')
         index = self.get_index_in_parent()
         this_is_harvesting = self.has_step('HARVESTING')
@@ -230,6 +243,9 @@ class RelValStep(ModelBase):
         raise Exception('No input step could be found')
 
     def get_input_eventcontent(self):
+        """
+        Return which eventcontent should be used as input for current RelVal step
+        """
         all_steps = self.parent().get('steps')
         this_is_harvesting = self.has_step('HARVESTING')
         this_is_alca = self.get('step') and self.get('step')[0].startswith('ALCA')

@@ -1,16 +1,15 @@
 """
 Module that contains RelVal class
 """
-import json
 from copy import deepcopy
 from core.model.model_base import ModelBase
 from core.model.relval_step import RelValStep
+from core.utils.common_utils import cmssw_setup
 
 
 class RelVal(ModelBase):
     """
-    PrepID example: CMSSW_11_0_0_pre4__data2018C-1564311759-RunDoubleMuon2018C
-                    {cmssw_release}__{batch_name}-{timestamp}-{label/first_step_name}
+    RelVal is a single job that might have multiple steps - cmsDrivers inside
     """
 
     _ModelBase__schema = {
@@ -36,7 +35,7 @@ class RelVal(ModelBase):
         'notes': '',
         # Type of relval: standard, upgrade
         'relval_set': 'standard',
-        # TODO: document
+        # Tag for grouping of RelVals
         'sample_tag': '',
         # Status of this relval
         'status': 'new',
@@ -77,23 +76,6 @@ class RelVal(ModelBase):
 
         ModelBase.__init__(self, json_input)
 
-    def get_cmssw_setup(self, cmssw_release):
-        """
-        Return code needed to set up CMSSW environment for given CMSSW release
-        Basically, cmsrel and cmsenv commands
-        """
-        commands = ['source /cvmfs/cms.cern.ch/cmsset_default.sh',
-                    f'if [ -r {cmssw_release}/src ] ; then',
-                    f'  echo {cmssw_release} already exist',
-                    'else',
-                    f'  scram p CMSSW {cmssw_release}',
-                    'fi',
-                    f'cd {cmssw_release}/src',
-                    'eval `scram runtime -sh`',
-                    'cd ../..']
-
-        return '\n'.join(commands)
-
     def get_cmsdrivers(self):
         """
         Get all cmsDriver commands for this RelVal
@@ -103,7 +85,7 @@ class RelVal(ModelBase):
         for step in self.get('steps'):
             step_cmssw = step.get('cmssw_release')
             if step_cmssw != previous_step_cmssw:
-                built_command += self.get_cmssw_setup(step_cmssw)
+                built_command += cmssw_setup(step_cmssw)
                 built_command += '\n\n'
 
             previous_step_cmssw = step_cmssw

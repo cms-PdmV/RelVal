@@ -4,7 +4,6 @@ Module that contains all system APIs
 from api.api_base import APIBase
 from core.utils.locker import Locker
 from core.utils.user_info import UserInfo
-from core.database.database import Database
 
 
 class LockerStatusAPI(APIBase):

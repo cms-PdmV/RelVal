@@ -3,7 +3,6 @@ Module that contains all ticket APIs
 """
 import json
 import flask
-from flask import request
 from api.api_base import APIBase
 from core.model.ticket import Ticket
 from core.controller.ticket_controller import TicketController

@@ -3,7 +3,6 @@ Module that contains all relval APIs
 """
 import json
 import flask
-from flask import request
 from api.api_base import APIBase
 from core.model.relval import RelVal
 from core.controller.relval_controller import RelValController

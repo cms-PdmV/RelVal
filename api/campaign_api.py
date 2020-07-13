@@ -3,7 +3,6 @@ Module that contains all campaign APIs
 """
 import json
 import flask
-from flask import request
 from api.api_base import APIBase
 from core.model.campaign import Campaign
 from core.controller.campaign_controller import CampaignController
