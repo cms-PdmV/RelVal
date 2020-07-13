@@ -191,12 +191,12 @@ class RelValStep(ModelBase):
                     previous_dataset = previous.get('input_dataset')
                     arguments_dict['filein'] = f'"dbs:{previous_dataset}"'
             else:
-                input_step_index = self.get_input_step_index()
-                input_eventcontent = self.get_input_eventcontent()
-                if not input_eventcontent:
-                    arguments_dict['filein'] = f'file:step{input_step_index + 1}.root"'
+                input_number = self.get_input_step_index() + 1
+                eventcontent_index, eventcontent = self.get_input_eventcontent()
+                if eventcontent_index == 0:
+                    arguments_dict['filein'] = f'file:step{input_number}.root"'
                 else:
-                    arguments_dict['filein'] = f'file:step{input_step_index + 1}_in{input_eventcontent}.root"'
+                    arguments_dict['filein'] = f'file:step{input_number}_in{eventcontent}.root"'
 
         cms_driver_command = self.__build_cmsdriver(index, arguments_dict)
         return cms_driver_command
@@ -218,7 +218,7 @@ class RelValStep(ModelBase):
             if step.has_step('HARVESTING'):
                 continue
 
-            if step.get('step')[0].startswith('ALCA'):
+            if step.get('step') and step.get('step')[0].startswith('ALCA'):
                 continue
 
             self.logger.info(step.get('step'))
@@ -232,32 +232,23 @@ class RelValStep(ModelBase):
     def get_input_eventcontent(self):
         all_steps = self.parent().get('steps')
         this_is_harvesting = self.has_step('HARVESTING')
-        this_is_alca = self.get('step')[0].startswith('ALCA')
+        this_is_alca = self.get('step') and self.get('step')[0].startswith('ALCA')
         input_step_index = self.get_input_step_index()
         input_step = all_steps[input_step_index]
         input_step_eventcontent = input_step.get('eventcontent')
         if this_is_harvesting:
             for eventcontent_index, eventcontent in enumerate(input_step_eventcontent):
                 if eventcontent == 'DQM':
-                    if eventcontent_index == 0:
-                        return ''
-                    else:
-                        return 'DQM'
+                    return eventcontent_index, eventcontent
 
             raise Exception('No in the input step')
 
         if this_is_alca:
             for eventcontent_index, eventcontent in enumerate(input_step_eventcontent):
                 if eventcontent.startswith('RECO'):
-                    if eventcontent_index == 0:
-                        return ''
-                    else:
-                        return eventcontent
+                    return eventcontent_index, eventcontent
 
             raise Exception('No in the input step')
 
         input_step_eventcontent = [x for x in input_step_eventcontent if not x.startswith('DQM')]
-        if len(input_step_eventcontent) < 2:
-            return ''
-        else:
-            return input_step_eventcontent[-1]
+        return len(input_step_eventcontent) - 1, input_step_eventcontent[-1]

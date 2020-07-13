@@ -138,6 +138,13 @@ def main():
             step = {'name': workflow_step_name}
             if workflow_step_name in wmsplit:
                 step['lumis_per_job'] = wmsplit[workflow_step_name]
+            elif 'INPUT' in workflow_step:
+                step['lumis_per_job'] = workflow_step['INPUT'].split
+            elif workflow_step_index > 0:
+                step['lumis_per_job'] = workflows[workflow_id]['steps'][-1].get('lumis_per_job', 10)
+            else:
+                # Default to 10
+                step['lumis_per_job'] = 10
 
             workflows[workflow_id]['steps'].append(step)
             if 'INPUT' in workflow_step:

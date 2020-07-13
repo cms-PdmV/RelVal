@@ -222,7 +222,7 @@ export default {
       this.dialog.description = "Are you sure you want to generate RelVals for " + ticket.prepid + " ticket?";
       this.dialog.ok = function() {
         component.loading = true;
-        axios.post('api/tickets/create_relvals', {'prepid': ticket.prepid}).then(() => {
+        axios.post('api/tickets/create_relvals', {'prepid': ticket.prepid}, {timeout: 180000}).then(() => {
           component.clearDialog();
           component.fetchObjects();
         }).catch(error => {

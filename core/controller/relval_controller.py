@@ -26,7 +26,7 @@ class RelValController(ControllerBase):
             raise Exception(f'Campaign {campaign_name} does not exist')
 
         cmssw_release = campaign_json.get('cmssw_release')
-        first_step_name = json_data.get('steps')[0]['name']
+        first_step_name = json_data.get('steps')[0]['name'].rstrip('INPUT')
         prepid_part = f'{campaign_name}-{first_step_name}'
         json_data['prepid'] = f'{prepid_part}-00000'
         json_data['cmssw_release'] = cmssw_release
@@ -148,52 +148,59 @@ class RelValController(ControllerBase):
         job_dict['RequestType'] = 'ReReco'
         job_dict['RequestString'] = request_string
         job_dict['EnableHarvesting'] = False
-        job_dict['RunWhitelist'] = []
-        job_dict['RunBlacklist'] = []
-        job_dict['BlockWhitelist'] = []
-        job_dict['BlockBlacklist'] = []
         job_dict['Campaign'] = campaign_name
         job_dict['Memory'] = relval.get('memory')
+        # Harvesting should run on single core, each task will have it's own core setting
         job_dict['Multicore'] = 1
 
         task_number = 0
-        task_dict = {}
         for step_index, step in enumerate(steps):
-            if step_index == 0:
-                if step.get_step_type() == 'input_file':
-                    # Input file step is not a task
-                    # Use this as input in next step
-                    task_dict['InputDataset'] = step['input_dataset']
-                    if step.get('input_lumisection'):
-                        task_dict['LumiList'] = step['input_lumisection']
-
-                    continue
-                else:
-                    task_dict['Seeding'] = 'AutomaticSeeding'
-
+            # Handle harvesting step quickly
             if step.has_step('HARVESTING'):
                 # It is harvesting step
                 # It goes in the main job_dict
                 job_dict['DQMConfigCacheID'] = step.get('config_id')
                 continue
 
-            conditions = step.get('conditions')
+            task_dict = {}
+            # First step, if it's input file - skip
+            # If it's generator, set Seeding to AutomaticSeeding
+            if step_index == 0:
+                if step.get_step_type() == 'input_file':
+                    continue
+
+                task_dict['Seeding'] = 'AutomaticSeeding'
+            else:
+                input_step_index = step.get_input_step_index()
+                input_step = steps[input_step_index]
+                if input_step.get_step_type() == 'input_file':
+                    # Input file step is not a task
+                    # Use this as input in next step
+                    task_dict['InputDataset'] = input_step.get('input_dataset')
+                    if input_step.get('input_lumisection'):
+                        task_dict['LumiList'] = input_step.get('input_lumisection')
+                else:
+                    task_dict['InputTask'] = input_step.get('name')
+                    _, input_module = step.get_input_eventcontent()
+                    task_dict['InputFromOutputModule'] = f'{input_module}output'
+
             task_dict['TaskName'] = step.get('name')
+            conditions = step.get('conditions')
             task_dict['ConfigCacheID'] = step.get('config_id')
             task_dict['KeepOutput'] = True
             task_dict['SplittingAlgo'] = 'LumiBased'
+            task_dict['LumisPerJob'] = step.get('lumis_per_job')
             task_dict['GlobalTag'] = conditions
             task_dict['ProcessingString'] = f'{conditions}_{relval_type}'.strip('_')
             task_dict['Memory'] = relval.get('memory')
             task_dict['Multicore'] = relval.get('cpu_cores')
             task_dict['Campaign'] = campaign_name
+            task_dict['AcquisitionEra'] = step.get('cmssw_release')
             if task_number == 0 and events:
                 task_dict['RequestNumEvents'] = events[0]
 
             task_number += 1
             job_dict[f'Task{task_number}'] = task_dict
-            # Next task input is this task
-            task_dict = {'InputTask': step.get('name')}
 
         job_dict['TaskChain'] = task_number
 

@@ -135,7 +135,7 @@ class RelVal(ModelBase):
         relval_type = ''
         steps = self.get('steps')
         if steps[0].get_step_type() == 'input_file':
-            first_step_label = steps[0].get('input').get('label')
+            first_step_label = steps[0].get('input_label')
         else:
             first_step_label = ''
 
