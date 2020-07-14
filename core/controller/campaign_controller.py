@@ -1,9 +1,9 @@
 """
 Module that contains CampaignController class
 """
-from core.database.database import Database
+from core_lib.pdmv_database.database import Database
+from core_lib.pdmv_controller.controller_base import ControllerBase
 from core.model.campaign import Campaign
-from core.controller.controller_base import ControllerBase
 
 
 class CampaignController(ControllerBase):

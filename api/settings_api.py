@@ -1,8 +1,8 @@
 """
 Module that contains all settings APIs
 """
-from api.api_base import APIBase
-from core.utils.settings import Settings
+from core_lib.pdmv_api.api_base import APIBase
+from core_lib.pdmv_utils.settings import Settings
 
 
 class SettingsAPI(APIBase):

@@ -4,7 +4,7 @@ Module that contains RelVal class
 from copy import deepcopy
 from core.model.model_base import ModelBase
 from core.model.relval_step import RelValStep
-from core.utils.common_utils import cmssw_setup
+from core_lib.pdmv_utils.common_utils import cmssw_setup
 
 
 class RelVal(ModelBase):

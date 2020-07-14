@@ -1,9 +1,9 @@
 """
 Module that contains all system APIs
 """
-from api.api_base import APIBase
-from core.utils.locker import Locker
-from core.utils.user_info import UserInfo
+from core_lib.pdmv_api.api_base import APIBase
+from core_lib.pdmv_utils.locker import Locker
+from core_lib.pdmv_utils.user_info import UserInfo
 
 
 class LockerStatusAPI(APIBase):

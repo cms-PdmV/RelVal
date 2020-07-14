@@ -6,6 +6,7 @@ import argparse
 from flask_restful import Api
 from flask_cors import CORS
 from flask import Flask, render_template
+from core_lib.pdmv_database.database import Database
 from api.system_api import (LockerStatusAPI,
                             UserInfoAPI)
 from api.search_api import SearchAPI
@@ -138,6 +139,7 @@ def main():
                         help='Run Flask in debug mode',
                         action='store_true')
 
+    Database.set_database_name('relval')
     args = vars(parser.parse_args())
     debug = args.get('debug', False)
     app.run(host='0.0.0.0',
