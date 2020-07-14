@@ -3,7 +3,7 @@
     <div style="display: flex;">
       <div style="flex: 1 1 auto;">
         <div>
-          <div style="width: calc(100vw - 16px); position: sticky; left: 8px;">
+          <div style="width: calc(100vw - 32px); position: sticky; left: 16px;">
             <h1 class="page-title">RelVals</h1>
             <ColumnSelector :columns="columns"
                             v-on:updateColumns="updateTableColumns"/>
