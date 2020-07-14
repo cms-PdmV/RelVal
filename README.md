@@ -1,3 +1,3 @@
 # RelVal machine
 
-Run `git submodules update` to clone and update git submodules
+Run `git submodule init` and `git submodules update` to clone and update git submodules
