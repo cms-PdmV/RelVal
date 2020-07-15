@@ -155,7 +155,7 @@ class TicketController(ControllerBase):
                                      'workflow_id': workflow_id,
                                      'workflow_name': workflow_dict['workflow_name']}
 
-                    for step_dict in workflow_dict['steps']:
+                    for step_index, step_dict in enumerate(workflow_dict['steps']):
                         arguments = step_dict.get('arguments', {})
                         input_dict = step_dict.get('input', {})
                         # Delete filein and fileout because they'll be made on the fly
@@ -187,6 +187,13 @@ class TicketController(ControllerBase):
                         arguments['input_events'] = input_dict.get('events', '')
                         # Set step name
                         arguments['name'] = step_dict['name']
+                        # Shorten the name and check for duplicate names
+                        if len(arguments['name']) > 50:
+                            arguments['name'] = clean_split(arguments['name'], '_')[-1]
+                            for existing_step in workflow_json['steps']:
+                                if arguments['name'] == existing_step['name']:
+                                    arguments['name'] += f'_{step_index + 1}'
+
                         arguments['lumis_per_job'] = step_dict.get('lumis_per_job', '')
                         # Set CMSSW for each step
                         arguments['cmssw_release'] = cmssw_release

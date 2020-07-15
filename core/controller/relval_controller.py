@@ -124,42 +124,30 @@ class RelValController(ControllerBase):
         """
         self.logger.debug('Getting config upload script for %s', relval.get_prepid())
         database_url = Settings().get('cmsweb_url') + '/couchdb'
-        command = '#!/bin/bash\n'
+        command = '#!/bin/bash\n\n'
         common_check_part = 'if [ ! -s "%s.py" ]; then\n'
         common_check_part += '  echo "File %s.py is missing" >&2\n'
         common_check_part += '  exit 1\n'
-        common_check_part += 'fi\n'
-        for configs in relval.get_config_file_names():
+        common_check_part += 'fi\n\n'
+        for config in relval.get_config_file_names():
             # Run config uploader
-            command += '\n'
-            command += common_check_part % (configs['config'], configs['config'])
-            if configs.get('harvest'):
-                command += '\n'
-                command += common_check_part % (configs['harvest'], configs['harvest'])
+            command += common_check_part % (config, config)
 
-        command += '\n'
-        command += cmssw_setup(relval.get('cmssw_release'))
-        command += '\n\n'
         # Add path to WMCore
         # This should be done in a smarter way
         command += '\n'.join(['git clone --quiet https://github.com/dmwm/WMCore.git',
                               'export PYTHONPATH=$(pwd)/WMCore/src/python/:$PYTHONPATH'])
+        command += '\n'
         common_upload_part = ('python config_uploader.py --file %s.py --label %s '
                               f'--group ppd --user $(echo $USER) --db {database_url}')
-        for configs in relval.get_config_file_names():
+        for config in relval.get_config_file_names():
             # Run config uploader
             command += '\n'
-            command += common_upload_part % (configs['config'], configs['config'])
-            if configs.get('harvest'):
-                command += '\n'
-                command += common_upload_part % (configs['harvest'], configs['harvest'])
+            command += common_upload_part % (config, config)
 
         # Remove WMCore in order not to run out of space
         command += '\n'
         command += 'rm -rf WMCore'
-        command += '\n'
-        cmssw_release = relval.get('cmssw_release')
-        command += f'rm -rf {cmssw_release}'
 
         return command
 

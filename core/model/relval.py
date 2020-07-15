@@ -173,6 +173,6 @@ class RelVal(ModelBase):
         """
         file_names = []
         for step in self.get('steps'):
-            file_names.append(step.get_config_file_names())
+            file_names.append(step.get_config_file_name())
 
         return file_names

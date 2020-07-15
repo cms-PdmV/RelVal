@@ -181,7 +181,7 @@ class RelValStep(ModelBase):
         name = self.get('name')
         all_steps = self.parent().get('steps')
         arguments_dict['fileout'] = f'"file:step{index + 1}.root"'
-        arguments_dict['python_filename'] = f'{name}.py'
+        arguments_dict['python_filename'] = f'{self.get_config_file_name()}.py'
         arguments_dict['no_exec'] = True
 
         if index != 0:
@@ -269,14 +269,10 @@ class RelValStep(ModelBase):
         input_step_eventcontent = [x for x in input_step_eventcontent if not x.startswith('DQM')]
         return len(input_step_eventcontent) - 1, input_step_eventcontent[-1]
 
-    def get_config_file_names(self):
+    def get_config_file_name(self):
         """
-        Return dictionary of 'config' and 'harvest' config file names
+        Return config file name without extension
         """
         parent_prepid = self.parent().get_prepid()
         index = self.get_index_in_parent()
-        config_file_names = {'config': f'{parent_prepid}_{index}_cfg'}
-        if self.has_step('HARVESTING'):
-            config_file_names['harvest'] = f'{parent_prepid}_{index}_harvest_cfg'
-
-        return config_file_names
+        return f'{parent_prepid}_{index}_cfg'
