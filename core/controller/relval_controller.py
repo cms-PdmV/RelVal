@@ -2,10 +2,10 @@
 Module that contains RelValController class
 """
 import json
-from core_lib.pdmv_database.database import Database
-from core_lib.pdmv_controller.controller_base import ControllerBase
-from core_lib.pdmv_utils.settings import Settings
-from core_lib.pdmv_utils.common_utils import cmssw_setup
+from core_lib.database.database import Database
+from core_lib.controller.controller_base import ControllerBase
+from core_lib.utils.settings import Settings
+from core_lib.utils.common_utils import cmssw_setup
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
 from core.model.relval_step import RelValStep

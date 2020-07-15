@@ -2,8 +2,8 @@
 Module that contains all search APIs
 """
 import flask
-from core_lib.pdmv_api.api_base import APIBase
-from core_lib.pdmv_database.database import Database
+from core_lib.api.api_base import APIBase
+from core_lib.database.database import Database
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
 from core.model.campaign import Campaign

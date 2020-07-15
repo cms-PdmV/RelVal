@@ -2,7 +2,7 @@
 Module that contains ModelBase class
 """
 import re
-from core_lib.pdmv_model.model_base import ModelBase as PdmVModelBase
+from core_lib.model.model_base import ModelBase as PdmVModelBase
 
 
 class ModelBase(PdmVModelBase):

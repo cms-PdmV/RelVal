@@ -4,11 +4,11 @@ Module that contains TicketController class
 import json
 import os
 from random import Random
-from core_lib.pdmv_database.database import Database
-from core_lib.pdmv_controller.controller_base import ControllerBase
-from core_lib.pdmv_utils.ssh_executor import SSHExecutor
-from core_lib.pdmv_utils.settings import Settings
-from core_lib.pdmv_utils.common_utils import clean_split, cmssw_setup
+from core_lib.database.database import Database
+from core_lib.controller.controller_base import ControllerBase
+from core_lib.utils.ssh_executor import SSHExecutor
+from core_lib.utils.settings import Settings
+from core_lib.utils.common_utils import clean_split, cmssw_setup
 from core.model.ticket import Ticket
 from core.model.campaign import Campaign
 from core.controller.relval_controller import RelValController

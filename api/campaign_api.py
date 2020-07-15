@@ -3,7 +3,7 @@ Module that contains all campaign APIs
 """
 import json
 import flask
-from core_lib.pdmv_api.api_base import APIBase
+from core_lib.api.api_base import APIBase
 from core.model.campaign import Campaign
 from core.controller.campaign_controller import CampaignController
 
