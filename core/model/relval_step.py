@@ -201,9 +201,9 @@ class RelValStep(ModelBase):
                 input_number = self.get_input_step_index() + 1
                 eventcontent_index, eventcontent = self.get_input_eventcontent()
                 if eventcontent_index == 0:
-                    arguments_dict['filein'] = f'file:step{input_number}.root"'
+                    arguments_dict['filein'] = f'"file:step{input_number}.root"'
                 else:
-                    arguments_dict['filein'] = f'file:step{input_number}_in{eventcontent}.root"'
+                    arguments_dict['filein'] = f'"file:step{input_number}_in{eventcontent}.root"'
 
         cms_driver_command = self.__build_cmsdriver(index, arguments_dict)
         return cms_driver_command
@@ -268,3 +268,15 @@ class RelValStep(ModelBase):
 
         input_step_eventcontent = [x for x in input_step_eventcontent if not x.startswith('DQM')]
         return len(input_step_eventcontent) - 1, input_step_eventcontent[-1]
+
+    def get_config_file_names(self):
+        """
+        Return dictionary of 'config' and 'harvest' config file names
+        """
+        parent_prepid = self.parent().get_prepid()
+        index = self.get_index_in_parent()
+        config_file_names = {'config': f'{parent_prepid}_{index}_cfg'}
+        if self.has_step('HARVESTING'):
+            config_file_names['harvest'] = f'{parent_prepid}_{index}_harvest_cfg'
+
+        return config_file_names

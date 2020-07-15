@@ -166,3 +166,13 @@ class RelVal(ModelBase):
             request_string += f'{relval_type}_'
 
         return request_string.strip('_')
+
+    def get_config_file_names(self):
+        """
+        Get list of dictionaries of all config file names without extensions
+        """
+        file_names = []
+        for step in self.get('steps'):
+            file_names.append(step.get_config_file_names())
+
+        return file_names

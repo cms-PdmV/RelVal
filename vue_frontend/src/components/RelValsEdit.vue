@@ -69,6 +69,9 @@
                     <input type="radio" class="mr-1 ml-2" v-model="step.step_type" :name="'step' + index" :value="'driver'">cmsDriver
                   </td>
                 </tr>
+                <tr>
+                  <td>Lumis per job</td><td><input type="text" v-model="step.lumis_per_job" :disabled="!editingInfo.steps"></td>
+                </tr>
                 <template v-if="step.step_type == 'input'">
                   <tr>
                     <td>Dataset</td><td><input type="text" v-model="step.input_dataset" :disabled="!editingInfo.steps"></td>

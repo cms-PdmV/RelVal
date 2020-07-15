@@ -184,7 +184,7 @@ class TicketController(ControllerBase):
                         arguments['input_dataset'] = input_dict.get('dataset', '')
                         arguments['input_lumisection'] = input_dict.get('lumisection', {})
                         arguments['input_label'] = input_dict.get('label', '')
-                        arguments['input_events'] = input_dict.get('events', 0)
+                        arguments['input_events'] = input_dict.get('events', '')
                         # Set step name
                         arguments['name'] = step_dict['name']
                         arguments['lumis_per_job'] = step_dict.get('lumis_per_job', '')

@@ -5,6 +5,7 @@ import json
 from core_lib.pdmv_database.database import Database
 from core_lib.pdmv_controller.controller_base import ControllerBase
 from core_lib.pdmv_utils.settings import Settings
+from core_lib.pdmv_utils.common_utils import cmssw_setup
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
 from core.model.relval_step import RelValStep
@@ -122,8 +123,43 @@ class RelValController(ControllerBase):
         Get bash script that would upload config files to ReqMgr2
         """
         self.logger.debug('Getting config upload script for %s', relval.get_prepid())
-        # database_url = Settings().get('cmsweb_url') + '/couchdb'
+        database_url = Settings().get('cmsweb_url') + '/couchdb'
         command = '#!/bin/bash\n'
+        common_check_part = 'if [ ! -s "%s.py" ]; then\n'
+        common_check_part += '  echo "File %s.py is missing" >&2\n'
+        common_check_part += '  exit 1\n'
+        common_check_part += 'fi\n'
+        for configs in relval.get_config_file_names():
+            # Run config uploader
+            command += '\n'
+            command += common_check_part % (configs['config'], configs['config'])
+            if configs.get('harvest'):
+                command += '\n'
+                command += common_check_part % (configs['harvest'], configs['harvest'])
+
+        command += '\n'
+        command += cmssw_setup(relval.get('cmssw_release'))
+        command += '\n\n'
+        # Add path to WMCore
+        # This should be done in a smarter way
+        command += '\n'.join(['git clone --quiet https://github.com/dmwm/WMCore.git',
+                              'export PYTHONPATH=$(pwd)/WMCore/src/python/:$PYTHONPATH'])
+        common_upload_part = ('python config_uploader.py --file %s.py --label %s '
+                              f'--group ppd --user $(echo $USER) --db {database_url}')
+        for configs in relval.get_config_file_names():
+            # Run config uploader
+            command += '\n'
+            command += common_upload_part % (configs['config'], configs['config'])
+            if configs.get('harvest'):
+                command += '\n'
+                command += common_upload_part % (configs['harvest'], configs['harvest'])
+
+        # Remove WMCore in order not to run out of space
+        command += '\n'
+        command += 'rm -rf WMCore'
+        command += '\n'
+        cmssw_release = relval.get('cmssw_release')
+        command += f'rm -rf {cmssw_release}'
 
         return command
 
@@ -152,8 +188,9 @@ class RelValController(ControllerBase):
         job_dict['RequestString'] = request_string
         job_dict['EnableHarvesting'] = False
         job_dict['Campaign'] = campaign_name
-        job_dict['Memory'] = relval.get('memory')
-        # Harvesting should run on single core, each task will have it's own core setting
+        # Harvesting should run on single core with 3GB memory,
+        # and each task will have it's own core and memory setting
+        job_dict['Memory'] = 3000
         job_dict['Multicore'] = 1
 
         task_number = 0
@@ -192,7 +229,7 @@ class RelValController(ControllerBase):
             task_dict['ConfigCacheID'] = step.get('config_id')
             task_dict['KeepOutput'] = True
             task_dict['SplittingAlgo'] = 'LumiBased'
-            task_dict['LumisPerJob'] = step.get('lumis_per_job')
+            task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
             task_dict['GlobalTag'] = conditions
             task_dict['ProcessingString'] = f'{conditions}_{relval_type}'.strip('_')
             task_dict['Memory'] = relval.get('memory')
