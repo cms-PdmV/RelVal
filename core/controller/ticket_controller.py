@@ -3,10 +3,12 @@ Module that contains TicketController class
 """
 import json
 import os
+import xml.etree.ElementTree as XMLet
 from random import Random
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
+from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.settings import Settings
 from core_lib.utils.common_utils import clean_split, cmssw_setup
 from core.model.ticket import Ticket
@@ -97,6 +99,7 @@ class TicketController(ControllerBase):
             campaign = Campaign(json_input=campaign_db.get(campaign_name))
             relval_set = ticket.get('relval_set')
             cmssw_release = campaign.get('cmssw_release')
+            scram_arch = self.get_scram_arch(cmssw_release)
             label = ticket.get('label')
             sample_tag = ticket.get('sample_tag')
             cpu_cores = ticket.get('cpu_cores')
@@ -188,8 +191,8 @@ class TicketController(ControllerBase):
                         # Set step name
                         arguments['name'] = step_dict['name']
                         # Shorten the name and check for duplicate names
-                        if len(arguments['name']) > 50:
-                            arguments['name'] = clean_split(arguments['name'], '_')[-1]
+                        if len(arguments['name']) + len(campaign_name) > 79:
+                            arguments['name'] = clean_split(arguments['name'], '_')[0]
                             for existing_step in workflow_json['steps']:
                                 if arguments['name'] == existing_step['name']:
                                     arguments['name'] += f'_{step_index + 1}'
@@ -197,6 +200,7 @@ class TicketController(ControllerBase):
                         arguments['lumis_per_job'] = step_dict.get('lumis_per_job', '')
                         # Set CMSSW for each step
                         arguments['cmssw_release'] = cmssw_release
+                        arguments['scram_arch'] = scram_arch
                         self.logger.debug('Will create %s', arguments)
                         workflow_json['steps'].append(arguments)
 
@@ -218,3 +222,28 @@ class TicketController(ControllerBase):
                 raise ex
 
         return []
+
+    def get_scram_arch(self, cmssw_release):
+        """
+        Get scram arch from
+        https://cmssdt.cern.ch/SDT/cgi-bin/ReleasesXML?anytype=1
+        """
+
+        self.logger.debug('Downloading releases XML')
+        conn = ConnectionWrapper(host='cmssdt.cern.ch')
+        response = conn.api('GET', '/SDT/cgi-bin/ReleasesXML?anytype=1')
+        self.logger.debug('Downloaded releases XML')
+        root = XMLet.fromstring(response)
+        for architecture in root:
+            if architecture.tag != 'architecture':
+                # This should never happen as children should be <architecture>
+                continue
+
+            scram_arch = architecture.attrib.get('name')
+            for release in architecture:
+                if release.attrib.get('label') == cmssw_release:
+                    self.logger.debug('Scram arch for %s is %s', cmssw_release, scram_arch)
+                    return scram_arch
+
+        self.logger.warning('Could not find scram arch for %s', cmssw_release)
+        return None

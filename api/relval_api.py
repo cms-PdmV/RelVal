@@ -197,3 +197,110 @@ class GetDefaultRelValStepAPI(APIBase):
         return self.output_text({'response': sequence,
                                  'success': True,
                                  'message': ''})
+
+class RelValNextStatus(APIBase):
+    """
+    Endpoint for moving one or multiple RelVals to next status
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.ensure_request_data
+    @APIBase.exceptions_to_errors
+    @APIBase.ensure_role('manager')
+    def post(self, prepid=None):
+        """
+        Move one or multiple RelVals to next status
+        """
+        data = flask.request.data
+        relval_json = json.loads(data.decode('utf-8'))
+        if isinstance(relval_json, dict):
+            prepid = relval_json.get('prepid')
+            relval = relval_controller.get(prepid)
+            results = relval_controller.next_status(relval)
+            results = results.get_json()
+        elif isinstance(relval_json, list):
+            results = []
+            for single_relval_json in relval_json:
+                prepid = single_relval_json.get('prepid')
+                relval = relval_controller.get(prepid)
+                results.append(relval_controller.next_status(relval))
+
+            results = [x.get_json() for x in results]
+        else:
+            raise Exception('Expected a single RelVal dict or a list of RelVal dicts')
+
+        return self.output_text({'response': results, 'success': True, 'message': ''})
+
+
+class RelValPreviousStatus(APIBase):
+    """
+    Endpoint for moving one or multiple RelVals to previous status
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.ensure_request_data
+    @APIBase.exceptions_to_errors
+    @APIBase.ensure_role('manager')
+    def post(self, prepid=None):
+        """
+        Move one or multiple RelVals to previous status
+        """
+        data = flask.request.data
+        relval_json = json.loads(data.decode('utf-8'))
+        if isinstance(relval_json, dict):
+            prepid = relval_json.get('prepid')
+            relval = relval_controller.get(prepid)
+            results = relval_controller.previous_status(relval)
+            results = results.get_json()
+        elif isinstance(relval_json, list):
+            results = []
+            for single_relval_json in relval_json:
+                prepid = single_relval_json.get('prepid')
+                relval = relval_controller.get(prepid)
+                results.append(relval_controller.previous_status(relval))
+
+            results = [x.get_json() for x in results]
+        else:
+            raise Exception('Expected a single RelVals dict or a list of RelVals dicts')
+
+        return self.output_text({'response': results, 'success': True, 'message': ''})
+
+
+class UpdateRelValWorkflowsAPI(APIBase):
+    """
+    Endpoint for trigerring one or multiple RelVal update from Stats2 (ReqMgr2 + DBS)
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.ensure_request_data
+    @APIBase.exceptions_to_errors
+    @APIBase.ensure_role('manager')
+    def post(self):
+        """
+        Pull workflows from Stats2 (ReqMgr2 + DBS) and update RelVal with that information
+        """
+        data = flask.request.data
+        relval_json = json.loads(data.decode('utf-8'))
+        if isinstance(relval_json, dict):
+            prepid = relval_json.get('prepid')
+            relval = relval_controller.get(prepid)
+            results = relval_controller.update_workflows(relval)
+            results = results.get_json()
+        elif isinstance(relval_json, list):
+            results = []
+            for single_relval_json in relval_json:
+                prepid = single_relval_json.get('prepid')
+                relval = relval_controller.get(prepid)
+                results.append(relval_controller.update_workflows(relval))
+
+            results = [x.get_json() for x in results]
+        else:
+            raise Exception('Expected a single RelVal dict or a list of RelVal dicts')
+
+        return self.output_text({'response': results, 'success': True, 'message': ''})

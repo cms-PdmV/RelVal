@@ -5,6 +5,7 @@ from copy import deepcopy
 from core.model.model_base import ModelBase
 from core.model.relval_step import RelValStep
 from core_lib.utils.common_utils import cmssw_setup
+from core_lib.utils.settings import Settings
 
 
 class RelVal(ModelBase):
@@ -19,8 +20,6 @@ class RelVal(ModelBase):
         'prepid': '',
         # Campaign name
         'campaign': '',
-        # CMSSW release
-        'cmssw_release': '',
         # GlobalTag for all steps
         'conditions_globaltag': '',
         # CPU cores
@@ -33,24 +32,31 @@ class RelVal(ModelBase):
         'memory': 2000,
         # User notes
         'notes': '',
+        # Priority in computing
+        'priority': 110000,
         # Type of relval: standard, upgrade
         'relval_set': 'standard',
         # Tag for grouping of RelVals
         'sample_tag': '',
+        # Size per event in kilobytes
+        'size_per_event': 1.0,
         # Status of this relval
         'status': 'new',
         # Steps of RelVal
         'steps': [],
+        # Time per event in seconds
+        'time_per_event': 1.0,
         # Workflow ID
         'workflow_id': 0.0,
         # Workflows name
-        'workflow_name': ''
+        'workflow_name': '',
+        # ReqMgr2 names
+        'workflows': [],
     }
 
     lambda_checks = {
         'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,99}'),
         'campaign': ModelBase.lambda_check('campaign'),
-        'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'conditions_globaltag': ModelBase.lambda_check('globaltag'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         'label': ModelBase.lambda_check('label'),
@@ -76,7 +82,7 @@ class RelVal(ModelBase):
 
         ModelBase.__init__(self, json_input)
 
-    def get_cmsdrivers(self):
+    def get_cmsdrivers(self, for_submission=False):
         """
         Get all cmsDriver commands for this RelVal
         """
@@ -89,8 +95,51 @@ class RelVal(ModelBase):
                 built_command += '\n\n'
 
             previous_step_cmssw = step_cmssw
-            built_command += step.get_command()
+            built_command += step.get_command(for_submission)
             built_command += '\n\n\n\n'
+
+        return built_command.strip()
+
+    def get_config_upload(self):
+        """
+        Get all config upload commands for this RelVal
+        """
+        built_command = ''
+        self.logger.debug('Getting config upload script for %s', self.get_prepid())
+        database_url = Settings().get('cmsweb_url') + '/couchdb'
+        file_check = 'if [ ! -s "%s.py" ]; then\n'
+        file_check += '  echo "File %s.py is missing" >&2\n'
+        file_check += '  exit 1\n'
+        file_check += 'fi\n\n'
+        for step in self.get('steps'):
+            # Run config check
+            config_name = step.get_config_file_name()
+            if config_name:
+                built_command += file_check % (config_name, config_name)
+
+        # Add path to WMCore
+        # This should be done in a smarter way
+        built_command += 'git clone --quiet https://github.com/dmwm/WMCore.git\n'
+        built_command += 'export PYTHONPATH=$(pwd)/WMCore/src/python/:$PYTHONPATH\n\n'
+        file_upload = ('python config_uploader.py --file %s.py --label %s '
+                       f'--group ppd --user $(echo $USER) --db {database_url}\n')
+        previous_step_cmssw = None
+        for step in self.get('steps'):
+            # Run config check
+            config_name = step.get_config_file_name()
+            if config_name:
+                step_cmssw = step.get('cmssw_release')
+                if step_cmssw != previous_step_cmssw:
+                    built_command += '\n'
+                    built_command += cmssw_setup(step_cmssw)
+                    built_command += '\n\n'
+
+                previous_step_cmssw = step_cmssw
+                built_command += file_upload % (config_name, config_name)
+
+        # Remove WMCore in order not to run out of space
+        built_command += '\n'
+        built_command += 'rm -rf WMCore'
 
         return built_command.strip()
 
@@ -152,9 +201,15 @@ class RelVal(ModelBase):
         Example: RVCMSSW_11_0_0_pre4RunDoubleMuon2018C__gcc8_RelVal_2018C
         RV{cmssw_release}{first_step_name}__{label}_{relval_type}_{first_step_label}
         """
-        cmssw_release = self.get('cmssw_release')
-        label = self.get('label')
         steps = self.get('steps')
+        for step in steps:
+            cmssw_release = step.get('cmssw_release')
+            if cmssw_release:
+                break
+        else:
+            raise Exception('No steps have CMSSW release')
+
+        label = self.get('label')
         first_step_name = steps[0].get('name')
         relval_type = self.get_relval_type()
 

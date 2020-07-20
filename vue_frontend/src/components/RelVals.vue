@@ -26,6 +26,10 @@
             <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>&nbsp;
             <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>&nbsp;
             <a :href="'api/relvals/get_config_upload/' + item.prepid" title="Show config upload script">Config upload</a>&nbsp;
+            <a style="text-decoration: underline;" @click="previousStatus(item)" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>&nbsp;
+            <a style="text-decoration: underline;" @click="nextStatus(item)" v-if="role('manager')" title="Move to next status">Next</a>&nbsp;
+            <a style="text-decoration: underline;" @click="updateWorkflows(item)" v-if="role('manager') && item.status == 'submitted'" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
+            <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done'" title="Show workflows of this RelVal in Stats2">Stats2</a>         
           </template>
           <template v-slot:item.prepid="{ item }">
             <a :href="'relvals?prepid=' + item.prepid">{{item.prepid}}</a>
@@ -36,9 +40,6 @@
           <template v-slot:item.notes="{ item }">
             <pre v-if="item.notes.length" class="notes">{{item.notes}}</pre>
           </template>
-          <template v-slot:item.cmssw_release="{ item }">
-            {{item.cmssw_release.replace('_', ' ').replace(/_/g, '.')}}
-          </template>
           <template v-slot:item.memory="{ item }">
             {{item.memory}} MB
           </template>
@@ -47,6 +48,25 @@
           </template>
           <template v-slot:item._workflow="{ item }">
             {{item.workflow_id}} <span v-if="item.workflow_name">({{item.workflow_name}})</span>
+          </template>
+          <template v-slot:item.workflows="{ item }">
+            <ol>
+              <li v-for="(workflow, index) in item.workflows" :key="workflow.name">
+                <a target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
+                <a target="_blank" title="Open workflow in Stats2" :href="'https://cms-pdmv.cern.ch/stats?workflow_name=' + workflow.name">Stats2</a>&nbsp;
+                <span v-if="workflow.status_history && workflow.status_history.length > 0">
+                  <small>type:</small> {{workflow.type}}
+                  <small>status:</small> {{workflow.status_history[workflow.status_history.length - 1].status}}
+                </span>
+                <ul v-if="index == item.workflows.length - 1">
+                  <li v-for="dataset in workflow.output_datasets" :key="dataset.name">
+                    <a target="_blank" title="Open dataset in DAS" :href="makeDASLink(dataset.name)">{{dataset.name}}</a>&nbsp;
+                    <small>events:</small> {{dataset.events}}
+                    <small>type:</small> {{dataset.type}}
+                  </li>
+                </ul>
+              </li>
+            </ol>
           </template>
         </v-data-table>
       </div>
@@ -95,6 +115,9 @@
       <a :href="'relvals/edit'" v-if="role('manager') && !selectedItems.length">New RelVal</a>
       <span v-if="role('manager') && selectedItems.length">Selected items ({{selectedItems.length}}) actions:</span>
       <a v-if="role('manager') && selectedItems.length" @click="deleteManyRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
+      <a v-if="role('manager') && selectedItems.length" @click="previousMany(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
+      <a v-if="role('manager') && selectedItems.length" @click="nextStatusMany(selectedItems)" title="Move selected RelVals to next status">Next</a>
+      <a v-if="role('manager') && selectedItems.length" @click="updateWorkflowsMany(selectedItems)" title="Update selected RelVals' information from Stats2">Update from Stats2</a>
       <Paginator :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
     </footer>
@@ -124,7 +147,6 @@ export default {
         {'dbName': '_actions', 'displayName': 'Actions', 'visible': 1},
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
         {'dbName': 'campaign', 'displayName': 'Campaign', 'visible': 1},
-        {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 1},
         {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
         {'dbName': '_workflow', 'displayName': 'Workflow', 'visible': 1},
@@ -132,9 +154,11 @@ export default {
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
         {'dbName': 'conditions_globaltag', 'displayName': 'GlobalTag', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
+        {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
+        {'dbName': 'priority', 'displayName': 'Priority', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
         {'dbName': 'steps', 'displayName': 'Steps', 'visible': 0},
-        {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
+        {'dbName': 'workflows', 'displayName': 'Workflows (jobs)', 'visible': 0},
       ],
       headers: [],
       dataItems: [],
@@ -243,6 +267,96 @@ export default {
         component.clearDialog();
       }
       this.dialog.visible = true;
+    },
+    nextStatus: function (relval) {
+      let component = this;
+      this.loading = true;
+      axios.post('api/relvals/next_status', relval).then(response => {
+        component.fetchObjects();
+      }).catch(error => {
+        component.loading = false;
+        component.clearDialog();
+        component.showError("Error moving RelVal to next status", error.response.data.message);
+      });
+    },
+    nextStatusMany: function (relvals) {
+      let component = this;
+      this.loading = true;
+      axios.post('api/relvals/next_status', relvals.slice()).then(() => {
+        component.fetchObjects();
+        component.selectedItems = [];
+      }).catch(error => {
+        component.loading = false;
+        component.clearDialog();
+        component.showError("Error moving RelVals to next status", error.response.data.message);
+        component.selectedItems = [];
+      });
+    },
+    previousStatus: function(relval) {
+      let component = this;
+      this.dialog.title = "Set " + relval.prepid + " to previous status?";
+      this.dialog.description = "Are you sure you want to set " + relval.prepid + " RelVal to previous status?";
+      this.dialog.ok = function() {
+        component.loading = true;
+        axios.post('api/relvals/previous_status', relval).then(response => {
+          component.clearDialog();
+          component.fetchObjects();
+        }).catch(error => {
+          component.loading = false;
+          component.clearDialog();
+          component.showError("Error moving RelVal to previous status", error.response.data.message);
+        });
+      }
+      this.dialog.cancel = function() {
+        component.clearDialog();
+      }
+      this.dialog.visible = true;
+    },
+    previousMany: function(relvals) {
+      let component = this;
+      this.dialog.title = "Set " + relvals.length + " RelVals to previous status?";
+      this.dialog.description = "Are you sure you want to set " + relvals.length + " RelVals to previous status?";
+      this.dialog.ok = function() {
+        component.loading = true;
+        axios.post('api/relvals/previous_status', relvals.slice()).then(() => {
+          component.clearDialog();
+          component.fetchObjects();
+          component.selectedItems = [];
+        }).catch(error => {
+          component.loading = false;
+          component.clearDialog();
+          component.showError("Error moving RelVals to previous status", error.response.data.message);
+          component.selectedItems =  [];
+        });
+      }
+      this.dialog.cancel = function() {
+        component.clearDialog();
+      }
+      this.dialog.visible = true;
+    },
+    updateWorkflows: function (relval) {
+      let component = this;
+      this.loading = true;
+      axios.post('api/relvals/update_workflows', relval).then(response => {
+        component.fetchObjects();
+      }).catch(error => {
+        component.loading = false;
+        component.clearDialog();
+        component.showError("Error updating RelVal info", error.response.data.message);
+      });
+    },
+    updateWorkflowsMany: function(relvals) {
+      let component = this;
+      this.loading = true;
+      axios.post('api/relvals/update_workflows', relvals.slice()).then(response => {
+        component.fetchObjects();
+        component.selectedItems =  [];
+      }).catch(error => {
+        component.loading = false;
+        component.clearDialog();
+        component.showError("Error updating RelVal info", error.response.data.message);
+        component.selectedItems =  [];
+      });
     },
   }
 }

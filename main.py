@@ -8,7 +8,9 @@ from flask_cors import CORS
 from flask import Flask, render_template
 from core_lib.database.database import Database
 from api.system_api import (LockerStatusAPI,
-                            UserInfoAPI)
+                            UserInfoAPI,
+                            SubmissionWorkerStatusAPI,
+                            SubmissionQueueAPI,)
 from api.search_api import SearchAPI
 from api.ticket_api import (CreateTicketAPI,
                             DeleteTicketAPI,
@@ -24,7 +26,10 @@ from api.relval_api import (CreateRelValAPI,
                             GetCMSDriverAPI,
                             GetConfigUploadAPI,
                             GetRelValJobDictAPI,
-                            GetDefaultRelValStepAPI)
+                            GetDefaultRelValStepAPI,
+                            RelValNextStatus,
+                            RelValPreviousStatus,
+                            UpdateRelValWorkflowsAPI)
 from api.campaign_api import (CreateCampaignAPI,
                               DeleteCampaignAPI,
                               UpdateCampaignAPI,
@@ -93,6 +98,8 @@ def api_documentation(_path):
 
 api.add_resource(LockerStatusAPI, '/api/system/locks')
 api.add_resource(UserInfoAPI, '/api/system/user_info')
+api.add_resource(SubmissionWorkerStatusAPI, '/api/system/workers')
+api.add_resource(SubmissionQueueAPI, '/api/system/queue')
 
 api.add_resource(SettingsAPI,
                  '/api/settings/get',
@@ -120,6 +127,9 @@ api.add_resource(GetCMSDriverAPI, '/api/relvals/get_cmsdriver/<string:prepid>')
 api.add_resource(GetConfigUploadAPI, '/api/relvals/get_config_upload/<string:prepid>')
 api.add_resource(GetRelValJobDictAPI, '/api/relvals/get_dict/<string:prepid>')
 api.add_resource(GetDefaultRelValStepAPI, '/api/relvals/get_default_step')
+api.add_resource(RelValNextStatus, '/api/relvals/next_status')
+api.add_resource(RelValPreviousStatus, '/api/relvals/previous_status')
+api.add_resource(UpdateRelValWorkflowsAPI, '/api/relvals/update_workflows')
 
 api.add_resource(CreateCampaignAPI, '/api/campaigns/create')
 api.add_resource(DeleteCampaignAPI, '/api/campaigns/delete')

@@ -30,6 +30,9 @@ class RelValStep(ModelBase):
         'datatier': [],
         'era': '',
         'eventcontent': [],
+        'eventsperlumi': '',
+        'eventsperjob': '',
+        'extra': '',
         'fast': False,
         'filetype': '',
         'hltProcess': '',
@@ -41,17 +44,24 @@ class RelValStep(ModelBase):
         'lumis_per_job': '',
         'mc': False,
         'no_exec': False,
-        'number': '',
         'pileup': '',
         'pileup_input': '',
         'process': '',
         'relval': '',
         'runUnscheduled': False,
         'scenario': '',
+        'scram_arch': '',
         'step': [],
     }
 
-    __common_attributes = {'extra', 'cfg', 'name', 'cmssw_release', 'lumis_per_job'}
+    __common_attributes = {'cfg',
+                           'cmssw_release',
+                           'eventsperlumi',
+                           'eventsperjob',
+                           'extra',
+                           'lumis_per_job',
+                           'name',
+                           'scram_arch'}
 
     lambda_checks = {
         'config_id': lambda cid: ModelBase.matches_regex(cid, '[a-f0-9]{0,50}'),
@@ -162,7 +172,7 @@ class RelValStep(ModelBase):
         command += f'echo \'{lumi_json}\' > {lumis_name}'
         return comment + '\n' + command
 
-    def get_command(self):
+    def get_command(self, for_submission=False):
         """
         Return a cmsDriver command for this step
         Config file is named like this
@@ -171,14 +181,16 @@ class RelValStep(ModelBase):
         step_type = self.get_step_type()
         index = self.get_index_in_parent()
         if index == 0 and step_type == 'input_file':
-            return self.__build_das_command(index, arguments_dict)
+            if for_submission:
+                return '# Nothing to do for input file step'
+            else:
+                return self.__build_das_command(index, arguments_dict)
 
         # Delete sequence metadata
         if 'config_id' in arguments_dict:
             del arguments_dict['config_id']
 
         # Handle input/output file names
-        name = self.get('name')
         all_steps = self.parent().get('steps')
         arguments_dict['fileout'] = f'"file:step{index + 1}.root"'
         arguments_dict['python_filename'] = f'{self.get_config_file_name()}.py'
@@ -188,15 +200,18 @@ class RelValStep(ModelBase):
             previous = all_steps[index - 1]
             previous_type = previous.get_step_type()
             if previous_type == 'input_file':
-                previous_lumisection = previous.get('input_lumisection')
-                if previous_lumisection:
-                    # If there are lumi ranges, add a file with them and list of files as input
-                    arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
-                    arguments_dict['lumiToProcess'] = f'"step{index}_lumi_ranges.txt"'
+                if for_submission:
+                    arguments_dict['filein'] = f'"file:_placeholder_.root"'
                 else:
-                    # If there are no lumi ranges, use input file normally
-                    previous_dataset = previous.get('input_dataset')
-                    arguments_dict['filein'] = f'"dbs:{previous_dataset}"'
+                    previous_lumisection = previous.get('input_lumisection')
+                    if previous_lumisection:
+                        # If there are lumi ranges, add a file with them and list of files as input
+                        arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
+                        arguments_dict['lumiToProcess'] = f'"step{index}_lumi_ranges.txt"'
+                    else:
+                        # If there are no lumi ranges, use input file normally
+                        previous_dataset = previous.get('input_dataset')
+                        arguments_dict['filein'] = f'"dbs:{previous_dataset}"'
             else:
                 input_number = self.get_input_step_index() + 1
                 eventcontent_index, eventcontent = self.get_input_eventcontent()
@@ -257,14 +272,14 @@ class RelValStep(ModelBase):
                 if eventcontent == 'DQM':
                     return eventcontent_index, eventcontent
 
-            raise Exception('No in the input step')
+            raise Exception(f'No DQM eventcontent in the input step {input_step_eventcontent}')
 
         if this_is_alca:
             for eventcontent_index, eventcontent in enumerate(input_step_eventcontent):
                 if eventcontent.startswith('RECO'):
                     return eventcontent_index, eventcontent
 
-            raise Exception('No in the input step')
+            raise Exception(f'No RECO eventcontent in the input step {input_step_eventcontent}')
 
         input_step_eventcontent = [x for x in input_step_eventcontent if not x.startswith('DQM')]
         return len(input_step_eventcontent) - 1, input_step_eventcontent[-1]
@@ -273,6 +288,8 @@ class RelValStep(ModelBase):
         """
         Return config file name without extension
         """
-        parent_prepid = self.parent().get_prepid()
+        if self.get_step_type() == 'input_file':
+            return None
+
         index = self.get_index_in_parent()
-        return f'{parent_prepid}_{index}_cfg'
+        return f'step_{index}_cfg'

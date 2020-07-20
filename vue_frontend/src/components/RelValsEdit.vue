@@ -13,10 +13,6 @@
           <td><input type="text" v-model="editableObject.campaign" :disabled="!editingInfo.campaign"></td>
         </tr>
         <tr>
-          <td>CMSSW Release</td>
-          <td><input type="text" v-model="editableObject.cmssw_release" :disabled="!editingInfo.cmssw_release"></td>
-        </tr>
-        <tr>
           <td>CPU Cores</td>
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="32"></td>
         </tr>
@@ -35,6 +31,10 @@
         <tr>
           <td>Notes</td>
           <td><textarea v-model="editableObject.notes" :disabled="!editingInfo.notes"></textarea></td>
+        </tr>
+        <tr>
+          <td>Priority</td>
+          <td><input type="number" v-model="editableObject.priority" :disabled="!editingInfo.priority"></td>
         </tr>
         <tr>
           <td>RelVal set</td>

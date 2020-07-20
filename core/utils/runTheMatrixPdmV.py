@@ -65,7 +65,11 @@ def resolve_globaltag(tag):
         return tag
 
     tag = tag.replace('auto:', '', 1)
-    return auto_globaltag[tag]
+    resolved_tag = auto_globaltag[tag]
+    if isinstance(resolved_tag, (list, tuple)):
+        resolved_tag = resolved_tag[0]
+
+    return resolved_tag
 
 
 def build_cmsdriver(arguments, step_index):
@@ -205,11 +209,11 @@ def main():
                 if '-s' in workflow_step:
                     workflow_step['--step'] = workflow_step.pop('-s')
 
-                if '-n' in workflow_step:
-                    workflow_step['--number'] = workflow_step.pop('-n')
-
                 if 'cfg' in workflow_step:
                     workflow_step['_cfg'] = workflow_step.pop('cfg')
+
+                if '-n' in workflow_step:
+                    del workflow_step['-n']
 
                 # Change "flags" value to True, e.g. --data, --mc, --fast
                 for arg_name, arg_value in workflow_step.items():
