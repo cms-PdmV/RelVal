@@ -48,6 +48,9 @@
               </li>
             </ul>
           </template>
+          <template v-slot:item.recycle_gs="{ item }">
+            {{item.recycle_gs ? 'Yes' : 'No'}}
+          </template>
         </v-data-table>
       </div>
     </div>
@@ -120,15 +123,15 @@ export default {
         {'dbName': '_actions', 'displayName': 'Actions', 'visible': 1},
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
         {'dbName': 'campaign', 'displayName': 'Campaign', 'visible': 1},
+        {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 1},
+        {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
+        {'dbName': 'recycle_gs', 'displayName': 'Recycle GS', 'visible': 1},
+        {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
-        {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
-        {'dbName': 'memory', 'displayName': 'Memory', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
-        {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 0},
-        {'dbName': 'recycle_gs', 'displayName': 'Recycle GS', 'visible': 0},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
       ],
       headers: [],

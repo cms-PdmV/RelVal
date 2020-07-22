@@ -56,6 +56,7 @@ class LockerStatusAPI(APIBase):
         Get status of all locks in the system
         """
         status = Locker().get_status()
+        status = {k: ('count=0' not in v['l']) for k, v in status.items()}
         return self.output_text({'response': status, 'success': True, 'message': ''})
 
 

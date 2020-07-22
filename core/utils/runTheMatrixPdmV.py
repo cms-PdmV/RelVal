@@ -80,7 +80,7 @@ def build_cmsdriver(arguments, step_index):
     driver_step_name = 'step%s' % (step_index + 1)
     for arg_name in sorted(arguments.keys(), key=lambda x: x.replace('-', '', 2).lower()):
         arg_value = arguments[arg_name]
-        if arg_name.lower() == 'cfg':
+        if arg_name.lower() == 'step_type':
             driver_step_name = arg_value
             continue
 
@@ -210,7 +210,7 @@ def main():
                     workflow_step['--step'] = workflow_step.pop('-s')
 
                 if 'cfg' in workflow_step:
-                    workflow_step['_cfg'] = workflow_step.pop('cfg')
+                    workflow_step['step_type'] = workflow_step.pop('cfg')
 
                 if '-n' in workflow_step:
                     del workflow_step['-n']

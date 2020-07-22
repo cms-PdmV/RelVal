@@ -3,12 +3,10 @@ Module that contains TicketController class
 """
 import json
 import os
-import xml.etree.ElementTree as XMLet
 from random import Random
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
-from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.settings import Settings
 from core_lib.utils.common_utils import clean_split, cmssw_setup
 from core.model.ticket import Ticket
@@ -48,11 +46,12 @@ class TicketController(ControllerBase):
             # Form a new temporary prepid
             prepid = f'{prepid_part}-{serial_number:05d}'
             json_data['prepid'] = prepid
-            relval = super().create(json_data)
+            ticket = super().create(json_data)
             # After successful save update serial numbers in settings
             serial_numbers[prepid_part] = serial_number
             settings.save('tickets_prepid_sequence', serial_numbers)
-            return relval
+
+        return ticket
 
     def get_editing_info(self, obj):
         editing_info = super().get_editing_info(obj)
@@ -94,7 +93,7 @@ class TicketController(ControllerBase):
         relval_controller = RelValController()
         created_relvals = []
         with self.locker.get_lock(ticket_prepid):
-            ticket = Ticket(json_input=ticket_db.get(ticket_prepid))
+            ticket = self.get(ticket_prepid)
             campaign_name = ticket.get('campaign')
             campaign = Campaign(json_input=campaign_db.get(campaign_name))
             relval_set = ticket.get('relval_set')
@@ -134,10 +133,7 @@ class TicketController(ControllerBase):
                             f'{recycle_gs_flag}']
                 out, err, code = ssh_executor.execute_command(command)
                 if code != 0:
-                    self.logger.error('Exit code %s creating RelVals:\nError:%s\nOutput:%s',
-                                      code,
-                                      err,
-                                      out)
+                    self.logger.error('Exit code %s:\nError:%s\nOutput:%s', code, err, out)
                     raise Exception(f'Error code {code} creating RelVals: {err}')
 
                 ssh_executor.download_file(f'relval_work/{ticket_prepid}/{file_name}',
@@ -180,29 +176,28 @@ class TicketController(ControllerBase):
                         if '--datatier' in arguments:
                             arguments['--datatier'] = clean_split(arguments['--datatier'])
 
-                        if '_cfg' in arguments:
-                            arguments['cfg'] = arguments.pop('_cfg')
+                        if 'step_type' in arguments:
+                            arguments['type'] = arguments.pop('step_type')
 
-                        # Add input info to arguments dict
-                        arguments['input_dataset'] = input_dict.get('dataset', '')
-                        arguments['input_lumisection'] = input_dict.get('lumisection', {})
-                        arguments['input_label'] = input_dict.get('label', '')
-                        arguments['input_events'] = input_dict.get('events', '')
                         # Set step name
-                        arguments['name'] = step_dict['name']
+                        new_step = {}
+                        new_step['name'] = step_dict['name']
                         # Shorten the name and check for duplicate names
-                        if len(arguments['name']) + len(campaign_name) > 79:
-                            arguments['name'] = clean_split(arguments['name'], '_')[0]
+                        if len(new_step['name']) + len(campaign_name) > 79:
+                            new_step['name'] = clean_split(new_step['name'], '_')[0]
                             for existing_step in workflow_json['steps']:
-                                if arguments['name'] == existing_step['name']:
-                                    arguments['name'] += f'_{step_index + 1}'
+                                if new_step['name'] == existing_step['name']:
+                                    new_step['name'] += f'_{step_index + 1}'
 
-                        arguments['lumis_per_job'] = step_dict.get('lumis_per_job', '')
+                        new_step['lumis_per_job'] = step_dict.get('lumis_per_job', '')
+                        new_step['events_per_job'] = step_dict.get('events_per_job', '')
+                        new_step['events_per_lumi'] = step_dict.get('events_per_lumi', '')
                         # Set CMSSW for each step
-                        arguments['cmssw_release'] = cmssw_release
-                        arguments['scram_arch'] = scram_arch
-                        self.logger.debug('Will create %s', arguments)
-                        workflow_json['steps'].append(arguments)
+                        new_step['cmssw_release'] = cmssw_release
+                        new_step['driver'] = arguments
+                        new_step['input'] = input_dict
+                        self.logger.debug('Will create %s', new_step)
+                        workflow_json['steps'].append(new_step)
 
                     relval = relval_controller.create(workflow_json)
                     created_relvals.append(relval)
@@ -222,28 +217,3 @@ class TicketController(ControllerBase):
                 raise ex
 
         return []
-
-    def get_scram_arch(self, cmssw_release):
-        """
-        Get scram arch from
-        https://cmssdt.cern.ch/SDT/cgi-bin/ReleasesXML?anytype=1
-        """
-
-        self.logger.debug('Downloading releases XML')
-        conn = ConnectionWrapper(host='cmssdt.cern.ch')
-        response = conn.api('GET', '/SDT/cgi-bin/ReleasesXML?anytype=1')
-        self.logger.debug('Downloaded releases XML')
-        root = XMLet.fromstring(response)
-        for architecture in root:
-            if architecture.tag != 'architecture':
-                # This should never happen as children should be <architecture>
-                continue
-
-            scram_arch = architecture.attrib.get('name')
-            for release in architecture:
-                if release.attrib.get('label') == cmssw_release:
-                    self.logger.debug('Scram arch for %s is %s', cmssw_release, scram_arch)
-                    return scram_arch
-
-        self.logger.warning('Could not find scram arch for %s', cmssw_release)
-        return None

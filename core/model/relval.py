@@ -20,8 +20,6 @@ class RelVal(ModelBase):
         'prepid': '',
         # Campaign name
         'campaign': '',
-        # GlobalTag for all steps
-        'conditions_globaltag': '',
         # CPU cores
         'cpu_cores': 1,
         # Action history
@@ -32,6 +30,8 @@ class RelVal(ModelBase):
         'memory': 2000,
         # User notes
         'notes': '',
+        # Output datasets of RelVal
+        'output_datasets': [],
         # Priority in computing
         'priority': 110000,
         # Type of relval: standard, upgrade
@@ -55,25 +55,32 @@ class RelVal(ModelBase):
     }
 
     lambda_checks = {
-        'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,99}'),
+        'prepid': ModelBase.lambda_check('relval'),
         'campaign': ModelBase.lambda_check('campaign'),
-        'conditions_globaltag': ModelBase.lambda_check('globaltag'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         'label': ModelBase.lambda_check('label'),
         'memory': ModelBase.lambda_check('memory'),
+        '__output_datasets': ModelBase.lambda_check('dataset'),
+        'priority': ModelBase.lambda_check('priority'),
         'relval_set': ModelBase.lambda_check('relval_set'),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
+        'size_per_event': lambda spe: spe > 0.0,
         'status': lambda status: status in ('new', 'approved', 'submitting', 'submitted', 'done'),
-        '__steps': lambda s: isinstance(s, RelValStep),
-        'workflow_id': lambda wf: isinstance(wf, (float, int)) and wf >= 0,
+        'steps': lambda s: len(s) > 0,
+        'time_per_event': lambda tpe: tpe > 0.0,
+        'workflow_id': lambda wf: wf >= 0,
+        'workflow_name': lambda wn: ModelBase.matches_regex(wn, '[a-zA-Z0-9_\\-]{0,99}')
     }
 
     def __init__(self, json_input=None):
         if json_input:
             json_input = deepcopy(json_input)
             step_objects = []
-            for step_json in json_input.get('steps', []):
-                step_objects.append(RelValStep(json_input=step_json, parent=self))
+            for step_index, step_json in enumerate(json_input.get('steps', [])):
+                step = RelValStep(json_input=step_json, parent=self)
+                step_objects.append(step)
+                if step_index > 0 and step.get_step_type() == 'input_file':
+                    raise Exception('Only first step can be input file')
 
             json_input['steps'] = step_objects
 
@@ -102,7 +109,7 @@ class RelVal(ModelBase):
 
     def get_config_upload(self):
         """
-        Get all config upload commands for this RelVal
+        Get config upload commands for this RelVal
         """
         built_command = ''
         self.logger.debug('Getting config upload script for %s', self.get_prepid())
@@ -124,6 +131,7 @@ class RelVal(ModelBase):
         file_upload = ('python config_uploader.py --file %s.py --label %s '
                        f'--group ppd --user $(echo $USER) --db {database_url}\n')
         previous_step_cmssw = None
+        cmssw_versions = []
         for step in self.get('steps'):
             # Run config check
             config_name = step.get_config_file_name()
@@ -133,31 +141,23 @@ class RelVal(ModelBase):
                     built_command += '\n'
                     built_command += cmssw_setup(step_cmssw)
                     built_command += '\n\n'
+                    if step_cmssw not in cmssw_versions:
+                        cmssw_versions.append(step_cmssw)
 
                 previous_step_cmssw = step_cmssw
                 built_command += file_upload % (config_name, config_name)
 
         # Remove WMCore in order not to run out of space
         built_command += '\n'
-        built_command += 'rm -rf WMCore'
+        built_command += 'rm -rf WMCore\n'
+        for cmssw_version in cmssw_versions:
+            built_command += f'rm -rf {cmssw_version}\n'
 
         return built_command.strip()
 
     def get_relval_type(self):
         """
-        if len( [step for step in s[3] if "HARVESTGEN" in step] )>0:
-            thisLabel=thisLabel+"_gen"
-
-        # for double miniAOD test
-        if len( [step for step in s[3] if "DBLMINIAODMCUP15NODQM" in step] )>0:
-            thisLabel=thisLabel+"_dblMiniAOD"
-
-        if 'FASTSIM' in s[2][index] or '--fast' in s[2][index]:
-            thisLabel+='_FastSim'
-
-        if '--data' in s[2][index] and nextHasDSInput.label:
-            thisLabel+='_RelVal_%s'%nextHasDSInput.label
-
+        RelVal type string based on step contents:
         RelVal
         gen
         FastSim
@@ -166,7 +166,7 @@ class RelVal(ModelBase):
         relval_type = ''
         steps = self.get('steps')
         if steps[0].get_step_type() == 'input_file':
-            first_step_label = steps[0].get('input_label')
+            first_step_label = steps[0].get('input')['label']
         else:
             first_step_label = ''
 
@@ -181,12 +181,12 @@ class RelVal(ModelBase):
                 break
 
         for step in steps:
-            if step.get('fast'):
+            if step.get('driver')['fast']:
                 relval_type += '_FastSim'
                 break
 
         for step in steps:
-            if step.get('data') and first_step_label:
+            if step.get('driver')['data'] and first_step_label:
                 relval_type += f'_RelVal_{first_step_label}_'
                 break
 
@@ -211,6 +211,7 @@ class RelVal(ModelBase):
 
         label = self.get('label')
         first_step_name = steps[0].get('name')
+        first_step_label = steps[0].get('input')['label']
         relval_type = self.get_relval_type()
 
         request_string = f'RV{cmssw_release}{first_step_name}__'
@@ -220,14 +221,7 @@ class RelVal(ModelBase):
         if relval_type:
             request_string += f'{relval_type}_'
 
+        if first_step_label:
+            request_string += f'{first_step_label}_'
+
         return request_string.strip('_')
-
-    def get_config_file_names(self):
-        """
-        Get list of dictionaries of all config file names without extensions
-        """
-        file_names = []
-        for step in self.get('steps'):
-            file_names.append(step.get_config_file_name())
-
-        return file_names

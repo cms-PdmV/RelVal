@@ -28,7 +28,7 @@ class Campaign(ModelBase):
     lambda_checks = {
         'prepid': ModelBase.lambda_check('campaign'),
         'batch_name': ModelBase.lambda_check('batch_name'),
-        'cmssw_release': ModelBase.lambda_check('cmssw_release')
+        'cmssw_release': ModelBase.lambda_check('cmssw_release'),
     }
 
     def __init__(self, json_input=None):

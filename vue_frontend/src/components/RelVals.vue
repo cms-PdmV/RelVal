@@ -68,6 +68,20 @@
               </li>
             </ol>
           </template>
+          <template v-slot:item.output_datasets="{ item }">
+            <ul>
+              <li v-for="dataset in item.output_datasets" :key="dataset"><a target="_blank" title="Open dataset in DAS" :href="makeDASLink(dataset)">{{dataset}}</a></li>
+            </ul>
+          </template>
+          <template v-slot:item.time_per_event="{ item }">
+            {{item.time_per_event}}s
+          </template>
+          <template v-slot:item.size_per_event="{ item }">
+            {{item.size_per_event}} kB
+          </template>
+          <template v-slot:item.recycle_gs="{ item }">
+            {{item.recycle_gs ? 'Yes' : 'No'}}
+          </template>
         </v-data-table>
       </div>
     </div>
@@ -148,16 +162,18 @@ export default {
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
         {'dbName': 'campaign', 'displayName': 'Campaign', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 1},
-        {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
-        {'dbName': '_workflow', 'displayName': 'Workflow', 'visible': 1},
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
-        {'dbName': 'conditions_globaltag', 'displayName': 'GlobalTag', 'visible': 0},
+        {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
+        {'dbName': '_workflow', 'displayName': 'Workflow', 'visible': 1},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
+        {'dbName': 'output_datasets', 'displayName': 'Output Datasets', 'visible': 0},
         {'dbName': 'priority', 'displayName': 'Priority', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
+        {'dbName': 'size_per_event', 'displayName': 'Size per Event', 'visible': 0},
         {'dbName': 'steps', 'displayName': 'Steps', 'visible': 0},
+        {'dbName': 'time_per_event', 'displayName': 'Time per Event', 'visible': 0},
         {'dbName': 'workflows', 'displayName': 'Workflows (jobs)', 'visible': 0},
       ],
       headers: [],

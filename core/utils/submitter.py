@@ -210,6 +210,9 @@ class RequestSubmitter(BaseSubmitter):
                 relval.add_history('submission', 'succeeded', 'automatic')
                 relval_db.save(relval.get_json())
             except Exception:
+                if reqmgr_response:
+                    reqmgr_response = reqmgr_response.replace('\\n', '\n')
+
                 self.__handle_error(relval,
                                     f'Error submitting {prepid} to ReqMgr2:\n{reqmgr_response}')
                 return

@@ -2,10 +2,10 @@
 Module that contains RelValController class
 """
 import json
+import xml.etree.ElementTree as XMLet
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.settings import Settings
-from core_lib.utils.common_utils import cmssw_setup
 from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core.utils.submitter import RequestSubmitter
@@ -40,6 +40,9 @@ class RelValController(ControllerBase):
             if not step.get('cmssw_release'):
                 step['cmssw_release'] = cmssw_release
 
+            if not step.get('scram_arch'):
+                step['scram_arch'] = self.get_scram_arch(step['cmssw_release'])
+
         settings = Settings()
         with self.locker.get_lock(f'generate-relval-prepid'):
             # Get a new serial number
@@ -53,24 +56,30 @@ class RelValController(ControllerBase):
             # After successful save update serial numbers in settings
             serial_numbers[prepid_part] = serial_number
             settings.save('relvals_prepid_sequence', serial_numbers)
-            return relval
+
+        return relval
 
     def get_editing_info(self, obj):
         editing_info = super().get_editing_info(obj)
         prepid = obj.get_prepid()
         status = obj.get('status')
         is_new = status == 'new'
+        not_done = status != 'done'
         creating_new = not bool(prepid)
-        editing_info['prepid'] = creating_new
+        editing_info['prepid'] = False
         editing_info['campaign'] = creating_new
         editing_info['conditions_globaltag'] = is_new
         editing_info['cpu_cores'] = is_new
         editing_info['memory'] = is_new
+        editing_info['label'] = is_new
         editing_info['notes'] = True
-        editing_info['priority'] = obj.get('status') != 'done'
+        editing_info['priority'] = not_done
         editing_info['relval_set'] = creating_new
         editing_info['sample_tag'] = is_new
-        editing_info['workflow_id'] = False
+        editing_info['size_per_event'] = is_new
+        editing_info['time_per_event'] = is_new
+        editing_info['workflow_id'] = creating_new
+        editing_info['workflow_name'] = creating_new
         editing_info['steps'] = is_new
 
         return editing_info
@@ -153,7 +162,7 @@ class RelValController(ControllerBase):
         campaign_name = relval.get('campaign')
         relval_type = relval.get_relval_type()
         # Get events from --relval attribute
-        events = [s.get('relval').split(',')[0] for s in steps]
+        events = [s.get('driver')['relval'].split(',')[0] for s in steps]
         events = [int(e) for e in events if e and int(e) > 0]
         job_dict = {}
         job_dict['Group'] = 'PPD'
@@ -173,7 +182,6 @@ class RelValController(ControllerBase):
         job_dict['RequestPriority'] = relval.get('priority')
         job_dict['TimePerEvent'] = relval.get('time_per_event')
         job_dict['SizePerEvent'] = relval.get('size_per_event')
-        job_dict['ScramArch'] = 'slc7_amd64_gcc700'
 
         task_number = 0
         for step_index, step in enumerate(steps):
@@ -182,6 +190,7 @@ class RelValController(ControllerBase):
                 # It is harvesting step
                 # It goes in the main job_dict
                 job_dict['DQMConfigCacheID'] = step.get('config_id')
+                job_dict['EnableHarvesting'] = True
                 continue
 
             task_dict = {}
@@ -196,22 +205,37 @@ class RelValController(ControllerBase):
                 input_step_index = step.get_input_step_index()
                 input_step = steps[input_step_index]
                 if input_step.get_step_type() == 'input_file':
+                    input_dict = input_step.get('input')
                     # Input file step is not a task
                     # Use this as input in next step
-                    task_dict['InputDataset'] = input_step.get('input_dataset')
-                    if input_step.get('input_lumisection'):
-                        task_dict['LumiList'] = input_step.get('input_lumisection')
+                    task_dict['InputDataset'] = input_dict['dataset']
+                    if input_dict['lumisection']:
+                        task_dict['LumiList'] = input_dict['lumisection']
                 else:
                     task_dict['InputTask'] = input_step.get('name')
                     _, input_module = step.get_input_eventcontent()
                     task_dict['InputFromOutputModule'] = f'{input_module}output'
 
             task_dict['TaskName'] = step.get('name')
-            conditions = step.get('conditions')
+            conditions = step.get('driver')['conditions']
             task_dict['ConfigCacheID'] = step.get('config_id')
             task_dict['KeepOutput'] = True
             task_dict['SplittingAlgo'] = 'LumiBased'
-            task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
+            if task_number == 0:
+                if step.get('lumis_per_job') != '':
+                    task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
+            else:
+                if step.get('events_per_lumi') != '':
+                    task_dict['EventsPerLumi'] = int(step.get('events_per_lumi'))
+
+                if step.get('events_per_job') != '':
+                    task_dict['EventsPerJob'] = int(step.get('events_per_job'))
+
+            task_dict['ScramArch'] = step.get('scram_arch')
+            if not job_dict.get('ScramArch'):
+                # Set main scram arch to first task scram arch
+                job_dict['ScramArch'] = task_dict['ScramArch']
+
             task_dict['GlobalTag'] = conditions
             if not job_dict.get('GlobalTag'):
                 # Set main globaltag to first task globaltag
@@ -353,12 +377,12 @@ class RelValController(ControllerBase):
         """
         Try to move RelVal back to approved
         """
-        active_workflows = self.__pick_active_workflows(relval)
+        active_workflows = self.pick_active_workflows(relval)
         self.force_stats_to_refresh([x['name'] for x in active_workflows])
         # Take active workflows again in case any of them changed during Stats refresh
-        active_workflows = self.__pick_active_workflows(relval)
+        active_workflows = self.pick_active_workflows(relval)
         if active_workflows:
-            self.__reject_workflows(active_workflows)
+            self.reject_workflows(active_workflows)
 
         relval.set('workflows', [])
         for step in relval.get('steps'):
@@ -367,7 +391,7 @@ class RelValController(ControllerBase):
         self.update_status(relval, 'approved')
         return relval
 
-    def __pick_workflows(self, all_workflows, output_datasets):
+    def pick_workflows(self, all_workflows, output_datasets):
         """
         Pick, process and sort workflows from computing based on output datasets
         """
@@ -397,7 +421,7 @@ class RelValController(ControllerBase):
                          ', '.join([w['name'] for w in new_workflows]))
         return new_workflows
 
-    def __pick_active_workflows(self, relval):
+    def pick_active_workflows(self, relval):
         """
         Filter out workflows that are rejected, aborted or failed
         """
@@ -436,7 +460,7 @@ class RelValController(ControllerBase):
             self.logger.info('Will make Stats2 refresh these workflows: %s', ', '.join(workflows))
             ssh_executor.execute_command(workflow_update_commands)
 
-    def __reject_workflows(self, workflows):
+    def reject_workflows(self, workflows):
         """
         Reject or abort list of workflows in ReqMgr2
         """
@@ -517,8 +541,8 @@ class RelValController(ControllerBase):
                 self.logger.info('Fetched workflow %s', workflow_name)
 
             stats_conn.close()
-            output_datasets = self.__get_output_datasets(relval, all_workflows)
-            new_workflows = self.__pick_workflows(all_workflows, output_datasets)
+            output_datasets = self.get_output_datasets(relval, all_workflows)
+            new_workflows = self.pick_workflows(all_workflows, output_datasets)
             all_workflow_names = [x['name'] for x in new_workflows]
             for new_workflow in reversed(new_workflows):
                 completed_events = -1
@@ -545,7 +569,7 @@ class RelValController(ControllerBase):
 
         return relval
 
-    def __get_output_datasets(self, relval, all_workflows):
+    def get_output_datasets(self, relval, all_workflows):
         """
         Return a list of sorted output datasets for RelVal from given workflows
         """
@@ -622,7 +646,7 @@ class RelValController(ControllerBase):
 
             relval.set('priority', priority)
             updated_workflows = []
-            active_workflows = self.__pick_active_workflows(relval)
+            active_workflows = self.pick_active_workflows(relval)
             settings = Settings()
             connection = ConnectionWrapper(host=settings.get('cmsweb_url'), keep_open=True)
             for workflow in active_workflows:
@@ -641,3 +665,30 @@ class RelValController(ControllerBase):
             relval_db.save(relval.get_json())
 
         return relval
+
+    def get_scram_arch(self, cmssw_release):
+        """
+        Get scram arch from
+        https://cmssdt.cern.ch/SDT/cgi-bin/ReleasesXML?anytype=1
+        """
+        if not cmssw_release:
+            return None
+
+        self.logger.debug('Downloading releases XML')
+        conn = ConnectionWrapper(host='cmssdt.cern.ch')
+        response = conn.api('GET', '/SDT/cgi-bin/ReleasesXML?anytype=1')
+        self.logger.debug('Downloaded releases XML')
+        root = XMLet.fromstring(response)
+        for architecture in root:
+            if architecture.tag != 'architecture':
+                # This should never happen as children should be <architecture>
+                continue
+
+            scram_arch = architecture.attrib.get('name')
+            for release in architecture:
+                if release.attrib.get('label') == cmssw_release:
+                    self.logger.debug('Scram arch for %s is %s', cmssw_release, scram_arch)
+                    return scram_arch
+
+        self.logger.warning('Could not find scram arch for %s', cmssw_release)
+        return None

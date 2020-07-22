@@ -45,6 +45,7 @@ class Ticket(ModelBase):
         'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,75}'),
         'campaign': ModelBase.lambda_check('campaign'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
+        '__created_relvals': ModelBase.lambda_check('relval'),
         'label': ModelBase.lambda_check('label'),
         'memory': ModelBase.lambda_check('memory'),
         'relval_set': ModelBase.lambda_check('relval_set'),
@@ -58,14 +59,7 @@ class Ticket(ModelBase):
     def __init__(self, json_input=None):
         if json_input:
             json_input = deepcopy(json_input)
-            workflow_ids = []
-            for workflow_id in json_input['workflow_ids']:
-                if isinstance(workflow_id, (float, int)):
-                    workflow_ids.append(workflow_id)
-                else:
-                    workflow_ids.append(float(workflow_id))
-
-            json_input['workflow_ids'] = workflow_ids
+            json_input['workflow_ids'] = [float(wid) for wid in json_input['workflow_ids']]
             json_input['recycle_gs'] = bool(json_input.get('recycle_gs', False))
 
         ModelBase.__init__(self, json_input)
