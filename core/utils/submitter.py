@@ -135,6 +135,41 @@ class RequestSubmitter(BaseSubmitter):
         stdout = [tuple(clean_split(x.strip(), ' ')[1:]) for x in stdout]
         return stdout
 
+    def __update_steps_with_config_hashes(self, relval, config_hashes):
+        """
+        Iterate through RelVal steps and set config_id values
+        """
+        for step in relval.get('steps'):
+            step_config_name = step.get_config_file_name()
+            if not step_config_name:
+                continue
+
+            step_name = step.get('name')
+            for config_pair in config_hashes:
+                config_name, config_hash = config_pair
+                if step_config_name == config_name:
+                    step.set('config_id', config_hash)
+                    config_hashes.remove(config_pair)
+                    self.logger.debug('Set %s %s for %s',
+                                      config_name,
+                                      config_hash,
+                                      step_name)
+                    break
+            else:
+                raise Exception(f'Could not find hash for {step_name}')
+
+        if config_hashes:
+            raise Exception(f'Unused hashes: {config_hashes}')
+
+        for step in relval.get('steps'):
+            step_config_name = step.get_config_file_name()
+            if not step_config_name:
+                continue
+
+            if not step.get('config_id'):
+                step_name = step.get('name')
+                raise Exception(f'Missing hash for step {step_name}')
+
     def submit_relval(self, relval, controller):
         """
         Method that is used by submission workers. This is where the actual submission happens
@@ -147,90 +182,34 @@ class RequestSubmitter(BaseSubmitter):
             self.logger.info('Locked %s for submission', prepid)
             relval_db = Database('relvals')
             relval = controller.get(prepid)
-            self.__check_for_submission(relval)
-            self.__prepare_workspace(relval, controller, ssh_executor)
-            # Start executing commands
-            # Create configs
-            self.__generate_configs(relval, ssh_executor)
-            # Upload configs
-            config_hashes = self.__upload_configs(relval, ssh_executor)
-            self.logger.debug(config_hashes)
-            # Iterate through uploaded configs and save their hashes in RelVal steps
-            for step in relval.get('steps'):
-                step_config_name = step.get_config_file_name()
-                if not step_config_name:
-                    continue
-
-                for config_pair in config_hashes:
-                    config_name, config_hash = config_pair
-                    if step_config_name == config_name:
-                        step.set('config_id', config_hash)
-                        config_hashes.remove(config_pair)
-                        break
-                else:
-                    step_name = step.get('name')
-                    self.__handle_error(relval, f'Could not find hash for {step_name}')
-                    return
-
-            if config_hashes:
-                self.__handle_error(relval, f'Unused hashes: {config_hashes}')
-                return
-
-            for step in relval.get('steps'):
-                step_config_name = step.get_config_file_name()
-                if not step_config_name:
-                    continue
-
-                if not step.get('config_id'):
-                    step_name = step.get('name')
-                    self.__handle_error(relval, f'Missing hash for step {step_name}')
-                    return
-
             try:
+                self.__check_for_submission(relval)
+                self.__prepare_workspace(relval, controller, ssh_executor)
+                # Start executing commands
+                # Create configs
+                self.__generate_configs(relval, ssh_executor)
+                # Upload configs
+                config_hashes = self.__upload_configs(relval, ssh_executor)
+                self.logger.debug(config_hashes)
+                # Iterate through uploaded configs and save their hashes in RelVal steps
+                self.__update_steps_with_config_hashes(relval, config_hashes)
+                # Submit job dict to ReqMgr2
                 job_dict = controller.get_job_dict(relval)
-            except Exception as ex:
-                self.__handle_error(relval, f'Error getting {prepid} job dict:\n{str(ex)}')
-                return
-
-            headers = {'Content-type': 'application/json',
-                       'Accept': 'application/json'}
-
-            cmsweb_url = Settings().get('cmsweb_url')
-            connection = ConnectionWrapper(host=cmsweb_url, keep_open=True)
-            try:
-                # Submit job dictionary (ReqMgr2 JSON)
-                reqmgr_response = connection.api('POST',
-                                                 '/reqmgr2/data/request',
-                                                 job_dict,
-                                                 headers)
-                self.logger.info(reqmgr_response)
-                workflow_name = json.loads(reqmgr_response).get('result', [])[0].get('request')
+                cmsweb_url = Settings().get('cmsweb_url')
+                connection = ConnectionWrapper(host=cmsweb_url, keep_open=True)
+                workflow_name = self.submit_job_dict(job_dict, connection)
+                # Update RelVal after successful submission
                 relval.set('workflows', [{'name': workflow_name}])
                 relval.set('status', 'submitted')
                 relval.add_history('submission', 'succeeded', 'automatic')
                 relval_db.save(relval.get_json())
-            except Exception:
-                if reqmgr_response:
-                    reqmgr_response = reqmgr_response.replace('\\n', '\n')
-
-                self.__handle_error(relval,
-                                    f'Error submitting {prepid} to ReqMgr2:\n{reqmgr_response}')
-                return
-
-            try:
-                # Try to approve workflow (move to assignment-approved) after few seconds
                 time.sleep(3)
-                approve_response = connection.api('PUT',
-                                                  f'/reqmgr2/data/request/{workflow_name}',
-                                                  {'RequestStatus': 'assignment-approved'},
-                                                  headers)
+                self.approve_workflow(workflow_name, connection)
+                connection.close()
+                controller.force_stats_to_refresh([workflow_name])
             except Exception as ex:
-                self.logger.error('Error approving %s: %s', prepid, str(ex))
-
-            connection.close()
-            self.logger.info(approve_response)
-            controller.force_stats_to_refresh([workflow_name])
-            self.__handle_success(relval)
+                self.__handle_error(relval, str(ex))
+                return
 
         controller.update_workflows(relval)
         self.logger.info('Successfully finished %s submission', prepid)
