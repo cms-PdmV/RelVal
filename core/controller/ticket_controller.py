@@ -102,17 +102,15 @@ class TicketController(ControllerBase):
             sample_tag = ticket.get('sample_tag')
             cpu_cores = ticket.get('cpu_cores')
             memory = ticket.get('memory')
-            recycle_gs = ticket.get('recycle_gs')
-            recycle_gs_flag = '-r ' if recycle_gs else ''
+            recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
             try:
                 workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
                 self.logger.info('Creating RelVals %s for %s', workflow_ids, ticket_prepid)
                 # Prepare empty directory with runTheMatrixPdmV.py
                 command = [f'rm -rf ~/relval_work/{ticket_prepid}',
                            f'mkdir -p ~/relval_work/{ticket_prepid}']
-                out, err, code = ssh_executor.execute_command(command)
+                _, err, code = ssh_executor.execute_command(command)
                 if code != 0:
-                    self.logger.error('Exit code %s:\nError:%s\nOutput:%s', code, err, out)
                     raise Exception(f'Error code {code} preparing workspace: {err}')
 
                 ssh_executor.upload_file('core/utils/runTheMatrixPdmV.py',
@@ -120,7 +118,6 @@ class TicketController(ControllerBase):
                 # Create a random name for temporary file
                 random = Random()
                 file_name = f'{ticket_prepid}_{int(random.randint(1000, 9999))}.json'
-                self.logger.info('Random file name %s', file_name)
                 # Execute runTheMatrixPdmV.py
                 command = ['cd ~/relval_work/']
                 command.extend(cmssw_setup(cmssw_release).split('\n'))
@@ -130,13 +127,15 @@ class TicketController(ControllerBase):
                             f'-w {relval_set} '
                             f'-o {file_name} '
                             f'{recycle_gs_flag}']
-                out, err, code = ssh_executor.execute_command(command)
+                _, err, code = ssh_executor.execute_command(command)
                 if code != 0:
-                    self.logger.error('Exit code %s:\nError:%s\nOutput:%s', code, err, out)
                     raise Exception(f'Error code {code} creating RelVals: {err}')
 
                 ssh_executor.download_file(f'relval_work/{ticket_prepid}/{file_name}',
                                            f'/tmp/{file_name}')
+
+                # Cleanup remote directory
+                ssh_executor.execute_command(f'rm -rf relval_work/{ticket_prepid}')
                 with open(f'/tmp/{file_name}', 'r') as workflows_file:
                     workflows = json.load(workflows_file)
 
@@ -156,34 +155,21 @@ class TicketController(ControllerBase):
                     for step_index, step_dict in enumerate(workflow_dict['steps']):
                         arguments = step_dict.get('arguments', {})
                         input_dict = step_dict.get('input', {})
-                        # Delete filein and fileout because they'll be made on the fly
-                        if '--filein' in arguments:
-                            del arguments['--filein']
+                        arguments.pop('--filein', None)
+                        arguments.pop('--fileout', None)
+                        arguments.pop('--lumiToProcess', None)
+                        arguments['--step'] = clean_split(arguments.get('--step', ''))
+                        arguments['--eventcontent'] = clean_split(arguments.get('--eventcontent', ''))
+                        arguments['--datatier'] = clean_split(arguments.get('--datatier', ''))
+                        arguments['type'] = arguments.pop('step_type', '')
+                        input_dict.pop('events', None)
 
-                        if '--fileout' in arguments:
-                            del arguments['--fileout']
-
-                        if '--lumiToProcess' in arguments:
-                            del arguments['--lumiToProcess']
-
-                        if 'events' in input_dict:
-                            del input_dict['events']
-
-                        if '--step' in arguments:
-                            arguments['--step'] = clean_split(arguments['--step'])
-
-                        if '--eventcontent' in arguments:
-                            arguments['--eventcontent'] = clean_split(arguments['--eventcontent'])
-
-                        if '--datatier' in arguments:
-                            arguments['--datatier'] = clean_split(arguments['--datatier'])
-
-                        if 'step_type' in arguments:
-                            arguments['type'] = arguments.pop('step_type')
-
-                        # Set step name
-                        new_step = {}
-                        new_step['name'] = step_dict['name']
+                        # Create a step
+                        new_step = {'name': step_dict['name'],
+                                    'lumis_per_job': step_dict.get('lumis_per_job', ''),
+                                    'cmssw_release': cmssw_release,
+                                    'driver': arguments,
+                                    'input': input_dict}
                         # Shorten the name and check for duplicate names
                         if len(new_step['name']) + len(campaign_name) > 79:
                             new_step['name'] = clean_split(new_step['name'], '_')[0]
@@ -191,14 +177,9 @@ class TicketController(ControllerBase):
                                 if new_step['name'] == existing_step['name']:
                                     new_step['name'] += f'_{step_index + 1}'
 
-                        new_step['lumis_per_job'] = step_dict.get('lumis_per_job', '')
-                        # Set CMSSW for each step
-                        new_step['cmssw_release'] = cmssw_release
-                        new_step['driver'] = arguments
-                        new_step['input'] = input_dict
-                        self.logger.debug('Will create %s', new_step)
                         workflow_json['steps'].append(new_step)
 
+                    self.logger.debug('Will create %s', workflow_json)
                     relval = relval_controller.create(workflow_json)
                     created_relvals.append(relval)
                     self.logger.info('Created %s', relval.get_prepid())
@@ -209,6 +190,7 @@ class TicketController(ControllerBase):
                 ticket.add_history('created_relvals', created_relval_prepids, None)
                 ticket_db.save(ticket.get_json())
             except Exception as ex:
+                self.logger.error('Error creating RelVal from ticket: %s', ex)
                 # Delete created relvals if there was an Exception
                 for created_relval in reversed(created_relvals):
                     relval_controller.delete({'prepid': created_relval.get('prepid')})
@@ -216,4 +198,4 @@ class TicketController(ControllerBase):
                 # And reraise the exception
                 raise ex
 
-        return []
+        return [r.get('prepid') for r in created_relvals]

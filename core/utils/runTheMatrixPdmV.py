@@ -193,9 +193,7 @@ def main():
                 if 'cfg' in workflow_step:
                     workflow_step['step_type'] = workflow_step.pop('cfg')
 
-                if '-n' in workflow_step:
-                    del workflow_step['-n']
-
+                workflow_step.pop('-n', None)
                 # Change "flags" value to True, e.g. --data, --mc, --fast
                 for arg_name, arg_value in workflow_step.items():
                     if arg_value == '':

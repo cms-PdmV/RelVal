@@ -1,7 +1,6 @@
 """
 Module that has all classes used for request submission to computing
 """
-import json
 import os
 import time
 from core_lib.utils.ssh_executor import SSHExecutor
@@ -15,8 +14,14 @@ from core.utils.emailer import Emailer
 
 
 class RequestSubmitter(BaseSubmitter):
+    """
+    Subclass of base submitter that is tailored for RelVal submission
+    """
 
     def add(self, relval, relval_controller):
+        """
+        Add a RelVal to the submission queue
+        """
         prepid = relval.get_prepid()
         super().add_task(prepid,
                          self.submit_relval,
@@ -69,6 +74,7 @@ class RequestSubmitter(BaseSubmitter):
         Clean or create a remote directory and upload all needed files
         """
         prepid = relval.get_prepid()
+        self.logger.info('Preparing workspace for %s', prepid)
         ssh_executor.execute_command([f'rm -rf relval_submission/{prepid}',
                                       f'mkdir -p relval_submission/{prepid}'])
         with open(f'/tmp/{prepid}_generate.sh', 'w') as temp_file:
@@ -100,6 +106,7 @@ class RequestSubmitter(BaseSubmitter):
         """
         Perform one last check of values before submitting a RelVal
         """
+        self.logger.debug('Performing one last check for %s', relval.get_prepid())
         if relval.get('status') != 'submitting':
             raise Exception(f'Cannot submit a request with status {relval.get("status")}')
 
