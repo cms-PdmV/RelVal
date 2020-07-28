@@ -9,7 +9,6 @@ import importlib
 import inspect
 import re
 import Configuration.PyReleaseValidation.relval_steps as steps_module
-from Configuration.AlCa.autoCond import autoCond as auto_globaltag
 from Configuration.PyReleaseValidation.MatrixInjector import MatrixInjector
 
 
@@ -57,21 +56,6 @@ def get_workflows_module(name):
     return workflows_module
 
 
-def resolve_globaltag(tag):
-    """
-    Translate auto:... to an actual globaltag
-    """
-    if not tag.startswith('auto:'):
-        return tag
-
-    tag = tag.replace('auto:', '', 1)
-    resolved_tag = auto_globaltag[tag]
-    if isinstance(resolved_tag, (list, tuple)):
-        resolved_tag = resolved_tag[0]
-
-    return resolved_tag
-
-
 def build_cmsdriver(arguments, step_index):
     """
     Make a cmsDriver command string out of given arguments
@@ -114,10 +98,6 @@ def main():
                         dest='recycle_gs',
                         action='store_true',
                         help='Recycle GS')
-    parser.add_argument('-g', '--resolve_gt',
-                        dest='resolve_gt',
-                        action='store_true',
-                        help='Resolve auto:... conditions to global tags')
     parser.add_argument('-b', '--base_dataset',
                         dest='base_dataset',
                         default='',
@@ -131,7 +111,6 @@ def main():
     print('User given command: %s' % (opt.command))
     print('Output file: %s' % (opt.output_file))
     print('Recycle GS: %s' % (opt.recycle_gs))
-    print('Resolve globaltag: %s' % (opt.resolve_gt))
 
     workflows_module = get_workflows_module(opt.workflows_file)
 
@@ -183,6 +162,8 @@ def main():
                 step['lumis_per_job'] = wmsplit[workflow_step_name]
             elif 'INPUT' in workflow_step:
                 step['lumis_per_job'] = workflow_step['INPUT'].split
+            elif '--relval' in workflow_step:
+                step['lumis_per_job'] = int(workflow_step['--relval'].split(',')[1])
             elif workflow_step_index > 0:
                 last_step = workflows[workflow_id]['steps'][-1]
                 step['lumis_per_job'] = last_step.get('lumis_per_job', 10)
@@ -219,10 +200,6 @@ def main():
                 for arg_name, arg_value in workflow_step.items():
                     if arg_value == '':
                         workflow_step[arg_name] = True
-
-                if opt.resolve_gt and '--conditions' in workflow_step:
-                    conditions = resolve_globaltag(workflow_step['--conditions'])
-                    workflow_step['--conditions'] = conditions
 
                 step['arguments'] = workflow_step
                 print(build_cmsdriver(step['arguments'], workflow_step_index))

@@ -162,8 +162,6 @@ class RelValController(ControllerBase):
         campaign_name = relval.get('campaign')
         relval_type = relval.get_relval_type()
         # Get events from --relval attribute
-        events = [s.get('driver')['relval'].split(',')[0] for s in steps]
-        events = [int(e) for e in events if e and int(e) > 0]
         job_dict = {}
         job_dict['Group'] = 'PPD'
         job_dict['Requestor'] = 'pdmvserv'
@@ -201,6 +199,17 @@ class RelValController(ControllerBase):
                     continue
 
                 task_dict['Seeding'] = 'AutomaticSeeding'
+                step_name = step.get('name')
+                task_dict['PrimaryDataset'] = f'RelVal{step_name}'
+                if step.get('driver').get('relval'):
+                    relval_attr = step.get('driver')['relval'].split(',')
+                    relval_attr = (int(relval_attr[0]), int(relval_attr[1]))
+                    task_dict['RequestNumEvents'] = relval_attr[0]
+                    task_dict['EventsPerJob'] = relval_attr[1]
+                    task_dict['EventsPerLumi'] = relval_attr[1]
+                else:
+                    raise Exception(f'Missing --relval attribute in {step_name} step')
+
             else:
                 input_step_index = step.get_input_step_index()
                 input_step = steps[input_step_index]
@@ -216,21 +225,14 @@ class RelValController(ControllerBase):
                     _, input_module = step.get_input_eventcontent()
                     task_dict['InputFromOutputModule'] = f'{input_module}output'
 
+                if step.get('lumis_per_job') != '':
+                    task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
+
             task_dict['TaskName'] = step.get('name')
             conditions = step.get('driver')['conditions']
             task_dict['ConfigCacheID'] = step.get('config_id')
             task_dict['KeepOutput'] = True
             task_dict['SplittingAlgo'] = 'LumiBased'
-            if task_number == 0:
-                if step.get('lumis_per_job') != '':
-                    task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
-            else:
-                if step.get('events_per_lumi') != '':
-                    task_dict['EventsPerLumi'] = int(step.get('events_per_lumi'))
-
-                if step.get('events_per_job') != '':
-                    task_dict['EventsPerJob'] = int(step.get('events_per_job'))
-
             task_dict['ScramArch'] = step.get('scram_arch')
             if not job_dict.get('ScramArch'):
                 # Set main scram arch to first task scram arch
@@ -255,9 +257,7 @@ class RelValController(ControllerBase):
             task_dict['Memory'] = relval.get('memory')
             task_dict['Multicore'] = relval.get('cpu_cores')
             task_dict['Campaign'] = campaign_name
-            if task_number == 0 and events:
-                task_dict['RequestNumEvents'] = events[0]
-
+            # Add task to main dict
             task_number += 1
             job_dict[f'Task{task_number}'] = task_dict
 

@@ -44,18 +44,13 @@ class RelValStep(ModelBase):
             'scenario': '',
             'step': [],
         },
-        # Events per job - applicable to not-first step
-        'events_per_job': '',
-        # Events per lumi - applicable to not-first step
-        'events_per_lumi': '',
         # Input file info
         'input': {
             'dataset': '',
             'lumisection': {},
             'label': '',
-            'events': '',
         },
-        # Events per lumi - applicable to first step
+        # Lumis per job - applicable to non-first steps
         'lumis_per_job': '',
         # CMSSW scram arch
         'scram_arch': '',
@@ -64,8 +59,6 @@ class RelValStep(ModelBase):
     lambda_checks = {
         'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'config_id': lambda cid: ModelBase.matches_regex(cid, '[a-f0-9]{0,50}'),
-        'events_per_job': lambda e: e == '' or int(e) > 0,
-        'events_per_lumi': lambda e: e == '' or int(e) > 0,
         'lumis_per_job': lambda l: l == '' or int(l) > 0,
         'name': lambda n: ModelBase.matches_regex(n, '[a-zA-Z0-9_\\-]{1,50}'),
         'scram_arch': ModelBase.lambda_check('scram_arch'),

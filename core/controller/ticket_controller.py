@@ -98,7 +98,6 @@ class TicketController(ControllerBase):
             campaign = Campaign(json_input=campaign_db.get(campaign_name))
             relval_set = ticket.get('relval_set')
             cmssw_release = campaign.get('cmssw_release')
-            scram_arch = self.get_scram_arch(cmssw_release)
             label = ticket.get('label')
             sample_tag = ticket.get('sample_tag')
             cpu_cores = ticket.get('cpu_cores')
@@ -126,7 +125,7 @@ class TicketController(ControllerBase):
                 command = ['cd ~/relval_work/']
                 command.extend(cmssw_setup(cmssw_release).split('\n'))
                 command += [f'cd {ticket_prepid}',
-                            'python runTheMatrixPdmV.py -g '
+                            'python runTheMatrixPdmV.py '
                             f'-l {workflow_ids} '
                             f'-w {relval_set} '
                             f'-o {file_name} '
@@ -167,6 +166,9 @@ class TicketController(ControllerBase):
                         if '--lumiToProcess' in arguments:
                             del arguments['--lumiToProcess']
 
+                        if 'events' in input_dict:
+                            del input_dict['events']
+
                         if '--step' in arguments:
                             arguments['--step'] = clean_split(arguments['--step'])
 
@@ -190,8 +192,6 @@ class TicketController(ControllerBase):
                                     new_step['name'] += f'_{step_index + 1}'
 
                         new_step['lumis_per_job'] = step_dict.get('lumis_per_job', '')
-                        new_step['events_per_job'] = step_dict.get('events_per_job', '')
-                        new_step['events_per_lumi'] = step_dict.get('events_per_lumi', '')
                         # Set CMSSW for each step
                         new_step['cmssw_release'] = cmssw_release
                         new_step['driver'] = arguments

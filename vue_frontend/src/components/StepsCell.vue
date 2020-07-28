@@ -1,7 +1,7 @@
 <template>
   <div>
     <ul>
-      <li v-for="step in shortenedStep" :key="step.name">
+      <li v-for="step in this.data" :key="step.name">
       {{step.name}}
       <small><pre>{{JSON.stringify(step, null, 2)}}</pre></small>
       </li>

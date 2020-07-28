@@ -10,7 +10,7 @@ from core_lib.database.database import Database
 from core_lib.utils.settings import Settings
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.submitter import Submitter as BaseSubmitter
-from core_lib.utils.common_utils import clean_split
+from core_lib.utils.common_utils import clean_split, cmssw_setup
 from core.utils.emailer import Emailer
 
 
@@ -88,6 +88,10 @@ class RequestSubmitter(BaseSubmitter):
         # Upload python script used by upload script
         ssh_executor.upload_file('./core_lib/utils/config_uploader.py',
                                  f'relval_submission/{prepid}/config_uploader.py')
+
+        # Upload python script to resolve auto globaltag by upload script
+        ssh_executor.upload_file('./core/utils/resolveAutoGlobalTag.py',
+                                 f'relval_submission/{prepid}/resolveAutoGlobalTag.py')
 
         os.remove(f'/tmp/{prepid}_generate.sh')
         os.remove(f'/tmp/{prepid}_upload.sh')
@@ -170,6 +174,52 @@ class RequestSubmitter(BaseSubmitter):
                 step_name = step.get('name')
                 raise Exception(f'Missing hash for step {step_name}')
 
+    def __resolve_global_tags(self, relval, job_dict, ssh_executor):
+        """
+        Fill GlobalTag and ProcessingString with resolved auto:... global tags
+        """
+        prepid = relval.get_prepid()
+        tasks = [job_dict]
+
+        for i in range(job_dict['TaskChain']):
+            task_name = f'Task{i + 1}'
+            tasks.append(job_dict[task_name])
+
+        # Leave only those tasks that have auto:... global tag
+        tasks = [t for t in tasks if t.get('GlobalTag', '').startswith('auto:')]
+
+        command = [f'cd relval_submission/{prepid}']
+        previous_cmssw = None
+        for task in tasks:
+            cmssw_version = task['CMSSWVersion']
+            global_tag = task['GlobalTag']
+            if cmssw_version != previous_cmssw:
+                command.extend(cmssw_setup(cmssw_version).split('\n'))
+                previous_cmssw = cmssw_version
+
+            command += [f'python resolveAutoGlobalTag.py {global_tag}']
+
+        stdout, stderr, exit_code = ssh_executor.execute_command(command)
+        if exit_code != 0:
+            self.logger.error('Error resolving auto global tags:\nstdout:%s\nstderr:%s',
+                              stdout,
+                              stderr)
+            raise Exception(f'Error resolving auto:... globaltags: {stderr}')
+
+        stdout = [x for x in clean_split(stdout, '\n') if x.startswith('GlobalTag:')]
+        for task, globaltag in zip(tasks, stdout):
+            globaltag = globaltag.split(' ')[1:]
+            if task['GlobalTag'] != globaltag[0]:
+                self.logger.error('Mismatch: %s != %s', task['GlobalTag'], globaltag[0])
+                raise Exception('Mismatch in resolved auto global tags')
+
+            self.logger.debug('Resolved %s to %s for %s',
+                              globaltag[0],
+                              globaltag[1],
+                              task.get('TaskName', '<main>'))
+            task['GlobalTag'] = globaltag[1]
+            task['ProcessingString'] = globaltag[1]
+
     def submit_relval(self, relval, controller):
         """
         Method that is used by submission workers. This is where the actual submission happens
@@ -195,6 +245,7 @@ class RequestSubmitter(BaseSubmitter):
                 self.__update_steps_with_config_hashes(relval, config_hashes)
                 # Submit job dict to ReqMgr2
                 job_dict = controller.get_job_dict(relval)
+                self.__resolve_global_tags(relval, job_dict, ssh_executor)
                 cmsweb_url = Settings().get('cmsweb_url')
                 connection = ConnectionWrapper(host=cmsweb_url, keep_open=True)
                 workflow_name = self.submit_job_dict(job_dict, connection)

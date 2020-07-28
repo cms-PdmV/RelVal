@@ -12,7 +12,6 @@
         <v-data-table :headers="headers"
                       :items="dataItems"
                       :items-per-page="itemsPerPage"
-                      :mobile-breakpoint=NaN
                       :loading="loading"
                       disable-sort
                       hide-default-footer

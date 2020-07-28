@@ -61,14 +61,8 @@
                 <tr>
                   <td>Scram Arch</td><td><input type="text" v-model="step.scram_arch" :disabled="!editingInfo.steps"></td>
                 </tr>
-                <tr v-if="index == 0">
+                <tr v-if="index != 0">
                   <td>Lumis per job</td><td><input type="text" v-model="step.lumis_per_job" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr v-if="index != 0">
-                  <td>Events per job</td><td><input type="text" v-model="step.events_per_job" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr v-if="index != 0">
-                  <td>Events per lumi</td><td><input type="text" v-model="step.events_per_lumi" :disabled="!editingInfo.steps"></td>
                 </tr>
                 <tr v-if="index == 0">
                   <td>Step type</td>
@@ -82,13 +76,15 @@
                     <td>Dataset</td><td><input type="text" v-model="step.input.dataset" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>Events</td><td><input type="number" v-model="step.input.events" :disabled="!editingInfo.steps"></td>
-                  </tr>
-                  <tr>
                     <td>Label</td><td><input type="text" v-model="step.input.label" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>Lumisection</td><td><input type="text" v-model="step.input.lumisection" :disabled="!editingInfo.steps"></td>
+                    <td>Lumisection</td>
+                    <td>
+                      <input type="text" style="width: 75%;font-family: monospace;" v-model="step.input.lumisection" v-on:input="checkLumisectionJSON(step.input.lumisection)" :disabled="!editingInfo.steps">
+                      <span v-if="lumisectionJSONValid" class="ml-2" style="color: #27ae60">Valid JSON</span>
+                      <span v-else class="ml-2" style="color: #e74c3c">Invalid JSON</span>
+                    </td>
                   </tr>
                 </template>
                 <template v-else>
@@ -225,6 +221,7 @@ export default {
       editingInfo: {},
       loading: true,
       creatingNew: true,
+      lumisectionJSONValid: true,
       errorDialog: {
         visible: false,
         title: '',
@@ -324,6 +321,14 @@ export default {
     deleteStep: function(index) {
       this.editableObject['steps'].splice(index, 1);
     },
+    checkLumisectionJSON: function(jsonText) {
+      try {
+        JSON.parse(jsonText);
+        this.lumisectionJSONValid = true;
+      } catch(err) {
+        this.lumisectionJSONValid = false;
+      }
+    }
   }
 }
 </script>

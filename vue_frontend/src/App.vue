@@ -38,9 +38,9 @@
         <img class="admin-star" :title="'User role: ' + userInfo.role" :src="userRolePicture"/>
       </div>
     </v-app-bar>
-    <v-content class="content-container">
+    <v-main class="content-container">
       <router-view/>
-    </v-content>
+    </v-main>
   </v-app>
 </template>
 
