@@ -269,5 +269,7 @@ class RequestSubmitter(BaseSubmitter):
                 self.__handle_error(relval, str(ex))
                 return
 
+            self.__handle_success(relval)
+
         controller.update_workflows(relval)
         self.logger.info('Successfully finished %s submission', prepid)

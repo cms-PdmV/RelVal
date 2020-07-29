@@ -162,8 +162,6 @@ def main():
                 step['lumis_per_job'] = wmsplit[workflow_step_name]
             elif 'INPUT' in workflow_step:
                 step['lumis_per_job'] = workflow_step['INPUT'].split
-            elif '--relval' in workflow_step:
-                step['lumis_per_job'] = int(workflow_step['--relval'].split(',')[1])
             elif workflow_step_index > 0:
                 last_step = workflows[workflow_id]['steps'][-1]
                 step['lumis_per_job'] = last_step.get('lumis_per_job', 10)

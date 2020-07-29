@@ -170,8 +170,13 @@ class TicketController(ControllerBase):
                                     'cmssw_release': cmssw_release,
                                     'driver': arguments,
                                     'input': input_dict}
+
+                        # Delete INPUT from step name
+                        if new_step['name'].endswith('INPUT'):
+                            new_step['name'] = new_step['name'][:-5]
+
                         # Shorten the name and check for duplicate names
-                        if len(new_step['name']) + len(campaign_name) > 79:
+                        if len(new_step['name']) > 50:
                             new_step['name'] = clean_split(new_step['name'], '_')[0]
                             for existing_step in workflow_json['steps']:
                                 if new_step['name'] == existing_step['name']:

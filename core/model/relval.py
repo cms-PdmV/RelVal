@@ -210,11 +210,15 @@ class RelVal(ModelBase):
             raise Exception('No steps have CMSSW release')
 
         label = self.get('label')
-        first_step_name = steps[0].get('name')
+        workflow_name = self.get('workflow_name')
+        if not workflow_name:
+            # Defaults to first step's name
+            workflow_name = steps[0].get('name')
+
         first_step_label = steps[0].get('input')['label']
         relval_type = self.get_relval_type()
 
-        request_string = f'RV{cmssw_release}{first_step_name}__'
+        request_string = f'RV{cmssw_release}{workflow_name}__'
         if label:
             request_string += f'{label}_'
 

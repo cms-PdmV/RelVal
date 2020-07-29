@@ -33,8 +33,12 @@ class RelValController(ControllerBase):
             raise Exception(f'Campaign {campaign_name} does not exist')
 
         cmssw_release = campaign_json.get('cmssw_release')
-        first_step_name = json_data.get('steps')[0]['name'].rstrip('INPUT')
-        prepid_part = f'{campaign_name}-{first_step_name}'
+        if json_data.get('workflow_name'):
+            workflow_name = json_data['workflow_name']
+        else:
+            workflow_name = json_data.get('steps')[0]['name']
+
+        prepid_part = f'{campaign_name}-{workflow_name}'
         json_data['prepid'] = f'{prepid_part}-00000'
         for step in json_data['steps']:
             if not step.get('cmssw_release'):
@@ -44,7 +48,7 @@ class RelValController(ControllerBase):
                 step['scram_arch'] = self.get_scram_arch(step['cmssw_release'])
 
         settings = Settings()
-        with self.locker.get_lock(f'generate-relval-prepid'):
+        with self.locker.get_lock('generate-relval-prepid'):
             # Get a new serial number
             serial_numbers = settings.get('relvals_prepid_sequence', {})
             serial_number = serial_numbers.get(prepid_part, 0)
@@ -534,7 +538,7 @@ class RelValController(ControllerBase):
                     raise Exception(f'Could not find {workflow_name} in Stats2')
 
                 workflow = json.loads(workflow)
-                if workflow.get('RequestType').lower() == 'resubmission':
+                if workflow.get('RequestType', '').lower() == 'resubmission':
                     continue
 
                 all_workflows[workflow_name] = workflow
