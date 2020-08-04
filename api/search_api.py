@@ -73,7 +73,7 @@ class SuggestionsAPI(APIBase):
 
         db_name = args.pop('db_name', None)
         query = args.pop('query', None).replace(' ', '.*')
-        limit = max(1, min(50, args.pop('limit', 10)))
+        limit = max(1, min(50, args.pop('limit', 20)))
 
         if not db_name or not query:
             raise Exception('Bad db_name or query parameter')

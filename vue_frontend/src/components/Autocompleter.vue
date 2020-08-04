@@ -160,6 +160,7 @@
 
 .suggestion-list-wrapper {
   position: relative;
+  z-index: 100;
 }
 
 .suggestion-list {
