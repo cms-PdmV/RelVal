@@ -10,8 +10,13 @@
         </tr>
         <tr>
           <td>Campaign</td>
-          <td><input type="text" v-model="editableObject.campaign" :disabled="!editingInfo.campaign"></td>
-        </tr>
+          <td>
+            <autocompleter
+              v-model="editableObject.campaign"
+              :getSuggestions="getCampaignSuggestions"
+              :disabled="!editingInfo.campaign">
+            </autocompleter>
+          </td>
         <tr>
           <td>CPU Cores</td>
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="32"></td>
@@ -81,11 +86,13 @@
 import axios from 'axios'
 import { utilsMixin } from '../mixins/UtilsMixin.js'
 import LoadingOverlay from './LoadingOverlay.vue'
+import Autocompleter from './Autocompleter.vue'
 
 export default {
   name: 'TicketsEdit',
   components: {
-    LoadingOverlay
+    LoadingOverlay,
+    Autocompleter,
   },
   mixins: [
     utilsMixin
@@ -172,6 +179,16 @@ export default {
       this.errorDialog.description = description;
       this.errorDialog.visible = true;
     },
+    getCampaignSuggestions: function(value, callback) {
+      if (!value || value.length == 0) {
+        callback([]);
+      }
+      axios.get('api/suggestions?db_name=campaigns&query=' + value).then(response => {
+        callback(response.data.response);
+      }).catch(error => {
+        callback([]);
+      });
+    }
   }
 }
 </script>

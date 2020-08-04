@@ -82,7 +82,7 @@ class RelValController(ControllerBase):
         editing_info['sample_tag'] = is_new
         editing_info['size_per_event'] = is_new
         editing_info['time_per_event'] = is_new
-        editing_info['workflow_id'] = creating_new
+        editing_info['workflow_id'] = False
         editing_info['workflow_name'] = creating_new
         editing_info['steps'] = is_new
 

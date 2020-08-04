@@ -11,7 +11,7 @@ from api.system_api import (LockerStatusAPI,
                             UserInfoAPI,
                             SubmissionWorkerStatusAPI,
                             SubmissionQueueAPI,)
-from api.search_api import SearchAPI
+from api.search_api import SearchAPI, SuggestionsAPI
 from api.ticket_api import (CreateTicketAPI,
                             DeleteTicketAPI,
                             UpdateTicketAPI,
@@ -106,6 +106,7 @@ api.add_resource(SettingsAPI,
                  '/api/settings/get/<string:name>')
 
 api.add_resource(SearchAPI, '/api/search')
+api.add_resource(SuggestionsAPI, '/api/suggestions')
 
 api.add_resource(CreateTicketAPI, '/api/tickets/create')
 api.add_resource(DeleteTicketAPI, '/api/tickets/delete')

@@ -10,7 +10,13 @@
         </tr>
         <tr>
           <td>Campaign</td>
-          <td><input type="text" v-model="editableObject.campaign" :disabled="!editingInfo.campaign"></td>
+          <td>
+            <autocompleter
+              v-model="editableObject.campaign"
+              :getSuggestions="getCampaignSuggestions"
+              :disabled="!editingInfo.campaign">
+            </autocompleter>
+          </td>
         </tr>
         <tr>
           <td>CPU Cores</td>
@@ -206,10 +212,12 @@
 import axios from 'axios'
 import { utilsMixin } from '../mixins/UtilsMixin.js'
 import LoadingOverlay from './LoadingOverlay.vue'
+import Autocompleter from './Autocompleter.vue'
 
 export default {
   components: {
-    LoadingOverlay
+    LoadingOverlay,
+    Autocompleter,
   },
   mixins: [
     utilsMixin
@@ -328,6 +336,16 @@ export default {
       } catch(err) {
         this.lumisectionJSONValid = false;
       }
+    },
+    getCampaignSuggestions: function(value, callback) {
+      if (!value || value.length == 0) {
+        callback([]);
+      }
+      axios.get('api/suggestions?db_name=campaigns&query=' + value).then(response => {
+        callback(response.data.response);
+      }).catch(error => {
+        callback([]);
+      });
     }
   }
 }

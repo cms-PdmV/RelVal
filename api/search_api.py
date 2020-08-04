@@ -2,6 +2,7 @@
 Module that contains all search APIs
 """
 import flask
+import re
 from core_lib.api.api_base import APIBase
 from core_lib.database.database import Database
 from core.model.ticket import Ticket
@@ -49,5 +50,39 @@ class SearchAPI(APIBase):
 
         return self.output_text({'response': {'results': results,
                                               'total_rows': total_rows},
+                                 'success': True,
+                                 'message': ''})
+
+
+class SuggestionsAPI(APIBase):
+    """
+    Endpoint that is used to fetch suggestions
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.exceptions_to_errors
+    def get(self):
+        """
+        Return a list of prepid suggestions for given query
+        """
+        args = flask.request.args.to_dict()
+        if args is None:
+            args = {}
+
+        db_name = args.pop('db_name', None)
+        query = args.pop('query', None).replace(' ', '.*')
+        limit = max(1, min(50, args.pop('limit', 10)))
+
+        if not db_name or not query:
+            raise Exception('Bad db_name or query parameter')
+
+        database = Database(db_name)
+        db_query = {'prepid': re.compile(f'.*{query}.*', re.IGNORECASE)}
+        results = database.collection.find(db_query).limit(limit)
+        results = [x['prepid'] for x in results]
+
+        return self.output_text({'response': results,
                                  'success': True,
                                  'message': ''})
