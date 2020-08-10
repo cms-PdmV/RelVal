@@ -8,6 +8,7 @@ from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.settings import Settings
 from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.connection_wrapper import ConnectionWrapper
+from core_lib.utils.global_config import Config
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
@@ -161,7 +162,7 @@ class RelValController(ControllerBase):
         prepid = relval.get_prepid()
         self.logger.debug('Getting job dict for %s', prepid)
         steps = relval.get('steps')
-        database_url = Settings().get('cmsweb_url') + '/couchdb'
+        database_url = Config.get('cmsweb_url') + '/couchdb'
         request_string = relval.get_request_string()
         campaign_name = relval.get('campaign')
         relval_type = relval.get_relval_type()
@@ -450,7 +451,7 @@ class RelValController(ControllerBase):
         if not workflows:
             return
 
-        credentials_path = Settings().get('credentials_path')
+        credentials_path = Config.get('credentials_path')
         with self.locker.get_lock('refresh-stats'):
             ssh_executor = SSHExecutor('vocms074.cern.ch', credentials_path)
             workflow_update_commands = ['cd /home/pdmvserv/private',
@@ -468,11 +469,13 @@ class RelValController(ControllerBase):
         """
         Reject or abort list of workflows in ReqMgr2
         """
-        if not workflows:
-            return
-
-        cmsweb_url = Settings().get('cmsweb_url')
-        connection = ConnectionWrapper(host=cmsweb_url, keep_open=True)
+        cmsweb_url = Config.get('cmsweb_url')
+        grid_cert = Config.get('grid_user_cert')
+        grid_key = Config.get('grid_user_key')
+        connection = ConnectionWrapper(host=cmsweb_url,
+                                       keep_open=True,
+                                       cert_file=grid_cert,
+                                       key_file=grid_key)
         headers = {'Content-type': 'application/json',
                    'Accept': 'application/json'}
         for workflow in workflows:
@@ -480,7 +483,7 @@ class RelValController(ControllerBase):
             status_history = workflow.get('status_history')
             if not status_history:
                 self.logger.error('%s has no status history', workflow_name)
-                continue
+                status_history = [{'status': '<unknown>'}]
 
             last_workflow_status = status_history[-1]['status']
             self.logger.info('%s last status is %s', workflow_name, last_workflow_status)
@@ -534,7 +537,7 @@ class RelValController(ControllerBase):
             all_workflows = {}
             for workflow_name in all_workflow_names:
                 workflow = stats_conn.api('GET', f'/requests/{workflow_name}')
-                if not workflow:
+                if not workflow or not workflow.get('RequestName'):
                     raise Exception(f'Could not find {workflow_name} in Stats2')
 
                 workflow = json.loads(workflow)
@@ -580,7 +583,7 @@ class RelValController(ControllerBase):
         output_datatiers = []
         prepid = relval.get_prepid()
         for step in relval.get('steps'):
-            output_datatiers.extend(step.get('datatier'))
+            output_datatiers.extend(step.get('driver')['datatier'])
 
         output_datatiers = set(output_datatiers)
         self.logger.info('%s output datatiers are: %s', prepid, ', '.join(output_datatiers))
@@ -651,8 +654,7 @@ class RelValController(ControllerBase):
             relval.set('priority', priority)
             updated_workflows = []
             active_workflows = self.pick_active_workflows(relval)
-            settings = Settings()
-            connection = ConnectionWrapper(host=settings.get('cmsweb_url'), keep_open=True)
+            connection = ConnectionWrapper(host=Config.get('cmsweb_url'), keep_open=True)
             for workflow in active_workflows:
                 workflow_name = workflow['name']
                 self.logger.info('Changing "%s" priority to %s', workflow_name, priority)

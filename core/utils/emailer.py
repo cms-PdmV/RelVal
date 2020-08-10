@@ -2,6 +2,7 @@
 Module that handles all email notifications
 """
 from core_lib.utils.emailer import Emailer as BaseEmailer
+from core_lib.utils.global_config import Config
 
 
 class Emailer(BaseEmailer):
@@ -11,5 +12,9 @@ class Emailer(BaseEmailer):
 
     def send(self, subject, body, recipients):
         body = body.strip()  + '\n\nSincerely,\nRelVal Machine'
-        subject = f'[RelVal] {subject}'
+        if Config.get('development'):
+            subject = f'[RelVal-DEV] {subject}'
+        else:
+            subject = f'[RelVal] {subject}'
+
         super().send(subject, body, recipients)

@@ -9,6 +9,7 @@ from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.settings import Settings
 from core_lib.utils.common_utils import clean_split, cmssw_setup
+from core_lib.utils.global_config import Config
 from core.model.ticket import Ticket
 from core.model.campaign import Campaign
 from core.controller.relval_controller import RelValController
@@ -88,7 +89,7 @@ class TicketController(ControllerBase):
         ticket_db = Database(self.database_name)
         campaign_db = Database('campaigns')
         ticket_prepid = ticket.get_prepid()
-        credentials_path = Settings().get('credentials_path')
+        credentials_path = Config.get('credentials_path')
         ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_path)
         relval_controller = RelValController()
         created_relvals = []

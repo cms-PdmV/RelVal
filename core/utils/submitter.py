@@ -10,6 +10,7 @@ from core_lib.utils.settings import Settings
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.submitter import Submitter as BaseSubmitter
 from core_lib.utils.common_utils import clean_split, cmssw_setup
+from core_lib.utils.global_config import Config
 from core.utils.emailer import Emailer
 
 
@@ -57,9 +58,9 @@ class RequestSubmitter(BaseSubmitter):
         """
         prepid = relval.get_prepid()
         last_workflow = relval.get('workflows')[-1]['name']
-        cmsweb_url = Settings().get('cmsweb_url')
+        cmsweb_url = Config.get('cmsweb_url')
         self.logger.info('Submission of %s succeeded', prepid)
-        service_url = Settings().get('service_url')
+        service_url = Config.get('service_url')
         emailer = Emailer()
         subject = f'RelVal {prepid} submission succeeded'
         body = f'Hello,\n\nSubmission of {prepid} succeeded.\n'
@@ -69,14 +70,14 @@ class RequestSubmitter(BaseSubmitter):
         recipients = emailer.get_recipients(relval)
         emailer.send(subject, body, recipients)
 
-    def __prepare_workspace(self, relval, controller, ssh_executor):
+    def __prepare_workspace(self, relval, controller, ssh_executor, remote_directory):
         """
         Clean or create a remote directory and upload all needed files
         """
         prepid = relval.get_prepid()
         self.logger.info('Preparing workspace for %s', prepid)
-        ssh_executor.execute_command([f'rm -rf relval_submission/{prepid}',
-                                      f'mkdir -p relval_submission/{prepid}'])
+        ssh_executor.execute_command([f'rm -rf {remote_directory}',
+                                      f'mkdir -p {remote_directory}'])
         with open(f'/tmp/{prepid}_generate.sh', 'w') as temp_file:
             config_file_content = controller.get_cmsdriver(relval, for_submission=True)
             temp_file.write(config_file_content)
@@ -87,17 +88,17 @@ class RequestSubmitter(BaseSubmitter):
 
         # Upload config generation script - cmsDrivers
         ssh_executor.upload_file(f'/tmp/{prepid}_generate.sh',
-                                 f'relval_submission/{prepid}/config_generate.sh')
+                                 f'{remote_directory}/config_generate.sh')
         # Upload config upload to ReqMgr2 script
         ssh_executor.upload_file(f'/tmp/{prepid}_upload.sh',
-                                 f'relval_submission/{prepid}/config_upload.sh')
+                                 f'{remote_directory}/config_upload.sh')
         # Upload python script used by upload script
         ssh_executor.upload_file('./core_lib/utils/config_uploader.py',
-                                 f'relval_submission/{prepid}/config_uploader.py')
+                                 f'{remote_directory}/config_uploader.py')
 
         # Upload python script to resolve auto globaltag by upload script
         ssh_executor.upload_file('./core/utils/resolveAutoGlobalTag.py',
-                                 f'relval_submission/{prepid}/resolveAutoGlobalTag.py')
+                                 f'{remote_directory}/resolveAutoGlobalTag.py')
 
         os.remove(f'/tmp/{prepid}_generate.sh')
         os.remove(f'/tmp/{prepid}_upload.sh')
@@ -110,12 +111,12 @@ class RequestSubmitter(BaseSubmitter):
         if relval.get('status') != 'submitting':
             raise Exception(f'Cannot submit a request with status {relval.get("status")}')
 
-    def __generate_configs(self, relval, ssh_executor):
+    def __generate_configs(self, relval, ssh_executor, remote_directory):
         """
         SSH to a remote machine and generate cmsDriver config files
         """
         prepid = relval.get_prepid()
-        command = [f'cd relval_submission/{prepid}',
+        command = [f'cd {remote_directory}',
                    'chmod +x config_generate.sh',
                    'voms-proxy-init -voms cms --valid 4:00 --out $(pwd)/proxy.txt',
                    'export X509_USER_PROXY=$(pwd)/proxy.txt',
@@ -127,12 +128,12 @@ class RequestSubmitter(BaseSubmitter):
 
         return stdout
 
-    def __upload_configs(self, relval, ssh_executor):
+    def __upload_configs(self, relval, ssh_executor, remote_directory):
         """
         SSH to a remote machine and upload cmsDriver config files to ReqMgr2
         """
         prepid = relval.get_prepid()
-        command = [f'cd relval_submission/{prepid}',
+        command = [f'cd {remote_directory}',
                    'chmod +x config_upload.sh',
                    'export X509_USER_PROXY=$(pwd)/proxy.txt',
                    './config_upload.sh']
@@ -181,13 +182,12 @@ class RequestSubmitter(BaseSubmitter):
                 step_name = step.get('name')
                 raise Exception(f'Missing hash for step {step_name}')
 
-    def __resolve_global_tags(self, relval, job_dict, ssh_executor):
+    def __resolve_global_tags(self, relval, job_dict, ssh_executor, remote_directory):
         """
         Fill GlobalTag and ProcessingString with resolved auto:... global tags
         """
         prepid = relval.get_prepid()
         tasks = [job_dict]
-
         for i in range(job_dict['TaskChain']):
             task_name = f'Task{i + 1}'
             tasks.append(job_dict[task_name])
@@ -195,7 +195,7 @@ class RequestSubmitter(BaseSubmitter):
         # Leave only those tasks that have auto:... global tag
         tasks = [t for t in tasks if t.get('GlobalTag', '').startswith('auto:')]
 
-        command = [f'cd relval_submission/{prepid}']
+        command = [f'cd {remote_directory}']
         previous_cmssw = None
         for task in tasks:
             cmssw_version = task['CMSSWVersion']
@@ -208,10 +208,11 @@ class RequestSubmitter(BaseSubmitter):
 
         stdout, stderr, exit_code = ssh_executor.execute_command(command)
         if exit_code != 0:
-            self.logger.error('Error resolving auto global tags:\nstdout:%s\nstderr:%s',
+            self.logger.error('Error resolving %s auto global tags:\nstdout:%s\nstderr:%s',
+                              prepid,
                               stdout,
                               stderr)
-            raise Exception(f'Error resolving auto:... globaltags: {stderr}')
+            raise Exception(f'Error resolving auto globaltags: {stderr}')
 
         stdout = [x for x in clean_split(stdout, '\n') if x.startswith('GlobalTag:')]
         for task, globaltag in zip(tasks, stdout):
@@ -220,10 +221,11 @@ class RequestSubmitter(BaseSubmitter):
                 self.logger.error('Mismatch: %s != %s', task['GlobalTag'], globaltag[0])
                 raise Exception('Mismatch in resolved auto global tags')
 
-            self.logger.debug('Resolved %s to %s for %s',
+            self.logger.debug('Resolved %s to %s for %s of %s',
                               globaltag[0],
                               globaltag[1],
-                              task.get('TaskName', '<main>'))
+                              task.get('TaskName', '<main>'),
+                              prepid)
             task['GlobalTag'] = globaltag[1]
             task['ProcessingString'] = globaltag[1]
 
@@ -231,8 +233,11 @@ class RequestSubmitter(BaseSubmitter):
         """
         Method that is used by submission workers. This is where the actual submission happens
         """
-        credentials_path = Settings().get('credentials_path')
-        ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_path)
+        prepid = relval.get_prepid()
+        credentials_file = Config.get('credentials_path')
+        ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_file)
+        remote_directory = Config.get('remote_path').rstrip('/')
+        remote_directory = f'{remote_directory}/{prepid}'
         prepid = relval.get_prepid()
         self.logger.debug('Will try to acquire lock for %s', prepid)
         with Locker().get_lock(prepid):
@@ -241,20 +246,25 @@ class RequestSubmitter(BaseSubmitter):
             relval = controller.get(prepid)
             try:
                 self.__check_for_submission(relval)
-                self.__prepare_workspace(relval, controller, ssh_executor)
+                self.__prepare_workspace(relval, controller, ssh_executor, remote_directory)
                 # Start executing commands
                 # Create configs
-                self.__generate_configs(relval, ssh_executor)
+                self.__generate_configs(relval, ssh_executor, remote_directory)
                 # Upload configs
-                config_hashes = self.__upload_configs(relval, ssh_executor)
+                config_hashes = self.__upload_configs(relval, ssh_executor, remote_directory)
                 self.logger.debug(config_hashes)
                 # Iterate through uploaded configs and save their hashes in RelVal steps
                 self.__update_steps_with_config_hashes(relval, config_hashes)
                 # Submit job dict to ReqMgr2
                 job_dict = controller.get_job_dict(relval)
-                self.__resolve_global_tags(relval, job_dict, ssh_executor)
-                cmsweb_url = Settings().get('cmsweb_url')
-                connection = ConnectionWrapper(host=cmsweb_url, keep_open=True)
+                self.__resolve_global_tags(relval, job_dict, ssh_executor, remote_directory)
+                cmsweb_url = Config.get('cmsweb_url')
+                grid_cert = Config.get('grid_user_cert')
+                grid_key = Config.get('grid_user_key')
+                connection = ConnectionWrapper(host=cmsweb_url,
+                                               keep_open=True,
+                                               cert_file=grid_cert,
+                                               key_file=grid_key)
                 workflow_name = self.submit_job_dict(job_dict, connection)
                 # Update RelVal after successful submission
                 relval.set('workflows', [{'name': workflow_name}])

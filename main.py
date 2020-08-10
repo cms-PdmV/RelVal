@@ -7,6 +7,7 @@ from flask_restful import Api
 from flask_cors import CORS
 from flask import Flask, render_template
 from core_lib.database.database import Database
+from core_lib.utils.global_config import Config
 from api.system_api import (LockerStatusAPI,
                             UserInfoAPI,
                             SubmissionWorkerStatusAPI,
@@ -146,15 +147,29 @@ def main():
     Main function: start Flask web server
     """
     parser = argparse.ArgumentParser(description='RelVal Machine')
+    parser.add_argument('--mode',
+                        help='Use production (prod) or development (dev) section of config',
+                        choices=['prod', 'dev'],
+                        required=True)
+    parser.add_argument('--config',
+                        default='config.cfg',
+                        help='Specify non standard config file name')
     parser.add_argument('--debug',
                         help='Run Flask in debug mode',
                         action='store_true')
+    args = vars(parser.parse_args())
+    config = Config.load(args.get('config'), args.get('mode'))
+    database_auth = config.get('database_auth')
 
     Database.set_database_name('relval')
-    args = vars(parser.parse_args())
+    if database_auth:
+        Database.set_credentials_file(database_auth)
+
     debug = args.get('debug', False)
-    app.run(host='0.0.0.0',
-            port=8005,
+    port = int(config.get('port', 8005))
+    host = config.get('host', '0.0.0.0')
+    app.run(host=host,
+            port=port,
             threaded=True,
             debug=debug)
 

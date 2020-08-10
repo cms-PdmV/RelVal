@@ -6,7 +6,7 @@ if [ "$CMD" = "dev" ]; then
   trap "exit" INT TERM ERR
   trap "kill 0" EXIT
   echo "Starting DEV python server"
-  python3 main.py --debug &
+  python3 main.py --debug --mode dev &
   python_pid=$!
   echo "Starting DEV node server"
   cd vue_frontend/
@@ -27,6 +27,6 @@ fi
 
 if [ "$CMD" = "start" ]; then
   echo "Starting RelVal"
-  nohup python3 $(pwd)main.py &
+  nohup python3 $(pwd)main.py --mode prod &
   echo "Started with pid $!"
 fi

@@ -5,7 +5,7 @@ from copy import deepcopy
 from core.model.model_base import ModelBase
 from core.model.relval_step import RelValStep
 from core_lib.utils.common_utils import cmssw_setup
-from core_lib.utils.settings import Settings
+from core_lib.utils.global_config import Config
 
 
 class RelVal(ModelBase):
@@ -113,7 +113,7 @@ class RelVal(ModelBase):
         """
         built_command = ''
         self.logger.debug('Getting config upload script for %s', self.get_prepid())
-        database_url = Settings().get('cmsweb_url') + '/couchdb'
+        database_url = Config.get('cmsweb_url') + '/couchdb'
         file_check = 'if [ ! -s "%s.py" ]; then\n'
         file_check += '  echo "File %s.py is missing" >&2\n'
         file_check += '  exit 1\n'

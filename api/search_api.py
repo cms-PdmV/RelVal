@@ -1,8 +1,8 @@
 """
 Module that contains all search APIs
 """
-import flask
 import re
+import flask
 from core_lib.api.api_base import APIBase
 from core_lib.database.database import Database
 from core.model.ticket import Ticket
