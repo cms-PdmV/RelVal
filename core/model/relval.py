@@ -199,7 +199,7 @@ class RelVal(ModelBase):
         Return request string made of CMSSW release and various labels
 
         Example: RVCMSSW_11_0_0_pre4RunDoubleMuon2018C__gcc8_RelVal_2018C
-        RV{cmssw_release}{relval_name}__{label}_{relval_type}_{first_step_label}
+        RV{cmssw_release}{relval_name}__{label}_{relval_type}
         """
         steps = self.get('steps')
         for step in steps:
@@ -209,13 +209,13 @@ class RelVal(ModelBase):
         else:
             raise Exception('No steps have CMSSW release')
 
-        ticket_label = self.get('label')
+        relval_label = self.get('label')
         relval_name = self.get_name()
         relval_type = self.get_relval_type()
 
         request_string = f'RV{cmssw_release}{relval_name}__'
-        if ticket_label:
-            request_string += f'{ticket_label}_'
+        if relval_label:
+            request_string += f'{relval_label}_'
 
         if relval_type:
             request_string += f'{relval_type}_'

@@ -46,7 +46,7 @@ class Ticket(ModelBase):
     lambda_checks = {
         'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,75}'),
         'base_dataset_rewrite': lambda bdr: ModelBase.matches_regex(bdr,
-                                                                    '[a-zA-Z0-9\\.\\-_]{1,199}'),
+                                                                    '[a-zA-Z0-9\\.\\-_]{0,199}'),
         'campaign': ModelBase.lambda_check('campaign'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         '__created_relvals': ModelBase.lambda_check('relval'),

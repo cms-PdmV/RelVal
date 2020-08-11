@@ -283,16 +283,18 @@ class RelValStep(ModelBase):
 
         raise Exception('No input step could be found')
 
-    def get_input_eventcontent(self):
+    def get_input_eventcontent(self, input_step=None):
         """
         Return which eventcontent should be used as input for current RelVal step
         """
-        all_steps = self.parent().get('steps')
-        self_step = self.get('driver')['step']
+        if input_step is None:
+            all_steps = self.parent().get('steps')
+            input_step_index = self.get_input_step_index()
+            input_step = all_steps[input_step_index]
+
         this_is_harvesting = self.has_step('HARVESTING')
+        self_step = self.get('driver')['step']
         this_is_alca = self_step and self_step[0].startswith('ALCA')
-        input_step_index = self.get_input_step_index()
-        input_step = all_steps[input_step_index]
         input_step_eventcontent = input_step.get('driver')['eventcontent']
         if this_is_harvesting:
             for eventcontent_index, eventcontent in enumerate(input_step_eventcontent):
@@ -320,3 +322,19 @@ class RelValStep(ModelBase):
 
         index = self.get_index_in_parent()
         return f'step_{index}_cfg'
+
+    def get_relval_events(self):
+        """
+        Split --relval argument to total events and events per job/lumi
+        """
+        relval = self.get('driver')['relval']
+        if not relval:
+            raise Exception('--relval is not set')
+
+        relval = relval.split(',')
+        if len(relval) < 2:
+            raise Exception('Not enough parameters in --relval argument')
+
+        requested_events = int(relval[0])
+        events_per = int(relval[1])
+        return requested_events, events_per

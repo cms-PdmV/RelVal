@@ -164,33 +164,32 @@ class RelValController(ControllerBase):
         prepid = relval.get_prepid()
         self.logger.debug('Getting job dict for %s', prepid)
         steps = relval.get('steps')
-        database_url = Config.get('cmsweb_url') + '/couchdb'
-        campaign_name = relval.get('campaign')
-        primary_dataset = relval.get_primary_dataset()
-        label = relval.get('label')
 
-        # Get events from --relval attribute
         job_dict = {}
         job_dict['Group'] = 'PPD'
         job_dict['Requestor'] = 'pdmvserv'
-        job_dict['ConfigCacheUrl'] = database_url
-        job_dict['CouchURL'] = database_url
+        job_dict['CouchURL'] = Config.get('cmsweb_url') + '/couchdb'
+        job_dict['ConfigCacheUrl'] = job_dict['CouchURL']
         job_dict['PrepID'] = relval.get_prepid()
         job_dict['RequestType'] = 'TaskChain'
         job_dict['SubRequestType'] = 'RelVal'
         job_dict['RequestString'] = relval.get_request_string()
-        job_dict['EnableHarvesting'] = False
-        job_dict['Campaign'] = campaign_name
+        job_dict['Campaign'] = relval.get('campaign')
+        job_dict['RequestPriority'] = relval.get('priority')
+        job_dict['TimePerEvent'] = relval.get('time_per_event')
+        job_dict['SizePerEvent'] = relval.get('size_per_event')
         # Harvesting should run on single core with 3GB memory,
         # and each task will have it's own core and memory setting
         job_dict['Memory'] = 3000
         job_dict['Multicore'] = 1
-        job_dict['RequestPriority'] = relval.get('priority')
-        job_dict['TimePerEvent'] = relval.get('time_per_event')
-        job_dict['SizePerEvent'] = relval.get('size_per_event')
+        job_dict['EnableHarvesting'] = False
 
         task_number = 0
         for step_index, step in enumerate(steps):
+            # If it's input file, it's not a task
+            if step.get_step_type() == 'input_file':
+                continue
+
             # Handle harvesting step quickly
             if step.has_step('HARVESTING'):
                 # It is harvesting step
@@ -200,28 +199,18 @@ class RelValController(ControllerBase):
                 continue
 
             task_dict = {}
-            # First step, if it's input file - skip
-            # If it's generator, set Seeding to AutomaticSeeding
+            # If it's firtst step and not input file - it is generator
+            # set Seeding to AutomaticSeeding, RequestNumEvets, EventsPerJob and EventsPerLumi
+            # It expects --relval attribute
             if step_index == 0:
-                if step.get_step_type() == 'input_file':
-                    continue
-
                 task_dict['Seeding'] = 'AutomaticSeeding'
-                step_name = step.get('name')
-                # Primary dataset is either workflow name or first step name
-                task_dict['PrimaryDataset'] = primary_dataset
-                if step.get('driver').get('relval'):
-                    relval_attr = step.get('driver')['relval'].split(',')
-                    relval_attr = (int(relval_attr[0]), int(relval_attr[1]))
-                    task_dict['RequestNumEvents'] = relval_attr[0]
-                    task_dict['EventsPerJob'] = relval_attr[1]
-                    task_dict['EventsPerLumi'] = relval_attr[1]
-                else:
-                    raise Exception(f'Missing --relval attribute in {step_name} step')
-
+                task_dict['PrimaryDataset'] = relval.get_primary_dataset()
+                requested_events, events_per = step.get_relval_events()
+                task_dict['RequestNumEvents'] = requested_events
+                task_dict['EventsPerJob'] = events_per
+                task_dict['EventsPerLumi'] = events_per
             else:
-                input_step_index = step.get_input_step_index()
-                input_step = steps[input_step_index]
+                input_step = steps[step.get_input_step_index()]
                 if input_step.get_step_type() == 'input_file':
                     input_dict = input_step.get('input')
                     # Input file step is not a task
@@ -231,46 +220,37 @@ class RelValController(ControllerBase):
                         task_dict['LumiList'] = input_dict['lumisection']
                 else:
                     task_dict['InputTask'] = input_step.get_short_name()
-                    _, input_module = step.get_input_eventcontent()
+                    _, input_module = step.get_input_eventcontent(input_step)
                     task_dict['InputFromOutputModule'] = f'{input_module}output'
 
                 if step.get('lumis_per_job') != '':
                     task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
 
             task_dict['TaskName'] = step.get_short_name()
-            conditions = step.get('driver')['conditions']
             task_dict['ConfigCacheID'] = step.get('config_id')
             task_dict['KeepOutput'] = True
             task_dict['SplittingAlgo'] = 'LumiBased'
             task_dict['ScramArch'] = step.get('scram_arch')
-            if not job_dict.get('ScramArch'):
-                # Set main scram arch to first task scram arch
-                job_dict['ScramArch'] = task_dict['ScramArch']
-
-            task_dict['GlobalTag'] = conditions
-            if not job_dict.get('GlobalTag'):
-                # Set main globaltag to first task globaltag
-                job_dict['GlobalTag'] = task_dict['GlobalTag']
-
-            task_dict['ProcessingString'] = f'{conditions}_{label}'.strip('_')
-            if not job_dict.get('ProcessingString'):
-                # Set main processing string to first task processing string
-                job_dict['ProcessingString'] = task_dict['ProcessingString']
-
+            task_dict['GlobalTag'] = step.get('driver')['conditions']
+            task_dict['ProcessingString'] = task_dict['GlobalTag']
             task_dict['CMSSWVersion'] = step.get('cmssw_release')
-            if not job_dict.get('CMSSWVersion'):
-                # Set main globaltag to first task globaltag
-                job_dict['CMSSWVersion'] = task_dict['CMSSWVersion']
-                job_dict['AcquisitionEra'] = task_dict['CMSSWVersion']
-
             task_dict['Memory'] = relval.get('memory')
             task_dict['Multicore'] = relval.get('cpu_cores')
-            task_dict['Campaign'] = campaign_name
+            task_dict['Campaign'] = job_dict['Campaign']
             # Add task to main dict
             task_number += 1
             job_dict[f'Task{task_number}'] = task_dict
 
         job_dict['TaskChain'] = task_number
+        # Set main scram arch to first task scram arch
+        job_dict['ScramArch'] = job_dict['Task1']['ScramArch']
+        # Set main globaltag to first task globaltag
+        job_dict['GlobalTag'] = job_dict['Task1']['GlobalTag']
+        # Set main processing string to first task processing string
+        job_dict['ProcessingString'] = job_dict['Task1']['ProcessingString']
+        # Set main CMSSW version to first task CMSSW version
+        job_dict['CMSSWVersion'] = job_dict['Task1']['CMSSWVersion']
+        job_dict['AcquisitionEra'] = job_dict['Task1']['CMSSWVersion']
 
         return job_dict
 

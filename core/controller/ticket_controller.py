@@ -175,12 +175,12 @@ class TicketController(ControllerBase):
                     for step_dict in workflow_dict['steps']:
                         arguments = step_dict.get('arguments', {})
                         input_dict = step_dict.get('input', {})
-                        arguments.pop('--filein', None)
-                        arguments.pop('--fileout', None)
-                        arguments.pop('--lumiToProcess', None)
-                        arguments['--step'] = clean_split(arguments.get('--step', ''))
-                        arguments['--eventcontent'] = clean_split(arguments.get('--eventcontent', ''))
-                        arguments['--datatier'] = clean_split(arguments.get('--datatier', ''))
+                        for to_pop in ('--filein', '--fileout', '--lumiToProcess'):
+                            arguments.pop(to_pop, None)
+
+                        for to_split in ('--step', '--eventcontent', '--datatier'):
+                            arguments[to_split] = clean_split(arguments.get(to_split, ''))
+
                         arguments['type'] = arguments.pop('step_type', '')
                         input_dict.pop('events', None)
                         self.rewrite_base_dataset(input_dict, base_dataset_rewrite)

@@ -93,6 +93,8 @@
       </v-card>
     </v-dialog>
 
+    <LoadingOverlay :visible="loadingCreatingRelVals"/>
+
     <footer>
       <a :href="'tickets/edit'" v-if="role('manager')">New ticket</a>
       <Paginator :totalRows="totalItems"
@@ -107,11 +109,14 @@ import ColumnSelector from './ColumnSelector'
 import Paginator from './Paginator'
 import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js'
+import LoadingOverlay from './LoadingOverlay.vue'
+
 export default {
   components: {
     ColumnSelector,
     Paginator,
-    HistoryCell
+    HistoryCell,
+    LoadingOverlay,
   },
   mixins: [roleMixin],
   data () {
@@ -137,6 +142,7 @@ export default {
       headers: [],
       dataItems: [],
       loading: false,
+      loadingCreatingRelVals: false,
       itemsPerPage: 1,  // If initial value is 0, table does not appear after update
       totalItems: 0,
       dialog: {
@@ -225,12 +231,15 @@ export default {
       this.dialog.description = "Are you sure you want to generate RelVals for " + ticket.prepid + " ticket?";
       this.dialog.ok = function() {
         component.loading = true;
+        component.loadingCreatingRelVals = true;
+        component.clearDialog();
         axios.post('api/tickets/create_relvals', {'prepid': ticket.prepid}, {timeout: 180000}).then(() => {
-          component.clearDialog();
+          component.loadingCreatingRelVals = false;
+          component.loading = false;
           component.fetchObjects();
         }).catch(error => {
+          component.loadingCreatingRelVals = false;
           component.loading = false;
-          component.clearDialog();
           component.showError("Error creating RelVals", error.response.data.message);
         });
       }
