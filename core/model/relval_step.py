@@ -60,7 +60,7 @@ class RelValStep(ModelBase):
         'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'config_id': lambda cid: ModelBase.matches_regex(cid, '[a-f0-9]{0,50}'),
         'lumis_per_job': lambda l: l == '' or int(l) > 0,
-        'name': lambda n: ModelBase.matches_regex(n, '[a-zA-Z0-9_\\-]{1,50}'),
+        'name': lambda n: ModelBase.matches_regex(n, '[a-zA-Z0-9_\\-]{1,150}'),
         'scram_arch': ModelBase.lambda_check('scram_arch'),
     }
 
@@ -82,6 +82,25 @@ class RelValStep(ModelBase):
 
     def get_prepid(self):
         return 'RelValStep'
+
+    def get_short_name(self):
+        """
+        Return a shortened step name
+        GenSimFull for anything that has GenSim in it
+        HadronizerFull for anything that has Hadronizer in it
+        Split and cut by underscores for other cases
+        """
+        name = self.get('name')
+        if 'gensim' in name.lower():
+            return 'GenSimFull'
+
+        if 'hadronizer' in name.lower():
+            return 'HadronizerFull'
+
+        while len(name) > 50:
+            name = '_'.join(name.split('_')[:-1])
+
+        return name
 
     def get_index_in_parent(self):
         """

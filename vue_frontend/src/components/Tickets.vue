@@ -128,6 +128,7 @@ export default {
         {'dbName': 'recycle_gs', 'displayName': 'Recycle GS', 'visible': 1},
         {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
+        {'dbName': 'base_dataset_rewrite', 'displayName': 'Base Dataset Rewrite', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},

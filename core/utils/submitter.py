@@ -229,6 +229,46 @@ class RequestSubmitter(BaseSubmitter):
             task['GlobalTag'] = globaltag[1]
             task['ProcessingString'] = globaltag[1]
 
+    def __add_pileup_strings(self, relval, job_dict):
+        """
+        Add special PU strings base on --pileup and --pileup_input values
+        """
+        steps = relval.get('steps')
+        tasks = []
+        for i in range(job_dict['TaskChain']):
+            task_name = f'Task{i + 1}'
+            tasks.append(job_dict[task_name])
+
+        for task in tasks:
+            task_step = None
+            for step in steps:
+                if task['TaskName'] == step.get_short_name():
+                    task_step = step
+                    break
+            else:
+                self.logger.info('Could not find %s step', task['TaskName'])
+                continue
+
+            pileup = task_step.get('driver').get('pileup')
+            pileup_input = task_step.get('driver').get('pileup_input')
+            prefix = ''
+            if pileup_input:
+                if '25ns' in pileup_input:
+                    prefix = 'PUpmx25ns_'
+                elif '50ns' in pileup_input:
+                    prefix = 'PUpmx50ns_'
+
+            if not prefix and pileup:
+                if '25ns' in pileup:
+                    prefix = 'PU25ns_'
+                elif '50ns' in pileup:
+                    prefix = 'PU50ns_'
+                else:
+                    prefix = 'PU_'
+
+            self.logger.debug('Adding "%s" prefix to %s', prefix, task['ProcessingString'])
+            task['ProcessingString'] = prefix + task['ProcessingString']
+
     def submit_relval(self, relval, controller):
         """
         Method that is used by submission workers. This is where the actual submission happens
@@ -252,12 +292,13 @@ class RequestSubmitter(BaseSubmitter):
                 self.__generate_configs(relval, ssh_executor, remote_directory)
                 # Upload configs
                 config_hashes = self.__upload_configs(relval, ssh_executor, remote_directory)
-                self.logger.debug(config_hashes)
                 # Iterate through uploaded configs and save their hashes in RelVal steps
                 self.__update_steps_with_config_hashes(relval, config_hashes)
                 # Submit job dict to ReqMgr2
                 job_dict = controller.get_job_dict(relval)
                 self.__resolve_global_tags(relval, job_dict, ssh_executor, remote_directory)
+                # Add special hardcoded values to processing strings
+                self.__add_pileup_strings(relval, job_dict)
                 cmsweb_url = Config.get('cmsweb_url')
                 grid_cert = Config.get('grid_user_cert')
                 grid_key = Config.get('grid_user_key')

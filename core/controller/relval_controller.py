@@ -34,10 +34,12 @@ class RelValController(ControllerBase):
             raise Exception(f'Campaign {campaign_name} does not exist')
 
         cmssw_release = campaign_json.get('cmssw_release')
+        # Use workflow name for prepid if possible, if not - first step name
         if json_data.get('workflow_name'):
             workflow_name = json_data['workflow_name']
         else:
-            workflow_name = json_data.get('steps')[0]['name']
+            first_step = RelValStep(json_input=json_data.get('steps')[0])
+            workflow_name = first_step.get_short_name()
 
         prepid_part = f'{campaign_name}-{workflow_name}'
         json_data['prepid'] = f'{prepid_part}-00000'
@@ -163,9 +165,10 @@ class RelValController(ControllerBase):
         self.logger.debug('Getting job dict for %s', prepid)
         steps = relval.get('steps')
         database_url = Config.get('cmsweb_url') + '/couchdb'
-        request_string = relval.get_request_string()
         campaign_name = relval.get('campaign')
-        relval_type = relval.get_relval_type()
+        primary_dataset = relval.get_primary_dataset()
+        label = relval.get('label')
+
         # Get events from --relval attribute
         job_dict = {}
         job_dict['Group'] = 'PPD'
@@ -175,7 +178,7 @@ class RelValController(ControllerBase):
         job_dict['PrepID'] = relval.get_prepid()
         job_dict['RequestType'] = 'TaskChain'
         job_dict['SubRequestType'] = 'RelVal'
-        job_dict['RequestString'] = request_string
+        job_dict['RequestString'] = relval.get_request_string()
         job_dict['EnableHarvesting'] = False
         job_dict['Campaign'] = campaign_name
         # Harvesting should run on single core with 3GB memory,
@@ -205,7 +208,8 @@ class RelValController(ControllerBase):
 
                 task_dict['Seeding'] = 'AutomaticSeeding'
                 step_name = step.get('name')
-                task_dict['PrimaryDataset'] = f'RelVal{step_name}'
+                # Primary dataset is either workflow name or first step name
+                task_dict['PrimaryDataset'] = primary_dataset
                 if step.get('driver').get('relval'):
                     relval_attr = step.get('driver')['relval'].split(',')
                     relval_attr = (int(relval_attr[0]), int(relval_attr[1]))
@@ -226,14 +230,14 @@ class RelValController(ControllerBase):
                     if input_dict['lumisection']:
                         task_dict['LumiList'] = input_dict['lumisection']
                 else:
-                    task_dict['InputTask'] = input_step.get('name')
+                    task_dict['InputTask'] = input_step.get_short_name()
                     _, input_module = step.get_input_eventcontent()
                     task_dict['InputFromOutputModule'] = f'{input_module}output'
 
                 if step.get('lumis_per_job') != '':
                     task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
 
-            task_dict['TaskName'] = step.get('name')
+            task_dict['TaskName'] = step.get_short_name()
             conditions = step.get('driver')['conditions']
             task_dict['ConfigCacheID'] = step.get('config_id')
             task_dict['KeepOutput'] = True
@@ -248,7 +252,7 @@ class RelValController(ControllerBase):
                 # Set main globaltag to first task globaltag
                 job_dict['GlobalTag'] = task_dict['GlobalTag']
 
-            task_dict['ProcessingString'] = f'{conditions}_{relval_type}'.strip('_')
+            task_dict['ProcessingString'] = f'{conditions}_{label}'.strip('_')
             if not job_dict.get('ProcessingString'):
                 # Set main processing string to first task processing string
                 job_dict['ProcessingString'] = task_dict['ProcessingString']

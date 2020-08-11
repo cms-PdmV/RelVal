@@ -61,6 +61,7 @@ class TicketController(ControllerBase):
         creating_new = not bool(prepid)
         not_done = status != 'done'
         editing_info['prepid'] = False
+        editing_info['base_dataset_rewrite'] = not_done
         editing_info['campaign'] = creating_new
         editing_info['cpu_cores'] = not_done
         editing_info['label'] = not_done
@@ -81,6 +82,23 @@ class TicketController(ControllerBase):
                             f'{prepid} has {len(created_relvals)} relvals')
 
         return True
+
+    def rewrite_base_dataset(self, input_dict, dataset_rewrite):
+        """
+        Perform base dataset rewrite if needed
+        (rewrite middle part of input dataset name)
+        """
+        if not dataset_rewrite or not input_dict.get('dataset'):
+            return
+
+        input_dataset = input_dict.get('dataset')
+        self.logger.info('Will rename %s middle part with %s',
+                         input_dataset,
+                         dataset_rewrite)
+        input_dataset_split = input_dataset.split('/')
+        input_dataset_split[2] = dataset_rewrite
+        input_dataset = '/'.join(input_dataset_split)
+        input_dict['dataset'] = input_dataset
 
     def create_relvals_for_ticket(self, ticket):
         """
@@ -103,6 +121,7 @@ class TicketController(ControllerBase):
             sample_tag = ticket.get('sample_tag')
             cpu_cores = ticket.get('cpu_cores')
             memory = ticket.get('memory')
+            base_dataset_rewrite = ticket.get('base_dataset_rewrite')
             recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
             try:
                 workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
@@ -153,7 +172,7 @@ class TicketController(ControllerBase):
                                      'workflow_id': workflow_id,
                                      'workflow_name': workflow_dict['workflow_name']}
 
-                    for step_index, step_dict in enumerate(workflow_dict['steps']):
+                    for step_dict in workflow_dict['steps']:
                         arguments = step_dict.get('arguments', {})
                         input_dict = step_dict.get('input', {})
                         arguments.pop('--filein', None)
@@ -164,6 +183,7 @@ class TicketController(ControllerBase):
                         arguments['--datatier'] = clean_split(arguments.get('--datatier', ''))
                         arguments['type'] = arguments.pop('step_type', '')
                         input_dict.pop('events', None)
+                        self.rewrite_base_dataset(input_dict, base_dataset_rewrite)
 
                         # Create a step
                         new_step = {'name': step_dict['name'],
@@ -175,13 +195,6 @@ class TicketController(ControllerBase):
                         # Delete INPUT from step name
                         if new_step['name'].endswith('INPUT'):
                             new_step['name'] = new_step['name'][:-5]
-
-                        # Shorten the name and check for duplicate names
-                        if len(new_step['name']) > 50:
-                            new_step['name'] = clean_split(new_step['name'], '_')[0]
-                            for existing_step in workflow_json['steps']:
-                                if new_step['name'] == existing_step['name']:
-                                    new_step['name'] += f'_{step_index + 1}'
 
                         workflow_json['steps'].append(new_step)
 

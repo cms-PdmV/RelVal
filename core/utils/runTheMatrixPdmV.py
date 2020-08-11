@@ -98,10 +98,6 @@ def main():
                         dest='recycle_gs',
                         action='store_true',
                         help='Recycle GS')
-    parser.add_argument('-b', '--base_dataset',
-                        dest='base_dataset',
-                        default='',
-                        help='String to be used in input dataset name middle part')
 
     opt = parser.parse_args()
 
@@ -176,10 +172,6 @@ def main():
                                  'lumisection': workflow_step['INPUT'].ls,
                                  'label': workflow_step['INPUT'].label,
                                  'events': workflow_step['INPUT'].events}
-                if opt.base_dataset.strip():
-                    split_dataset = step['input']['dataset'].split('/')
-                    split_dataset[2] = opt.base_dataset.strip()
-                    step['input'] = '/'.join(split_dataset)
 
                 print(step)
             else:

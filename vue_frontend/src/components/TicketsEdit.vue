@@ -9,6 +9,10 @@
           <td><input type="text" v-model="editableObject.prepid" :disabled="!editingInfo.prepid"></td>
         </tr>
         <tr>
+          <td>Base dataset rewrite</td>
+          <td><input type="text" v-model="editableObject.base_dataset_rewrite" :disabled="!editingInfo.base_dataset_rewrite"></td>
+        </tr>
+        <tr>
           <td>Campaign</td>
           <td>
             <autocompleter

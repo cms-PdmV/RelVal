@@ -1,9 +1,11 @@
 <template>
   <div>
     <ul>
-      <li v-for="step in this.data" :key="step.name">
-      {{step.name}}
-      <small><pre>{{JSON.stringify(step, null, 2)}}</pre></small>
+      <li v-for="(step, index) in data" :key="index">
+        {{step.name}}:
+        <ul>
+          <li v-for="(value, key) in stepValues(step)" :key="key" class="monospace">{{key}} {{value}}</li>
+        </ul>
       </li>
     </ul>
   </div>
@@ -13,42 +15,54 @@
 
   export default {
     props:{
-      data: {
-        type: Array
-      }
+      data: Array
     },
     data () {
       return {
       }
     },
-    created () {
-    },
-    watch:{
-    },
     methods: {
-
+      stepKeys: function(step) {
+        return Object.keys(step).filter(s => step[s] && step[s] !== '' && s != 'driver' && s != 'input');
+      },
+      stepKey: function(key) {
+        return key == 'extra' ? '' : key;
+      },
+      stepValue: function(value) {
+        if (Array.isArray(value)) {
+          return value.join(',');
+        } else if (value === true || value === false) {
+          return '';
+        }
+        return value;
+      },
+      stepValues: function(value) {
+        let newData = {};
+        for (let key of this.stepKeys(value)) {
+          newData[this.stepKey(key)] = this.stepValue(value[key]);
+        }
+        if (value.input && value.input.dataset && value.input.dataset) {
+          for (let key of this.stepKeys(value.input)) {
+            newData[this.stepKey(key)] = this.stepValue(value.input[key]);
+          }
+        } else {
+          for (let key of this.stepKeys(value.driver)) {
+            newData[this.stepKey(key)] = this.stepValue(value.driver[key]);
+          }
+        }
+        return newData;
+      }
     },
     computed: {
-      shortenedStep: function() {
-        let data = [];
-        for (let step of this.data) {
-          let s = {};
-          for (let attr in step) {
-            if (step[attr] == false) {
-              continue;
-            }
-            if (step[attr] == true) {
-              s[attr] = step[attr];
-              continue;
-            }
-            if (step[attr].length) {
-              s[attr] = step[attr]
-            }
-          }
-          data.push(s);
-        }
-        return data;
-      }
     }
   }
 </script>
+
+<style scoped>
+
+.monospace {
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+</style>

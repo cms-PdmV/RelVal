@@ -199,7 +199,7 @@ class RelVal(ModelBase):
         Return request string made of CMSSW release and various labels
 
         Example: RVCMSSW_11_0_0_pre4RunDoubleMuon2018C__gcc8_RelVal_2018C
-        RV{cmssw_release}{first_step_name}__{label}_{relval_type}_{first_step_label}
+        RV{cmssw_release}{relval_name}__{label}_{relval_type}_{first_step_label}
         """
         steps = self.get('steps')
         for step in steps:
@@ -209,23 +209,39 @@ class RelVal(ModelBase):
         else:
             raise Exception('No steps have CMSSW release')
 
-        label = self.get('label')
-        workflow_name = self.get('workflow_name')
-        if not workflow_name:
-            # Defaults to first step's name
-            workflow_name = steps[0].get('name')
-
-        first_step_label = steps[0].get('input')['label']
+        ticket_label = self.get('label')
+        relval_name = self.get_name()
         relval_type = self.get_relval_type()
 
-        request_string = f'RV{cmssw_release}{workflow_name}__'
-        if label:
-            request_string += f'{label}_'
+        request_string = f'RV{cmssw_release}{relval_name}__'
+        if ticket_label:
+            request_string += f'{ticket_label}_'
 
         if relval_type:
             request_string += f'{relval_type}_'
 
-        if first_step_label:
-            request_string += f'{first_step_label}_'
-
         return request_string.strip('_')
+
+    def get_name(self):
+        """
+        Return a RelVal (workflow) name
+        If available, use workflow name, otherwise first step name
+        """
+        workflow_name = self.get('workflow_name')
+        if workflow_name:
+            return workflow_name
+
+        first_step = self.get('steps')[0]
+        return first_step.get_short_name()
+
+    def get_primary_dataset(self):
+        """
+        Return a primary dataset
+        """
+        workflow_name = self.get('workflow_name')
+        if workflow_name:
+            return f'RelVal{workflow_name}'
+
+        steps = self.get('steps')
+        first_step_name = steps[0].get('name')
+        return f'RelVal{first_step_name}'
