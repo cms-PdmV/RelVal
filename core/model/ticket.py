@@ -15,8 +15,6 @@ class Ticket(ModelBase):
         '_id': '',
         # PrepID
         'prepid': '',
-        # String to rewrite middle part of INPUT dataset(s) /.../THIS/...
-        'base_dataset_rewrite': '',
         # CMSSW release
         'campaign': '',
         # CPU cores
@@ -27,14 +25,16 @@ class Ticket(ModelBase):
         'history': [],
         # Label to be used in runTheMatrix
         'label': '',
+        # Type of relval: standard, upgrade, premix, etc.
+        'matrix': 'standard',
         # Memory in MB
         'memory': 2000,
         # User notes
         'notes': '',
         # Whether to recycle first step
         'recycle_gs': False,
-        # Type of relval: standard, upgrade, premix, etc.
-        'relval_set': 'standard',
+        # String to rewrite middle part of INPUT dataset(s) /.../THIS/...
+        'rewrite_gt_string': '',
         # Tag to group workflow ids
         'sample_tag': '',
         # Status is either new or done
@@ -45,14 +45,13 @@ class Ticket(ModelBase):
 
     lambda_checks = {
         'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,75}'),
-        'base_dataset_rewrite': lambda bdr: ModelBase.matches_regex(bdr,
-                                                                    '[a-zA-Z0-9\\.\\-_]{0,199}'),
+        'rewrite_gt_string': lambda rgs: ModelBase.matches_regex(rgs, '[a-zA-Z0-9\\.\\-_]{0,199}'),
         'campaign': ModelBase.lambda_check('campaign'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         '__created_relvals': ModelBase.lambda_check('relval'),
         'label': ModelBase.lambda_check('label'),
+        'matrix': ModelBase.lambda_check('matrix'),
         'memory': ModelBase.lambda_check('memory'),
-        'relval_set': ModelBase.lambda_check('relval_set'),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
         'status': lambda status: status in ('new', 'done'),
         'workflow_ids': lambda wf: len(wf) > 0,

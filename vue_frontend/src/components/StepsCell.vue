@@ -26,7 +26,7 @@
         return Object.keys(step).filter(s => step[s] && step[s] !== '' && s != 'driver' && s != 'input');
       },
       stepKey: function(key) {
-        return key == 'extra' ? '' : key;
+        return key == 'extra' ? 'EXTRA: ' : '--' + key;
       },
       stepValue: function(value) {
         if (Array.isArray(value)) {

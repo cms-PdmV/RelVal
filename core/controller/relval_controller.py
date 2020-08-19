@@ -7,8 +7,10 @@ from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.settings import Settings
 from core_lib.utils.ssh_executor import SSHExecutor
+from core_lib.utils.locker import Locker
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.global_config import Config
+from core_lib.utils.cache import TimeoutCache
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
@@ -24,6 +26,8 @@ class RelValController(ControllerBase):
         ControllerBase.__init__(self)
         self.database_name = 'relvals'
         self.model_class = RelVal
+        if not hasattr(self.__class__, 'scram_arch_cache'):
+            self.__class__.scram_arch_cache = TimeoutCache(3600)
 
     def create(self, json_data):
         # Clean up the input
@@ -47,8 +51,7 @@ class RelValController(ControllerBase):
             if not step.get('cmssw_release'):
                 step['cmssw_release'] = cmssw_release
 
-            if not step.get('scram_arch'):
-                step['scram_arch'] = self.get_scram_arch(step['cmssw_release'])
+            step['scram_arch'] = RelValController.get_scram_arch(step['cmssw_release'])
 
         settings = Settings()
         with self.locker.get_lock('generate-relval-prepid'):
@@ -66,12 +69,23 @@ class RelValController(ControllerBase):
 
         return relval
 
+    def update(self, json_data, force_update=False):
+        # Update scram arch for all steps
+        for step in json_data.get('steps'):
+            cmssw_release = step['cmssw_release']
+            scram_arch = RelValController.get_scram_arch(cmssw_release)
+            if not scram_arch:
+                raise Exception(f'Could not find scram arch for {cmssw_release}')
+
+            step['scram_arch'] = scram_arch
+
+        return super().update(json_data, force_update)
+
     def get_editing_info(self, obj):
         editing_info = super().get_editing_info(obj)
         prepid = obj.get_prepid()
         status = obj.get('status')
         is_new = status == 'new'
-        not_done = status != 'done'
         creating_new = not bool(prepid)
         editing_info['prepid'] = False
         editing_info['campaign'] = creating_new
@@ -80,8 +94,7 @@ class RelValController(ControllerBase):
         editing_info['memory'] = is_new
         editing_info['label'] = is_new
         editing_info['notes'] = True
-        editing_info['priority'] = not_done
-        editing_info['relval_set'] = creating_new
+        editing_info['matrix'] = creating_new
         editing_info['sample_tag'] = is_new
         editing_info['size_per_event'] = is_new
         editing_info['time_per_event'] = is_new
@@ -107,12 +120,6 @@ class RelValController(ControllerBase):
                 raise Exception('Campaign %s does not exist' % (campaign_name))
 
         return True
-
-    def before_update(self, obj):
-        if obj.get('status') == 'submitted':
-            old_obj = self.get(obj.get_prepid())
-            if old_obj.get('priority') != obj.get('priority'):
-                self.change_relval_priority(obj, obj.get('priority'))
 
     def before_delete(self, obj):
         prepid = obj.get_prepid()
@@ -175,7 +182,7 @@ class RelValController(ControllerBase):
         job_dict['SubRequestType'] = 'RelVal'
         job_dict['RequestString'] = relval.get_request_string()
         job_dict['Campaign'] = relval.get('campaign')
-        job_dict['RequestPriority'] = relval.get('priority')
+        job_dict['RequestPriority'] = 500000
         job_dict['TimePerEvent'] = relval.get('time_per_event')
         job_dict['SizePerEvent'] = relval.get('size_per_event')
         # Harvesting should run on single core with 3GB memory,
@@ -209,6 +216,7 @@ class RelValController(ControllerBase):
                 task_dict['RequestNumEvents'] = requested_events
                 task_dict['EventsPerJob'] = events_per
                 task_dict['EventsPerLumi'] = events_per
+                task_dict['SplittingAlgo'] = 'EventBased'
             else:
                 input_step = steps[step.get_input_step_index()]
                 if input_step.get_step_type() == 'input_file':
@@ -226,10 +234,11 @@ class RelValController(ControllerBase):
                 if step.get('lumis_per_job') != '':
                     task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
 
+                task_dict['SplittingAlgo'] = 'LumiBased'
+
             task_dict['TaskName'] = step.get_short_name()
             task_dict['ConfigCacheID'] = step.get('config_id')
             task_dict['KeepOutput'] = True
-            task_dict['SplittingAlgo'] = 'LumiBased'
             task_dict['ScramArch'] = step.get('scram_arch')
             task_dict['GlobalTag'] = step.get('driver')['conditions']
             task_dict['ProcessingString'] = task_dict['GlobalTag']
@@ -548,9 +557,6 @@ class RelValController(ControllerBase):
 
             if all_workflow_names:
                 newest_workflow = all_workflows[all_workflow_names[-1]]
-                if 'RequestPriority' in newest_workflow:
-                    relval.set('priority', newest_workflow['RequestPriority'])
-
                 if 'TotalEvents' in newest_workflow:
                     relval.set('total_events', max(0, newest_workflow['TotalEvents']))
 
@@ -622,63 +628,44 @@ class RelValController(ControllerBase):
                                      sort_keys=True))
         return output_datasets
 
-    def change_relval_priority(self, relval, priority):
-        """
-        Change request priority
-        """
-        prepid = relval.get_prepid()
-        relval_db = Database('relvals')
-        self.logger.info('Will try to change %s priority to %s', prepid, priority)
-        with self.locker.get_nonblocking_lock(prepid):
-            relval = self.get(prepid)
-            if relval.get('status') != 'submitted':
-                raise Exception('It is not allowed to change priority of '
-                                'RelVals that are not in status "submitted"')
-
-            relval.set('priority', priority)
-            updated_workflows = []
-            active_workflows = self.pick_active_workflows(relval)
-            connection = ConnectionWrapper(host=Config.get('cmsweb_url'), keep_open=True)
-            for workflow in active_workflows:
-                workflow_name = workflow['name']
-                self.logger.info('Changing "%s" priority to %s', workflow_name, priority)
-                response = connection.api('PUT',
-                                          f'/reqmgr2/data/request/{workflow_name}',
-                                          {'RequestPriority': priority})
-                updated_workflows.append(workflow_name)
-                self.logger.debug(response)
-
-            connection.close()
-            # Update priority in Stats2
-            self.force_stats_to_refresh(updated_workflows)
-            # Finally save the RelVal
-            relval_db.save(relval.get_json())
-
-        return relval
-
-    def get_scram_arch(self, cmssw_release):
+    @classmethod
+    def get_scram_arch(cls, cmssw_release, refetch_if_needed=True):
         """
         Get scram arch from
         https://cmssdt.cern.ch/SDT/cgi-bin/ReleasesXML?anytype=1
+        Cache it in RelValController class
         """
         if not cmssw_release:
             return None
 
-        self.logger.debug('Downloading releases XML')
-        conn = ConnectionWrapper(host='cmssdt.cern.ch')
-        response = conn.api('GET', '/SDT/cgi-bin/ReleasesXML?anytype=1')
-        self.logger.debug('Downloaded releases XML')
-        root = XMLet.fromstring(response)
-        for architecture in root:
-            if architecture.tag != 'architecture':
-                # This should never happen as children should be <architecture>
-                continue
+        cache = cls.scram_arch_cache
+        releases = cls.scram_arch_cache.get('releases', {})
+        cached_value = releases.get(cmssw_release)
+        if cached_value:
+            return cached_value
 
-            scram_arch = architecture.attrib.get('name')
-            for release in architecture:
-                if release.attrib.get('label') == cmssw_release:
-                    self.logger.debug('Scram arch for %s is %s', cmssw_release, scram_arch)
-                    return scram_arch
+        if not refetch_if_needed:
+            return None
 
-        self.logger.warning('Could not find scram arch for %s', cmssw_release)
-        return None
+        with Locker().get_lock('relval-controller-get-scram-arch'):
+            # Maybe cache got updated while waiting for a lock
+            cached_value = cls.get_scram_arch(cmssw_release, False)
+            if cached_value:
+                return cached_value
+
+            connection = ConnectionWrapper(host='cmssdt.cern.ch')
+            response = connection.api('GET', '/SDT/cgi-bin/ReleasesXML?anytype=1')
+            root = XMLet.fromstring(response)
+            releases = {}
+            for architecture in root:
+                if architecture.tag != 'architecture':
+                    # This should never happen as children should be <architecture>
+                    continue
+
+                scram_arch = architecture.attrib.get('name')
+                for release in architecture:
+                    releases[release.attrib.get('label')] = scram_arch
+
+            cache.set('releases', releases)
+
+        return cls.get_scram_arch(cmssw_release, False)

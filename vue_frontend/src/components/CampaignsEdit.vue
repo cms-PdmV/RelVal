@@ -10,15 +10,15 @@
         </tr>
         <tr>
           <td>Batch name</td>
-          <td><input type="text" v-model="editableObject.batch_name" :disabled="!editingInfo.batch_name"></td>
+          <td><input type="text" v-model="editableObject.batch_name" placeholder="E.g. fullsim_noPU_..." :disabled="!editingInfo.batch_name"></td>
         </tr>
         <tr>
           <td>CMSSW Version</td>
-          <td><input type="text" v-model="editableObject.cmssw_release" :disabled="!editingInfo.cmssw_release"></td>
+          <td><input type="text" v-model="editableObject.cmssw_release" placeholder="E.g. CMSSW_11_..." :disabled="!editingInfo.cmssw_release"></td>
         </tr>
         <tr>
           <td>Notes</td>
-          <td><textarea v-model="editableObject.notes" :disabled="!editingInfo.notes"></textarea></td>
+          <td><textarea v-model="editableObject.notes" placeholder="E.g. Goals, comments, links to TWiki and HN" :disabled="!editingInfo.notes"></textarea></td>
         </tr>
       </table>
       <v-btn small class="mr-1 mt-2" color="primary" @click="save()">Save</v-btn>

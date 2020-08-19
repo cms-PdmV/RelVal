@@ -146,8 +146,7 @@ def main():
             workflow_step = steps_module.steps[workflow_step_name]
             # Because first item in the list has highest priority
             workflow_step = steps_module.merge([workflow_matrix.overrides,
-                                                workflow_step,
-                                                {'--no_exec': True}])
+                                                workflow_step])
             if opt.command:
                 command_dict = split_command_to_dict(opt.command)
                 print('Merging %s' % (command_dict))
@@ -158,9 +157,6 @@ def main():
                 step['lumis_per_job'] = wmsplit[workflow_step_name]
             elif 'INPUT' in workflow_step:
                 step['lumis_per_job'] = workflow_step['INPUT'].split
-            elif workflow_step_index > 0:
-                last_step = workflows[workflow_id]['steps'][-1]
-                step['lumis_per_job'] = last_step.get('lumis_per_job', 10)
             else:
                 # Default to 10
                 step['lumis_per_job'] = 10
@@ -181,7 +177,7 @@ def main():
                     workflow_step['--step'] = workflow_step.pop('-s')
 
                 if 'cfg' in workflow_step:
-                    workflow_step['step_type'] = workflow_step.pop('cfg')
+                    workflow_step['type'] = workflow_step.pop('cfg')
 
                 workflow_step.pop('-n', None)
                 # Change "flags" value to True, e.g. --data, --mc, --fast

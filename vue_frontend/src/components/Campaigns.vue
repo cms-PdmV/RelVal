@@ -19,6 +19,8 @@
           <template v-slot:item._actions="{ item }">
             <a :href="'campaigns/edit?prepid=' + item.prepid" v-if="role('manager')" title="Edit campaign">Edit</a>&nbsp;
             <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager')" title="Delete campaign">Delete</a>&nbsp;
+            <a :href="'tickets/edit?campaign=' + item.prepid" v-if="role('manager')" title="Create ticket">Create ticket</a>&nbsp;
+            <a :href="'relvals?campaign=' + item.prepid" v-if="role('manager')" title="Show all RelVals in this campaign">RelVals</a>&nbsp;
           </template>
           <template v-slot:item.prepid="{ item }">
             <a :href="'campaigns?prepid=' + item.prepid" title="Show only this campaign">{{item.prepid}}</a>

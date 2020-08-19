@@ -26,16 +26,14 @@ class RelVal(ModelBase):
         'history': [],
         # Label
         'label': '',
+        # Type of relval: standard, upgrade
+        'matrix': 'standard',
         # Memory in MB
         'memory': 2000,
         # User notes
         'notes': '',
         # Output datasets of RelVal
         'output_datasets': [],
-        # Priority in computing
-        'priority': 110000,
-        # Type of relval: standard, upgrade
-        'relval_set': 'standard',
         # Tag for grouping of RelVals
         'sample_tag': '',
         # Size per event in kilobytes
@@ -59,10 +57,9 @@ class RelVal(ModelBase):
         'campaign': ModelBase.lambda_check('campaign'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         'label': ModelBase.lambda_check('label'),
+        'matrix': ModelBase.lambda_check('matrix'),
         'memory': ModelBase.lambda_check('memory'),
         '__output_datasets': ModelBase.lambda_check('dataset'),
-        'priority': ModelBase.lambda_check('priority'),
-        'relval_set': ModelBase.lambda_check('relval_set'),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
         'size_per_event': lambda spe: spe > 0.0,
         'status': lambda status: status in ('new', 'approved', 'submitting', 'submitted', 'done'),

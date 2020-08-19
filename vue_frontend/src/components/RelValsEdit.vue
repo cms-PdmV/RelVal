@@ -19,29 +19,17 @@
           </td>
         </tr>
         <tr>
-          <td>CPU Cores</td>
-          <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="32"></td>
+          <td>CPU Cores (-t)</td>
+          <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="8"></td>
         </tr>
         <tr>
-          <td>Label</td>
-          <td><input type="text" v-model="editableObject.label" :disabled="!editingInfo.label"></td>
+          <td>Label (--label)</td>
+          <td><input type="text" v-model="editableObject.label" placeholder="E.g. gcc8 or rsb or pmx" :disabled="!editingInfo.label"></td>
         </tr>
         <tr>
-          <td>Memory</td>
-          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="64000" step="1000">MB</td>
-        </tr>
-        <tr>
-          <td>Notes</td>
-          <td><textarea v-model="editableObject.notes" :disabled="!editingInfo.notes"></textarea></td>
-        </tr>
-        <tr>
-          <td>Priority</td>
-          <td><input type="number" v-model="editableObject.priority" :disabled="!editingInfo.priority"></td>
-        </tr>
-        <tr>
-          <td>RelVal set</td>
+          <td>Matrix (--what)</td>
           <td>
-            <select v-model="editableObject.relval_set" :disabled="!editingInfo.relval_set">
+            <select v-model="editableObject.matrix" :disabled="!editingInfo.matrix">
               <option>standard</option>
               <option>upgrade</option>
               <option>generator</option>
@@ -49,8 +37,16 @@
           </td>
         </tr>
         <tr>
+          <td>Memory</td>
+          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="32000" step="1000">MB</td>
+        </tr>
+        <tr>
+          <td>Notes</td>
+          <td><textarea v-model="editableObject.notes" placeholder="E.g. Goals, comments, links to TWiki and HN" :disabled="!editingInfo.notes"></textarea></td>
+        </tr>
+        <tr>
           <td>Sample Tag</td>
-          <td><input type="text" v-model="editableObject.sample_tag" :disabled="!editingInfo.sample_tag"></td>
+          <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run3, MetMC, MuonMC" :disabled="!editingInfo.sample_tag"></td>
         </tr>
         <tr v-if="editableObject.steps">
           <td>Steps ({{listLength(editableObject.steps)}})</td>
@@ -63,9 +59,6 @@
                 </tr>
                 <tr>
                   <td>CMSSW Release</td><td><input type="text" v-model="step.cmssw_release" :disabled="!editingInfo.steps"></td>
-                </tr>
-                <tr>
-                  <td>Scram Arch</td><td><input type="text" v-model="step.scram_arch" :disabled="!editingInfo.steps"></td>
                 </tr>
                 <tr v-if="index != 0">
                   <td>Lumis per job</td><td><input type="text" v-model="step.lumis_per_job" :disabled="!editingInfo.steps"></td>
@@ -104,10 +97,10 @@
                     <td>--customise</td><td><input type="text" v-model="step.driver.customise" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>--datatier</td><td><input type="text" v-model="step.driver.datatier" :disabled="!editingInfo.steps"></td>
+                    <td>--customise_commands</td><td><input type="text" v-model="step.driver.customise_commands" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>--data</td><td><input type="checkbox" v-model="step.driver.data" :disabled="!editingInfo.steps"></td>
+                    <td>--datatier</td><td><input type="text" v-model="step.driver.datatier" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
                     <td>--era</td><td><input type="text" v-model="step.driver.era" :disabled="!editingInfo.steps"></td>
@@ -116,22 +109,13 @@
                     <td>--eventcontent</td><td><input type="text" v-model="step.driver.eventcontent" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>--fast</td><td><input type="checkbox" v-model="step.driver.fast" :disabled="!editingInfo.steps"></td>
-                  </tr>
-                  <tr>
                     <td>--filetype</td><td><input type="text" v-model="step.driver.filetype" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
+                    <td>--geometry</td><td><input type="text" v-model="step.driver.geometry" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
                     <td>--hltProcess</td><td><input type="text" v-model="step.driver.hltProcess" :disabled="!editingInfo.steps"></td>
-                  </tr>
-                  <tr>
-                    <td>--mc</td><td><input type="checkbox" v-model="step.driver.mc" :disabled="!editingInfo.steps"></td>
-                  </tr>
-                  <tr>
-                    <td>--no_exec</td><td><input type="checkbox" v-model="step.driver.no_exec" :disabled="!editingInfo.steps"></td>
-                  </tr>
-                  <tr>
-                    <td>--number</td><td><input type="number" v-model="step.driver.number" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
                     <td>--pileup</td><td><input type="text" v-model="step.driver.pileup" :disabled="!editingInfo.steps"></td>
@@ -163,6 +147,32 @@
                   </tr>
                   <tr>
                     <td>--step</td><td><input type="text" v-model="step.driver.step" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>Data, Fast, MC</td>
+                    <td>
+                      <input type="radio"
+                             class="mr-1"
+                             v-model="step.driver.data"
+                             :name="'step' + index + '_data_fast_mc'"
+                             @click="step.driver.fast = false; step.driver.mc = false; step.driver.data = !step.driver.data" :value="true"
+                             :disabled="!editingInfo.steps">--data
+                      <input type="radio"
+                             class="mr-1 ml-2"
+                             v-model="step.driver.fast"
+                             :name="'step' + index + '_data_fast_mc'"
+                             @click="step.driver.data = false; step.driver.mc = false; step.driver.fast = !step.driver.fast" :value="true"
+                             :disabled="!editingInfo.steps">--fast
+                      <input type="radio"
+                             class="mr-1 ml-2"
+                             v-model="step.driver.mc"
+                             :name="'step' + index + '_data_fast_mc'"
+                             @click="step.driver.data = false; step.driver.fast = false; step.driver.mc = !step.driver.mc" :value="true"
+                             :disabled="!editingInfo.steps">--mc
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Extra</td><td><input type="text" v-model="step.driver.extra" placeholder="Any arguments not mentioned above" :disabled="!editingInfo.steps"></td>
                   </tr>
                 </template>
               </table>
@@ -311,8 +321,6 @@ export default {
           newStep['cmssw_release'] = previousStep['cmssw_release'];
           newStep['scram_arch'] = previousStep['scram_arch'];
           newStep.driver.conditions = previousStep.driver.conditions;
-          newStep.driver.no_exec = previousStep.driver.no_exec;
-          newStep.driver.number = previousStep.driver.number;
         }
         newStep.step_type = 'driver';
         newStep.input.lumisection = JSON.stringify(newStep.input.lumisection);

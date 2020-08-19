@@ -214,6 +214,7 @@ h1.page-title {
   background: #dadada !important;
   color: rgba(0, 0, 0, 0.65);
   cursor: not-allowed;
+  opacity: 1;
 }
 
 @media all and (max-width:650px){

@@ -12,6 +12,7 @@ from core_lib.utils.common_utils import clean_split, cmssw_setup
 from core_lib.utils.global_config import Config
 from core.model.ticket import Ticket
 from core.model.campaign import Campaign
+from core.model.relval_step import RelValStep
 from core.controller.relval_controller import RelValController
 
 
@@ -61,16 +62,16 @@ class TicketController(ControllerBase):
         creating_new = not bool(prepid)
         not_done = status != 'done'
         editing_info['prepid'] = False
-        editing_info['base_dataset_rewrite'] = not_done
         editing_info['campaign'] = creating_new
         editing_info['cpu_cores'] = not_done
         editing_info['label'] = not_done
+        editing_info['matrix'] = not_done
         editing_info['memory'] = not_done
         editing_info['notes'] = True
+        editing_info['recycle_gs'] = not_done
+        editing_info['rewrite_gt_string'] = not_done
         editing_info['sample_tag'] = not_done
         editing_info['workflow_ids'] = not_done
-        editing_info['relval_set'] = not_done
-        editing_info['recycle_gs'] = not_done
 
         return editing_info
 
@@ -83,7 +84,7 @@ class TicketController(ControllerBase):
 
         return True
 
-    def rewrite_base_dataset(self, input_dict, dataset_rewrite):
+    def rewrite_gt_string_if_needed(self, input_dict, dataset_rewrite):
         """
         Perform base dataset rewrite if needed
         (rewrite middle part of input dataset name)
@@ -100,6 +101,59 @@ class TicketController(ControllerBase):
         input_dataset = '/'.join(input_dataset_split)
         input_dict['dataset'] = input_dataset
 
+    def make_relval_step_dict(self, step_dict):
+        """
+        Remove, split or move arguments in step dictionary
+        returned from runTheMatrixPdmV.py
+        """
+        # Deal with input file part
+        input_dict = step_dict.get('input', {})
+        input_dict.pop('events', None)
+
+        # Deal with driver part
+        arguments = step_dict.get('arguments', {})
+        # Remove unneeded arguments
+        for to_pop in ('--filein', '--fileout', '--lumiToProcess'):
+            arguments.pop(to_pop, None)
+
+        # Split comma separated items into lists
+        for to_split in ('--step', '--eventcontent', '--datatier'):
+            arguments[to_split] = clean_split(arguments.get(to_split, ''))
+
+        # Put all arguments that are not in schema to extra field
+        driver_schema = RelValStep.schema()['driver']
+        driver_keys = {f'--{key}' for key in driver_schema.keys()}
+        extra = ''
+        for key, value in arguments.items():
+            if key == 'type':
+                continue
+
+            if key not in driver_keys:
+                if isinstance(value, bool):
+                    if value:
+                        extra += f' {key}'
+                elif isinstance(value, list):
+                    if value:
+                        extra += f' {key} {",".join(value)}'
+                else:
+                    if value:
+                        extra += f' {key} {value}'
+
+        arguments['extra'] = extra.strip()
+
+        # Create a step
+        name = step_dict['name']
+        # Delete INPUT from step name
+        if name.endswith('INPUT'):
+            name = name[:-5]
+
+        new_step = {'name': name,
+                    'lumis_per_job': step_dict.get('lumis_per_job', ''),
+                    'driver': arguments,
+                    'input': input_dict}
+
+        return new_step
+
     def create_relvals_for_ticket(self, ticket):
         """
         Create RelVals from given subcampaign ticket. Return list of relval prepids
@@ -115,13 +169,13 @@ class TicketController(ControllerBase):
             ticket = self.get(ticket_prepid)
             campaign_name = ticket.get('campaign')
             campaign = Campaign(json_input=campaign_db.get(campaign_name))
-            relval_set = ticket.get('relval_set')
+            matrix = ticket.get('matrix')
             cmssw_release = campaign.get('cmssw_release')
             label = ticket.get('label')
             sample_tag = ticket.get('sample_tag')
             cpu_cores = ticket.get('cpu_cores')
             memory = ticket.get('memory')
-            base_dataset_rewrite = ticket.get('base_dataset_rewrite')
+            rewrite_gt_string = ticket.get('rewrite_gt_string')
             recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
             try:
                 workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
@@ -144,7 +198,7 @@ class TicketController(ControllerBase):
                 command += [f'cd {ticket_prepid}',
                             'python runTheMatrixPdmV.py '
                             f'-l {workflow_ids} '
-                            f'-w {relval_set} '
+                            f'-w {matrix} '
                             f'-o {file_name} '
                             f'{recycle_gs_flag}']
                 _, err, code = ssh_executor.execute_command(command)
@@ -166,36 +220,16 @@ class TicketController(ControllerBase):
                                      'cpu_cores': cpu_cores,
                                      'label': label,
                                      'memory': memory,
-                                     'relval_set': relval_set,
+                                     'matrix': matrix,
                                      'sample_tag': sample_tag,
                                      'steps': [],
                                      'workflow_id': workflow_id,
                                      'workflow_name': workflow_dict['workflow_name']}
 
                     for step_dict in workflow_dict['steps']:
-                        arguments = step_dict.get('arguments', {})
-                        input_dict = step_dict.get('input', {})
-                        for to_pop in ('--filein', '--fileout', '--lumiToProcess'):
-                            arguments.pop(to_pop, None)
-
-                        for to_split in ('--step', '--eventcontent', '--datatier'):
-                            arguments[to_split] = clean_split(arguments.get(to_split, ''))
-
-                        arguments['type'] = arguments.pop('step_type', '')
-                        input_dict.pop('events', None)
-                        self.rewrite_base_dataset(input_dict, base_dataset_rewrite)
-
-                        # Create a step
-                        new_step = {'name': step_dict['name'],
-                                    'lumis_per_job': step_dict.get('lumis_per_job', ''),
-                                    'cmssw_release': cmssw_release,
-                                    'driver': arguments,
-                                    'input': input_dict}
-
-                        # Delete INPUT from step name
-                        if new_step['name'].endswith('INPUT'):
-                            new_step['name'] = new_step['name'][:-5]
-
+                        new_step = self.make_relval_step_dict(step_dict)
+                        new_step['cmssw_release'] = cmssw_release
+                        self.rewrite_gt_string_if_needed(new_step['input'], rewrite_gt_string)
                         workflow_json['steps'].append(new_step)
 
                     self.logger.debug('Will create %s', workflow_json)

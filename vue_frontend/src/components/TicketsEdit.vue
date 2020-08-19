@@ -9,10 +9,6 @@
           <td><input type="text" v-model="editableObject.prepid" :disabled="!editingInfo.prepid"></td>
         </tr>
         <tr>
-          <td>Base dataset rewrite</td>
-          <td><input type="text" v-model="editableObject.base_dataset_rewrite" :disabled="!editingInfo.base_dataset_rewrite"></td>
-        </tr>
-        <tr>
           <td>Campaign</td>
           <td>
             <autocompleter
@@ -22,29 +18,17 @@
             </autocompleter>
           </td>
         <tr>
-          <td>CPU Cores</td>
-          <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="32"></td>
+          <td>CPU Cores (-t)</td>
+          <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="8"></td>
         </tr>
         <tr>
-          <td>Label</td>
-          <td><input type="text" v-model="editableObject.label" :disabled="!editingInfo.label"></td>
+          <td>Label (--label)</td>
+          <td><input type="text" v-model="editableObject.label" placeholder="E.g. gcc8 or rsb or pmx" :disabled="!editingInfo.label"></td>
         </tr>
         <tr>
-          <td>Memory</td>
-          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="64000" step="1000">MB</td>
-        </tr>
-        <tr>
-          <td>Notes</td>
-          <td><textarea v-model="editableObject.notes" :disabled="!editingInfo.notes"></textarea></td>
-        </tr>
-        <tr>
-          <td>Recycle GS</td>
-          <td><input type="checkbox" v-model="editableObject.recycle_gs" :disabled="!editingInfo.recycle_gs"/></td>
-        </tr>
-        <tr>
-          <td>RelVal set</td>
+          <td>Matrix (--what)</td>
           <td>
-            <select v-model="editableObject.relval_set" :disabled="!editingInfo.relval_set">
+            <select v-model="editableObject.matrix" :disabled="!editingInfo.matrix">
               <option>standard</option>
               <option>upgrade</option>
               <option>generator</option>
@@ -54,12 +38,31 @@
           </td>
         </tr>
         <tr>
-          <td>Sample Tag</td>
-          <td><input type="text" v-model="editableObject.sample_tag" :disabled="!editingInfo.sample_tag"></td>
+          <td>Memory</td>
+          <td><input type="number" v-model="editableObject.memory" :disabled="!editingInfo.memory" min="0" max="32000" step="1000">MB</td>
         </tr>
         <tr>
-          <td>Workflows ({{listLength(editableObject.workflow_ids)}})</td>
-          <td><textarea v-model="editableObject.workflow_ids" :disabled="!editingInfo.workflow_ids"></textarea></td>
+          <td>Notes</td>
+          <td><textarea v-model="editableObject.notes" placeholder="E.g. Goals, comments, links to TWiki and HN" :disabled="!editingInfo.notes"></textarea></td>
+        </tr>
+        <tr>
+          <td>Recycle GS (-i all)</td>
+          <td><input type="checkbox" v-model="editableObject.recycle_gs" :disabled="!editingInfo.recycle_gs"/></td>
+        </tr>
+        <tr>
+          <td>Rewrite GT String</td>
+          <td>
+            <input type="text" v-model="editableObject.rewrite_gt_string" placeholder="E.g. CMSSW_10_3_0_pre5-103X_upgrade2018_realistic_v7-v1" :disabled="!editingInfo.rewrite_gt_string">
+            <small v-if="editableObject.rewrite_gt_string"><br>Preview: /PrimaryDataset/<span style="color: red">{{editableObject.rewrite_gt_string}}</span>/DATATIER</small>
+          </td>
+        </tr>
+        <tr>
+          <td>Sample Tag</td>
+          <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run3, MetMC, MuonMC" :disabled="!editingInfo.sample_tag"></td>
+        </tr>
+        <tr>
+          <td>Workflow IDs ({{listLength(editableObject.workflow_ids)}})</td>
+          <td><textarea v-model="editableObject.workflow_ids" :placeholder="'One workflow id per line, e.g.\n136.801\n1302.181\n10848'" :disabled="!editingInfo.workflow_ids"></textarea></td>
         </tr>
       </table>
       <v-btn small class="mr-1 mb-1" color="primary" @click="save()">Save</v-btn>
@@ -143,6 +146,9 @@ export default {
       } else {
         component.editableObject = response.data.response.object;
         component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
+        if (query.campaign && query.campaign.length) {
+          component.editableObject.campaign = query.campaign;
+        }
         component.editingInfo = response.data.response.editing_info;
         component.loading = false;
       }

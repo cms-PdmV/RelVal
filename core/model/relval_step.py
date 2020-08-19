@@ -25,6 +25,7 @@ class RelValStep(ModelBase):
             'beamspot': '',
             'conditions': '',
             'customise': '',
+            'customise_commands': '',
             'data': False,
             'datatier': [],
             'era': '',
@@ -32,9 +33,9 @@ class RelValStep(ModelBase):
             'extra': '',
             'fast': False,
             'filetype': '',
+            'geometry': '',
             'hltProcess': '',
             'mc': False,
-            'no_exec': False,
             'pileup': '',
             'pileup_input': '',
             'process': '',
@@ -73,6 +74,9 @@ class RelValStep(ModelBase):
             else:
                 json_input['driver'] = {k.lstrip('-'): v for k, v in json_input['driver'].items()}
                 json_input['input'] = {}
+                data_fast_mc = [x for x in ('data', 'fast', 'mc') if json_input['driver'][x]]
+                if len(data_fast_mc) > 1:
+                    raise Exception('Only one of --data, --fast and --mc is allowed in a step')
 
         ModelBase.__init__(self, json_input)
         if parent:
@@ -136,7 +140,7 @@ class RelValStep(ModelBase):
         # Comment in front of the command for better readability
         comment = f'# Arguments for step {step_index + 1}:\n'
         for key in sorted(arguments.keys()):
-            if key == 'type':
+            if key in ('type', 'extra'):
                 continue
 
             if not arguments[key]:

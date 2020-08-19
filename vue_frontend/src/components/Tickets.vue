@@ -25,6 +25,18 @@
           <template v-slot:item.prepid="{ item }">
             <a :href="'tickets?prepid=' + item.prepid" title="Show only this ticket">{{item.prepid}}</a>
           </template>
+          <template v-slot:item.status="{ item }">
+            <a :href="'tickets?status=' + item.status" :title="'Show all tickets with status ' + item.status">{{item.status}}</a>
+          </template>
+          <template v-slot:item.matrix="{ item }">
+            <a :href="'tickets?matrix=' + item.matrix" :title="'Show all tickets with ' + item.matrix + ' matrix'">{{item.matrix}}</a>
+          </template>
+          <template v-slot:item.sample_tag="{ item }">
+            <a :href="'tickets?sample_tag=' + item.sample_tag" :title="'Show all tickets with ' + item.sample_tag + ' sample tag'">{{item.sample_tag}}</a>
+          </template>
+          <template v-slot:item.label="{ item }">
+            <a :href="'tickets?label=' + item.label" :title="'Show all tickets with ' + item.label + ' label'">{{item.label}}</a>
+          </template>
           <template v-slot:item.history="{ item }">
             <HistoryCell :data="item.history"/>
           </template>
@@ -128,16 +140,16 @@ export default {
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
         {'dbName': 'campaign', 'displayName': 'Campaign', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 1},
+        {'dbName': 'matrix', 'displayName': 'Matrix', 'visible': 1},
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
         {'dbName': 'recycle_gs', 'displayName': 'Recycle GS', 'visible': 1},
-        {'dbName': 'relval_set', 'displayName': 'RelVal Set', 'visible': 1},
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
-        {'dbName': 'base_dataset_rewrite', 'displayName': 'Base Dataset Rewrite', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
-        {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
+        {'dbName': 'rewrite_gt_string', 'displayName': 'Rewrite GT String', 'visible': 0},
+        {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
       ],
       headers: [],
       dataItems: [],
@@ -228,7 +240,7 @@ export default {
     showCreateRelValsDialog: function(ticket) {
       let component = this;
       this.dialog.title = "Create RelVals for " + ticket.prepid + "?";
-      this.dialog.description = "Are you sure you want to generate RelVals for " + ticket.prepid + " ticket?";
+      this.dialog.description = "Are you sure you want to generate RelVals for " + ticket.prepid + " ticket? After RelVals are created, this ticket cannot be modified, additional workflows will require a new ticket.";
       this.dialog.ok = function() {
         component.loading = true;
         component.loadingCreatingRelVals = true;
