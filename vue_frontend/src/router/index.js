@@ -62,7 +62,7 @@ const router = new VueRouter({
   stringifyQuery: query => {
     var result = qs.stringify(query);
     // Do not encode asterisks
-    result = result.replace(/%2A/g, '*').replace(/%2F/g, '/').replace(/%21/g, '!');
+    result = result.replace(/%2A/g, '*').replace(/%2F/g, '/').replace(/%21/g, '!').replace(/%2C/g, ',');
     return result ? ('?' + result) : '';
   },
   routes

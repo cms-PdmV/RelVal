@@ -6,6 +6,7 @@ import argparse
 from flask_restful import Api
 from flask_cors import CORS
 from flask import Flask, render_template
+from jinja2.exceptions import TemplateNotFound
 from core_lib.database.database import Database
 from core_lib.utils.global_config import Config
 from api.system_api import (LockerStatusAPI,
@@ -62,7 +63,10 @@ def catch_all(_path):
     """
     Return index.html for all paths except API
     """
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except TemplateNotFound:
+        return 'Webpage is starting, please wait a few minutes...'
 
 
 @app.route('/api', defaults={'_path': ''})

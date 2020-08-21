@@ -81,6 +81,21 @@
           <template v-slot:item.recycle_gs="{ item }">
             {{item.recycle_gs ? 'Yes' : 'No'}}
           </template>
+          <template v-slot:item.campaign="{ item }">
+            <a :href="'relvals?campaign=' + item.campaign" :title="'Show all RelVals with ' + item.campaign + ' campaign'">{{item.campaign}}</a>
+          </template>
+          <template v-slot:item.status="{ item }">
+            <a :href="'relvals?status=' + item.status" :title="'Show all RelVals with status ' + item.status">{{item.status}}</a>
+          </template>
+          <template v-slot:item.matrix="{ item }">
+            <a :href="'relvals?matrix=' + item.matrix" :title="'Show all RelVals with ' + item.matrix + ' matrix'">{{item.matrix}}</a>
+          </template>
+          <template v-slot:item.sample_tag="{ item }">
+            <a :href="'relvals?sample_tag=' + item.sample_tag" :title="'Show all RelVals with ' + item.sample_tag + ' sample tag'">{{item.sample_tag}}</a>
+          </template>
+          <template v-slot:item.label="{ item }">
+            <a :href="'relvals?label=' + item.label" :title="'Show all RelVals with ' + item.label + ' label'">{{item.label}}</a>
+          </template>
         </v-data-table>
       </div>
     </div>

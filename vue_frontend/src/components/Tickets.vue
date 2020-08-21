@@ -54,6 +54,7 @@
           </template>
           <template v-slot:item.created_relvals="{ item }">
             <ul>
+              <li v-if="item.created_relvals && item.created_relvals.length > 1"><a :href="'relvals?prepid=' + item.created_relvals.join(',')">All ({{item.created_relvals.length}})</a></li>
               <li v-for="relval in item.created_relvals" :key="relval">
                 <a :href="'relvals?prepid=' + relval" :title="'Open ' + relval + ' RelVal'">{{relval}}</a>
               </li>

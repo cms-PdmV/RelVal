@@ -151,7 +151,10 @@
                   <tr>
                     <td>Data, Fast, MC</td>
                     <td>
-                      <input type="radio"
+                      <input type="checkbox" class="mr-1" v-model="step.driver.data" :disabled="!editingInfo.steps"/>--data
+                      <input type="checkbox" class="mr-1 ml-2" v-model="step.driver.fast" :disabled="!editingInfo.steps"/>--fast
+                      <input type="checkbox" class="mr-1 ml-2" v-model="step.driver.mc" :disabled="!editingInfo.steps"/>--mc
+                      <!-- <input type="radio"
                              class="mr-1"
                              v-model="step.driver.data"
                              :name="'step' + index + '_data_fast_mc'"
@@ -168,7 +171,7 @@
                              v-model="step.driver.mc"
                              :name="'step' + index + '_data_fast_mc'"
                              @click="step.driver.data = false; step.driver.fast = false; step.driver.mc = !step.driver.mc" :value="true"
-                             :disabled="!editingInfo.steps">--mc
+                             :disabled="!editingInfo.steps">--mc -->
                     </td>
                   </tr>
                   <tr>

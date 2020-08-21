@@ -6,7 +6,6 @@ import time
 from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.locker import Locker
 from core_lib.database.database import Database
-from core_lib.utils.settings import Settings
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.submitter import Submitter as BaseSubmitter
 from core_lib.utils.common_utils import clean_split, cmssw_setup
@@ -41,13 +40,13 @@ class RequestSubmitter(BaseSubmitter):
             step.set('config_id', '')
 
         relval_db.save(relval.get_json())
-        service_url = Settings().get('service_url')
+        service_url = Config.get('service_url')
         emailer = Emailer()
         prepid = relval.get_prepid()
         subject = f'RelVal {prepid} submission failed'
         body = f'Hello,\n\nUnfortunately submission of {prepid} failed.\n'
         body += (f'You can find this relval at '
-                 f'{service_url}/relval/relvals?prepid={prepid}\n')
+                 f'{service_url}/relvals?prepid={prepid}\n')
         body += f'Error message:\n\n{error_message}'
         recipients = emailer.get_recipients(relval)
         emailer.send(subject, body, recipients)
@@ -65,7 +64,7 @@ class RequestSubmitter(BaseSubmitter):
         subject = f'RelVal {prepid} submission succeeded'
         body = f'Hello,\n\nSubmission of {prepid} succeeded.\n'
         body += (f'You can find this relval at '
-                 f'{service_url}/relval/relvals?prepid={prepid}\n')
+                 f'{service_url}/relvals?prepid={prepid}\n')
         body += f'Workflow in ReqMgr2 {cmsweb_url}/reqmgr2/fetch?rid={last_workflow}'
         recipients = emailer.get_recipients(relval)
         emailer.send(subject, body, recipients)
@@ -122,9 +121,9 @@ class RequestSubmitter(BaseSubmitter):
                    'export X509_USER_PROXY=$(pwd)/proxy.txt',
                    './config_generate.sh']
         stdout, stderr, exit_code = ssh_executor.execute_command(command)
+        self.logger.debug('Exit code %s for %s config generation', exit_code, prepid)
         if exit_code != 0:
-            self.__handle_error(relval, f'Error generating configs for {prepid}.\n{stderr}')
-            return None
+            raise Exception(f'Error generating configs for {prepid}.\n{stderr}')
 
         return stdout
 
@@ -138,9 +137,9 @@ class RequestSubmitter(BaseSubmitter):
                    'export X509_USER_PROXY=$(pwd)/proxy.txt',
                    './config_upload.sh']
         stdout, stderr, exit_code = ssh_executor.execute_command(command)
+        self.logger.debug('Exit code %s for %s config upload', exit_code, prepid)
         if exit_code != 0:
-            self.__handle_error(relval, f'Error uploading configs for {prepid}.\n{stderr}')
-            return None
+            raise Exception(f'Error uploading configs for {prepid}.\n{stderr}')
 
         stdout = [x for x in clean_split(stdout, '\n') if 'DocID' in x]
         # Get all lines that have DocID as tuples split by space

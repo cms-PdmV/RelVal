@@ -530,10 +530,13 @@ class RelValController(ControllerBase):
             all_workflows = {}
             for workflow_name in all_workflow_names:
                 workflow = stats_conn.api('GET', f'/requests/{workflow_name}')
-                if not workflow or not workflow.get('RequestName'):
+                if not workflow:
                     raise Exception(f'Could not find {workflow_name} in Stats2')
 
                 workflow = json.loads(workflow)
+                if not workflow.get('RequestName'):
+                    raise Exception(f'Could not find {workflow_name} in Stats2')
+
                 if workflow.get('RequestType', '').lower() == 'resubmission':
                     continue
 

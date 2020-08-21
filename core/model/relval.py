@@ -109,6 +109,7 @@ class RelVal(ModelBase):
         Get config upload commands for this RelVal
         """
         built_command = ''
+        built_command += 'python --version\n'
         self.logger.debug('Getting config upload script for %s', self.get_prepid())
         database_url = Config.get('cmsweb_url') + '/couchdb'
         file_check = 'if [ ! -s "%s.py" ]; then\n'
@@ -125,8 +126,8 @@ class RelVal(ModelBase):
         # This should be done in a smarter way
         built_command += 'git clone --quiet https://github.com/dmwm/WMCore.git\n'
         built_command += 'export PYTHONPATH=$(pwd)/WMCore/src/python/:$PYTHONPATH\n\n'
-        file_upload = ('python config_uploader.py --file %s.py --label %s '
-                       f'--group ppd --user $(echo $USER) --db {database_url}\n')
+        file_upload = ('python config_uploader.py --file $(pwd)/%s.py --label %s '
+                       f'--group ppd --user $(echo $USER) --db {database_url} || exit $?\n')
         previous_step_cmssw = None
         cmssw_versions = []
         for step in self.get('steps'):
