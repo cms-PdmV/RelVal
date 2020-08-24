@@ -246,6 +246,9 @@ class RelValController(ControllerBase):
             task_dict['Memory'] = relval.get('memory')
             task_dict['Multicore'] = relval.get('cpu_cores')
             task_dict['Campaign'] = job_dict['Campaign']
+            if step.get('driver').get('nStreams'):
+                task_dict['EventStreams'] = int(step.get('driver')['nStreams'])
+
             # Add task to main dict
             task_number += 1
             job_dict[f'Task{task_number}'] = task_dict

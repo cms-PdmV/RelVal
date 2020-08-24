@@ -118,6 +118,9 @@
                     <td>--hltProcess</td><td><input type="text" v-model="step.driver.hltProcess" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
+                    <td>--nStreams</td><td><input type="text" v-model="step.driver.nStreams" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
                     <td>--pileup</td><td><input type="text" v-model="step.driver.pileup" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>

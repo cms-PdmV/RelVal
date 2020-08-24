@@ -21,13 +21,13 @@
                       v-model="selectedItems">
           <template v-slot:item._actions="{ item }">
             <a :href="'relvals/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>&nbsp;
-            <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager')">Delete</a>&nbsp;
+            <a style="text-decoration: underline;" @click="deleteRelVals([item])" v-if="role('manager')">Delete</a>&nbsp;
             <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>&nbsp;
             <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>&nbsp;
             <a :href="'api/relvals/get_config_upload/' + item.prepid" title="Show config upload script">Config upload</a>&nbsp;
-            <a style="text-decoration: underline;" @click="previousStatus(item)" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>&nbsp;
-            <a style="text-decoration: underline;" @click="nextStatus(item)" v-if="role('manager')" title="Move to next status">Next</a>&nbsp;
-            <a style="text-decoration: underline;" @click="updateWorkflows(item)" v-if="role('manager') && item.status == 'submitted'" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
+            <a style="text-decoration: underline;" @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>&nbsp;
+            <a style="text-decoration: underline;" @click="nextStatus([item])" v-if="role('manager')" title="Move to next status">Next</a>&nbsp;
+            <a style="text-decoration: underline;" @click="updateWorkflows([item])" v-if="role('manager') && item.status == 'submitted'" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
             <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done'" title="Show workflows of this RelVal in Stats2">Stats2</a>         
           </template>
           <template v-slot:item.prepid="{ item }">
@@ -111,7 +111,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn small class="mr-1 mb-1" color="primary" @click="dialog.cancel">
+          <v-btn small class="mr-1 mb-1" color="primary" v-if="dialog.cancel" @click="dialog.cancel">
             Cancel
           </v-btn>
           <v-btn small class="mr-1 mb-1" color="error" @click="dialog.ok">
@@ -142,10 +142,10 @@
     <footer>
       <a :href="'relvals/edit'" v-if="role('manager') && !selectedItems.length">New RelVal</a>
       <span v-if="role('manager') && selectedItems.length">Selected items ({{selectedItems.length}}) actions:</span>
-      <a v-if="role('manager') && selectedItems.length" @click="deleteManyRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
-      <a v-if="role('manager') && selectedItems.length" @click="previousMany(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
-      <a v-if="role('manager') && selectedItems.length" @click="nextStatusMany(selectedItems)" title="Move selected RelVals to next status">Next</a>
-      <a v-if="role('manager') && selectedItems.length" @click="updateWorkflowsMany(selectedItems)" title="Update selected RelVals' information from Stats2">Update from Stats2</a>
+      <a v-if="role('manager') && selectedItems.length" @click="deleteRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
+      <a v-if="role('manager') && selectedItems.length" @click="previousStaus(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
+      <a v-if="role('manager') && selectedItems.length" @click="nextStatus(selectedItems)" title="Move selected RelVals to next status">Next</a>
+      <a v-if="role('manager') && selectedItems.length" @click="updateWorkflows(selectedItems)" title="Update selected RelVals' information from Stats2">Update from Stats2</a>
       <Paginator :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
     </footer>
@@ -271,12 +271,13 @@ export default {
           component.showError("Error deleting relval", error.response.data.message);
         });
       }
-      this.dialog.cancel = function() {
-        component.clearDialog();
-      }
+      this.dialog.cancel = this.clearDialog;
       this.dialog.visible = true;
     },
-    deleteManyRelVals: function(relvals) {
+    showDataDatasetsDialog: function(relvals) {
+
+    },
+    deleteRelVals: function(relvals) {
       let component = this;
       this.dialog.title = "Delete " + relvals.length + " RelVals?";
       this.dialog.description = "Are you sure you want to delete " + relvals.length + " RelVals?";
@@ -293,59 +294,56 @@ export default {
           component.selectedItems =  [];
         });
       }
-      this.dialog.cancel = function() {
-        component.clearDialog();
-      }
+      this.dialog.cancel = this.clearDialog;
       this.dialog.visible = true;
     },
-    nextStatus: function (relval) {
+    nextStatus: function (relvals) {
       let component = this;
-      this.loading = true;
-      axios.post('api/relvals/next_status', relval).then(response => {
-        component.fetchObjects();
-      }).catch(error => {
-        component.loading = false;
+      const submit = function () {
         component.clearDialog();
-        component.showError("Error moving RelVal to next status", error.response.data.message);
-      });
-    },
-    nextStatusMany: function (relvals) {
-      let component = this;
-      this.loading = true;
-      axios.post('api/relvals/next_status', relvals.slice()).then(() => {
-        component.fetchObjects();
-        component.selectedItems = [];
-      }).catch(error => {
-        component.loading = false;
-        component.clearDialog();
-        component.showError("Error moving RelVals to next status", error.response.data.message);
-        component.selectedItems = [];
-      });
-    },
-    previousStatus: function(relval) {
-      let component = this;
-      this.dialog.title = "Set " + relval.prepid + " to previous status?";
-      this.dialog.description = "Are you sure you want to set " + relval.prepid + " RelVal to previous status?";
-      this.dialog.ok = function() {
         component.loading = true;
-        axios.post('api/relvals/previous_status', relval).then(response => {
-          component.clearDialog();
+        axios.post('api/relvals/next_status', relvals.slice()).then(() => {
           component.fetchObjects();
+          component.selectedItems = [];
         }).catch(error => {
           component.loading = false;
           component.clearDialog();
-          component.showError("Error moving RelVal to previous status", error.response.data.message);
+          component.showError("Error moving RelVal to next status", error.response.data.message);
+          component.selectedItems = [];
         });
       }
-      this.dialog.cancel = function() {
-        component.clearDialog();
+      let showDataWarning = false;
+      // Iterate through all RelVals and see if there are any that have --data and are approved
+      for (let relval of relvals) {
+        for (let step of relval.steps) {
+          if (step.driver.data && relval.status == 'approved') {
+            showDataWarning = true;
+            break;
+          }
+        }
+        if (showDataWarning) {
+          break;
+        }
       }
-      this.dialog.visible = true;
+      if (showDataWarning) {
+        this.dialog.title = "Make sure RelVal datasets are available on disk";
+        this.dialog.description = "Please make sure that data RelVals have required dataset blocks on a disk";
+        this.dialog.ok = submit;
+        this.dialog.cancel = this.clearDialog;
+        this.dialog.visible = true;
+      } else {
+        submit();
+      }
     },
-    previousMany: function(relvals) {
+    previousStatus: function(relvals) {
       let component = this;
-      this.dialog.title = "Set " + relvals.length + " RelVals to previous status?";
-      this.dialog.description = "Are you sure you want to set " + relvals.length + " RelVals to previous status?";
+      if (relvals.length > 1) {
+        this.dialog.title = "Move " + relvals.length + " RelVals to previous status?";
+        this.dialog.description = "Are you sure you want to move " + relvals.length + " RelVals to previous status?";
+      } else {
+        this.dialog.title = "Move " + relvals[0].prepid + " RelVal to previous status?";
+        this.dialog.description = "Are you sure you want to move " + relvals[0].prepid + " RelVal to previous status?";
+      }
       this.dialog.ok = function() {
         component.loading = true;
         axios.post('api/relvals/previous_status', relvals.slice()).then(() => {
@@ -355,37 +353,24 @@ export default {
         }).catch(error => {
           component.loading = false;
           component.clearDialog();
-          component.showError("Error moving RelVals to previous status", error.response.data.message);
-          component.selectedItems =  [];
+          component.showError("Error moving RelVal to previous status", error.response.data.message);
+          component.selectedItems = [];
         });
       }
-      this.dialog.cancel = function() {
-        component.clearDialog();
-      }
+      this.dialog.cancel = this.clearDialog;
       this.dialog.visible = true;
     },
-    updateWorkflows: function (relval) {
+    updateWorkflows: function(relvals) {
       let component = this;
       this.loading = true;
-      axios.post('api/relvals/update_workflows', relval).then(response => {
-        component.fetchObjects();
-      }).catch(error => {
-        component.loading = false;
-        component.clearDialog();
-        component.showError("Error updating RelVal info", error.response.data.message);
-      });
-    },
-    updateWorkflowsMany: function(relvals) {
-      let component = this;
-      this.loading = true;
-      axios.post('api/relvals/update_workflows', relvals.slice()).then(response => {
+      axios.post('api/relvals/update_workflows', relvals.slice()).then(() => {
         component.fetchObjects();
         component.selectedItems =  [];
       }).catch(error => {
         component.loading = false;
         component.clearDialog();
         component.showError("Error updating RelVal info", error.response.data.message);
-        component.selectedItems =  [];
+        component.selectedItems = [];
       });
     },
   }
