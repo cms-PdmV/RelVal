@@ -149,12 +149,9 @@
                     <td>--step</td><td><input type="text" v-model="step.driver.step" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>Data, Fast, MC</td>
+                    <td>Data, MC, FastSim</td>
                     <td>
-                      <input type="checkbox" class="mr-1" v-model="step.driver.data" :disabled="!editingInfo.steps"/>--data
-                      <input type="checkbox" class="mr-1 ml-2" v-model="step.driver.fast" :disabled="!editingInfo.steps"/>--fast
-                      <input type="checkbox" class="mr-1 ml-2" v-model="step.driver.mc" :disabled="!editingInfo.steps"/>--mc
-                      <!-- <input type="radio"
+                      <input type="radio"
                              class="mr-1"
                              v-model="step.driver.data"
                              :name="'step' + index + '_data_fast_mc'"
@@ -162,16 +159,16 @@
                              :disabled="!editingInfo.steps">--data
                       <input type="radio"
                              class="mr-1 ml-2"
-                             v-model="step.driver.fast"
-                             :name="'step' + index + '_data_fast_mc'"
-                             @click="step.driver.data = false; step.driver.mc = false; step.driver.fast = !step.driver.fast" :value="true"
-                             :disabled="!editingInfo.steps">--fast
-                      <input type="radio"
-                             class="mr-1 ml-2"
                              v-model="step.driver.mc"
                              :name="'step' + index + '_data_fast_mc'"
-                             @click="step.driver.data = false; step.driver.fast = false; step.driver.mc = !step.driver.mc" :value="true"
-                             :disabled="!editingInfo.steps">--mc -->
+                             @click="step.driver.data = false; step.driver.mc = !step.driver.mc" :value="true"
+                             :disabled="!editingInfo.steps">--mc
+                      <span v-if="!step.driver.data">
+                        <input type="checkbox"
+                              class="mr-1 ml-2"
+                              v-model="step.driver.fast"
+                              :disabled="!editingInfo.steps"/>--fast
+                      </span>
                     </td>
                   </tr>
                   <tr>

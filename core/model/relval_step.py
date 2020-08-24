@@ -74,10 +74,12 @@ class RelValStep(ModelBase):
             else:
                 json_input['driver'] = {k.lstrip('-'): v for k, v in json_input['driver'].items()}
                 json_input['input'] = {}
-                # driver = json_input['driver']
-                # data_fast_mc = [x for x in ('data', 'fast', 'mc') if driver.get(x, False)]
-                # if len(data_fast_mc) > 1:
-                #     raise Exception('Only one of --data, --fast and --mc is allowed in a step.')
+                driver = json_input['driver']
+                if driver.get('data') and driver.get('mc'):
+                    raise  Exception('Both --data and --mc are not allowed in the same step')
+
+                if driver.get('data') and driver.get('fast'):
+                    raise Exception('Both --data and --fast are not allowed in the same step')
 
         ModelBase.__init__(self, json_input)
         if parent:
