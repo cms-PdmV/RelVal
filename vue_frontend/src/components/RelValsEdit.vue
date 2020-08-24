@@ -46,7 +46,7 @@
         </tr>
         <tr>
           <td>Sample Tag</td>
-          <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run3, MetMC, MuonMC" :disabled="!editingInfo.sample_tag"></td>
+          <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run2, Run3, Phase2, HIN, GEN, ..." :disabled="!editingInfo.sample_tag"></td>
         </tr>
         <tr v-if="editableObject.steps">
           <td>Steps ({{listLength(editableObject.steps)}})</td>
@@ -199,6 +199,7 @@
         </tr>
       </table>
       <v-btn small class="mr-1 mb-1" color="primary" @click="save()">Save</v-btn>
+      <v-btn small class="mr-1 mb-1" color="error" @click="cancel()">Cancel</v-btn>
     </v-card>
     <LoadingOverlay :visible="loading"/>
     <v-dialog v-model="errorDialog.visible"
@@ -301,6 +302,13 @@ export default {
         component.loading = false;
         component.showError('Error saving relval', error.response.data.message)
       });
+    },
+    cancel: function() {
+      if (this.creatingNew) {
+        window.location = 'relvals';
+      } else {
+        window.location = 'relvals?prepid=' + this.prepid;
+      }
     },
     clearErrorDialog: function() {
       this.errorDialog.visible = false;

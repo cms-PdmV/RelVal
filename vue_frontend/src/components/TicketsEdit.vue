@@ -58,14 +58,15 @@
         </tr>
         <tr>
           <td>Sample Tag</td>
-          <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run3, MetMC, MuonMC" :disabled="!editingInfo.sample_tag"></td>
+          <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run2, Run3, Phase2, HIN, GEN, ..." :disabled="!editingInfo.sample_tag"></td>
         </tr>
         <tr>
-          <td>Workflow IDs ({{listLength(editableObject.workflow_ids)}})</td>
-          <td><textarea v-model="editableObject.workflow_ids" :placeholder="'One workflow id per line, e.g.\n136.801\n1302.181\n10848'" :disabled="!editingInfo.workflow_ids"></textarea></td>
+          <td>Workflow IDs ({{workflowListLength(editableObject.workflow_ids)}})</td>
+          <td><textarea v-model="editableObject.workflow_ids" :placeholder="'Comma or newline separated workflow IDs, e.g. \n136.801,136.802 \n1302.181 \n10848'" :disabled="!editingInfo.workflow_ids"></textarea></td>
         </tr>
       </table>
       <v-btn small class="mr-1 mb-1" color="primary" @click="save()">Save</v-btn>
+      <v-btn small class="mr-1 mb-1" color="error" @click="cancel()">Cancel</v-btn>
     </v-card>
     <LoadingOverlay :visible="loading"/>
     <v-dialog v-model="errorDialog.visible"
@@ -178,6 +179,13 @@ export default {
         component.showError('Error saving ticket', error.response.data.message);
       });
     },
+    cancel: function() {
+      if (this.creatingNew) {
+        window.location = 'tickets';
+      } else {
+        window.location = 'tickets?prepid=' + this.prepid;
+      }
+    },
     clearErrorDialog: function() {
       this.errorDialog.visible = false;
       this.errorDialog.title = '';
@@ -198,6 +206,9 @@ export default {
       }).catch(error => {
         callback([]);
       });
+    },
+    workflowListLength: function(list) {
+      return this.cleanSplit(list).length;
     }
   }
 }

@@ -30,23 +30,20 @@ class SearchAPI(APIBase):
         if args is None:
             args = {}
 
-        db_name = args.get('db_name', None)
-        page = int(args.get('page', 0))
-        limit = int(args.get('limit', 20))
-
-        if 'db_name' in args:
-            del args['db_name']
-
-        if 'page' in args:
-            del args['page']
-
-        if 'limit' in args:
-            del args['limit']
+        db_name = args.pop('db_name', None)
+        page = int(args.pop('page', 0))
+        limit = int(args.pop('limit', 20))
+        sort = args.pop('sort', None)
+        sort_asc = args.pop('sort_asc', True)
 
         query_string = '&&'.join(['%s=%s' % (pair) for pair in args.items()])
         database = Database(db_name)
         query_string = database.build_query_with_types(query_string, self.classes[db_name])
-        results, total_rows = database.query_with_total_rows(query_string, page, limit)
+        results, total_rows = database.query_with_total_rows(query_string,
+                                                             page,
+                                                             limit,
+                                                             sort,
+                                                             sort_asc)
 
         return self.output_text({'response': {'results': results,
                                               'total_rows': total_rows},

@@ -22,6 +22,7 @@
         </tr>
       </table>
       <v-btn small class="mr-1 mt-2" color="primary" @click="save()">Save</v-btn>
+      <v-btn small class="mr-1 mb-1" color="error" @click="cancel()">Cancel</v-btn>
     </v-card>
     <LoadingOverlay :visible="loading"/>
     <v-dialog v-model="errorDialog.visible"
@@ -109,6 +110,13 @@ export default {
         component.loading = false;
         component.showError('Error saving campaign', error.response.data.message);
       });
+    },
+    cancel: function() {
+      if (this.creatingNew) {
+        window.location = 'campaigns';
+      } else {
+        window.location = 'campaigns?prepid=' + this.prepid;
+      }
     },
     clearErrorDialog: function() {
       this.errorDialog.visible = false;
