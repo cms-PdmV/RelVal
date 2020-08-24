@@ -63,6 +63,9 @@
           <template v-slot:item.recycle_gs="{ item }">
             {{item.recycle_gs ? 'Yes' : 'No'}}
           </template>
+          <template v-slot:item.command="{ item }">
+            <pre v-if="item.command && item.command.length" class="notes">{{item.command}}</pre>
+          </template>
         </v-data-table>
       </div>
     </div>
@@ -146,6 +149,7 @@ export default {
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
         {'dbName': 'recycle_gs', 'displayName': 'Recycle GS', 'visible': 1},
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
+        {'dbName': 'command', 'displayName': 'Command', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0},

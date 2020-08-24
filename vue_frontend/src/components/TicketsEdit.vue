@@ -17,6 +17,11 @@
               :disabled="!editingInfo.campaign">
             </autocompleter>
           </td>
+        </tr>
+        <tr>
+          <td>Command (--command)</td>
+          <td><input type="text" v-model="editableObject.command" placeholder="Argument that will be added to all cmsDrivers" :disabled="!editingInfo.command"></td>
+        </tr>
         <tr>
           <td>CPU Cores (-t)</td>
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="8"></td>

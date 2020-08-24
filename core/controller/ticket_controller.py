@@ -40,7 +40,7 @@ class TicketController(ControllerBase):
         prepid_part = f'{cmssw_release}__{batch_name}'
         json_data['prepid'] = f'{prepid_part}-00000'
         settings = Settings()
-        with self.locker.get_lock(f'generate-ticket-prepid'):
+        with self.locker.get_lock('generate-ticket-prepid'):
             # Get a new serial number
             serial_numbers = settings.get('tickets_prepid_sequence', {})
             serial_number = serial_numbers.get(prepid_part, 0)
@@ -63,6 +63,7 @@ class TicketController(ControllerBase):
         not_done = status != 'done'
         editing_info['prepid'] = False
         editing_info['campaign'] = creating_new
+        editing_info['command'] = not_done
         editing_info['cpu_cores'] = not_done
         editing_info['label'] = not_done
         editing_info['matrix'] = not_done
@@ -177,6 +178,13 @@ class TicketController(ControllerBase):
             memory = ticket.get('memory')
             rewrite_gt_string = ticket.get('rewrite_gt_string')
             recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
+            additional_command = ticket.get('command').strip()
+            if additional_command:
+                additional_command = additional_command.replace('"', '\\"')
+                additional_command = f'-c "{additional_command}"'
+            else:
+                additional_command = ''
+
             try:
                 workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
                 self.logger.info('Creating RelVals %s for %s', workflow_ids, ticket_prepid)
@@ -200,6 +208,7 @@ class TicketController(ControllerBase):
                             f'-l {workflow_ids} '
                             f'-w {matrix} '
                             f'-o {file_name} '
+                            f'{additional_command} '
                             f'{recycle_gs_flag}']
                 _, err, code = ssh_executor.execute_command(command)
                 if code != 0:

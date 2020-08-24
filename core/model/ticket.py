@@ -17,6 +17,8 @@ class Ticket(ModelBase):
         'prepid': '',
         # CMSSW release
         'campaign': '',
+        # Additional command to add to all cmsDrivers
+        'command': '',
         # CPU cores
         'cpu_cores': 1,
         # List of prepids of relvals that were created from this ticket
