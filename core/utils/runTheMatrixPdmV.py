@@ -29,6 +29,31 @@ def get_wmsplit():
         return {}
 
 
+def extract_events_per_lumi(step):
+    """
+    Extract process.source.numberEventsInLuminosityBlock value from a step it it exists
+    """
+    customise_commands = step.get('--customise_commands', '')
+    if 'process.source.numberEventsInLuminosityBlock' not in customise_commands:
+        return None
+
+    regex = 'process.source.numberEventsInLuminosityBlock=cms.untracked.uint32\(([0-9]*)\)'
+    events_per_lumi = re.findall(regex, customise_commands)
+    if not events_per_lumi or not events_per_lumi[-1].isdigit():
+        return
+
+    events_per_job = int(step.get('--relval', '').split(',')[1])
+    events_per_lumi = int(events_per_lumi[-1])
+    customise_commands = re.sub(regex, '', customise_commands).replace('""', '')
+    if not customise_commands:
+        del step['--customise_commands']
+    else:
+        step['--customise_commands'] = customise_commands
+
+    # Events per lumi has to be less or equal to events per job
+    return min(events_per_lumi, events_per_job)
+
+
 def split_command_to_dict(command):
     """
     Split string command into a dictionary
@@ -184,6 +209,10 @@ def main():
                 for arg_name, arg_value in workflow_step.items():
                     if arg_value == '':
                         workflow_step[arg_name] = True
+
+                events_per_lumi = extract_events_per_lumi(workflow_step)
+                if events_per_lumi:
+                    step['events_per_lumi'] = events_per_lumi
 
                 step['arguments'] = workflow_step
                 print(build_cmsdriver(step['arguments'], workflow_step_index))

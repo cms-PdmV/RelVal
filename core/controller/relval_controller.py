@@ -212,11 +212,16 @@ class RelValController(ControllerBase):
             if step_index == 0:
                 task_dict['Seeding'] = 'AutomaticSeeding'
                 task_dict['PrimaryDataset'] = relval.get_primary_dataset()
-                requested_events, events_per = step.get_relval_events()
+                requested_events, events_per_job = step.get_relval_events()
+                events_per_lumi = step.get('events_per_lumi')
                 task_dict['RequestNumEvents'] = requested_events
-                task_dict['EventsPerJob'] = events_per
-                task_dict['EventsPerLumi'] = events_per
                 task_dict['SplittingAlgo'] = 'EventBased'
+                task_dict['EventsPerJob'] = events_per_job
+                if events_per_lumi:
+                    # EventsPerLumi has to be <= EventsPerJob
+                    task_dict['EventsPerLumi'] = min(events_per_lumi, events_per_job)
+                else:
+                    task_dict['EventsPerLumi'] = events_per_job
             else:
                 input_step = steps[step.get_input_step_index()]
                 if input_step.get_step_type() == 'input_file':

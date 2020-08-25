@@ -46,6 +46,8 @@ class RelValStep(ModelBase):
             'scenario': '',
             'step': [],
         },
+        # Events per lumi - if empty, events per job will be used
+        'events_per_lumi': '',
         # Input file info
         'input': {
             'dataset': '',
@@ -218,6 +220,13 @@ class RelValStep(ModelBase):
         # Handle input/output file names
         arguments_dict['fileout'] = f'"file:step{index + 1}.root"'
         arguments_dict['python_filename'] = f'{self.get_config_file_name()}.py'
+        # Add events per lumi to customise_commands
+        events_per_lumi = self.get('events_per_lumi')
+        if events_per_lumi:
+            customise_commands = arguments_dict['customise_commands']
+            customise_commands += ';"process.source.numberEventsInLuminosityBlock='
+            customise_commands += f'cms.untracked.uint32({events_per_lumi})"'
+            arguments_dict['customise_commands'] = customise_commands.lstrip(';')
 
         all_steps = self.parent().get('steps')
         if index > 0:

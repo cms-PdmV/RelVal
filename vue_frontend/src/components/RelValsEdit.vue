@@ -60,6 +60,9 @@
                 <tr>
                   <td>CMSSW Release</td><td><input type="text" v-model="step.cmssw_release" :disabled="!editingInfo.steps"></td>
                 </tr>
+                <tr v-if="index == 0 && step_type != 'input'">
+                  <td>Events per lumi</td><td><input type="text" v-model="step.events_per_lumi" :disabled="!editingInfo.steps"></td>
+                </tr>
                 <tr v-if="index != 0">
                   <td>Lumis per job</td><td><input type="text" v-model="step.lumis_per_job" :disabled="!editingInfo.steps"></td>
                 </tr>
@@ -78,7 +81,7 @@
                     <td>Label</td><td><input type="text" v-model="step.input.label" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>Lumisection</td>
+                    <td>Lumisection ranges</td>
                     <td>
                       <input type="text" style="width: 75%;font-family: monospace;" v-model="step.input.lumisection" v-on:input="checkLumisectionJSON(step.input.lumisection)" :disabled="!editingInfo.steps">
                       <span v-if="lumisectionJSONValid" class="ml-2" style="color: #27ae60">Valid JSON</span>

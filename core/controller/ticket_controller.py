@@ -150,6 +150,7 @@ class TicketController(ControllerBase):
 
         new_step = {'name': name,
                     'lumis_per_job': step_dict.get('lumis_per_job', ''),
+                    'events_per_lumi': step_dict.get('events_per_lumi', ''),
                     'driver': arguments,
                     'input': input_dict}
 
