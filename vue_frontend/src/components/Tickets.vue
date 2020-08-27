@@ -98,7 +98,7 @@
           {{errorDialog.title}}
         </v-card-title>
         <v-card-text>
-          {{errorDialog.description}}
+          <span v-html="errorDialog.description"></span>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -126,6 +126,7 @@ import Paginator from './Paginator'
 import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js'
 import LoadingOverlay from './LoadingOverlay.vue'
+import { utilsMixin } from '../mixins/UtilsMixin.js'
 
 export default {
   components: {
@@ -134,7 +135,7 @@ export default {
     HistoryCell,
     LoadingOverlay,
   },
-  mixins: [roleMixin],
+  mixins: [roleMixin, utilsMixin],
   data () {
     return {
       databaseName: undefined,
@@ -194,6 +195,10 @@ export default {
         component.dataItems = response.data.response.results.map(function (x) { x._actions = undefined; return x});
         component.totalItems = response.data.response.total_rows;
         component.loading = false;
+      }).catch(error => {
+        component.loading = false;
+        component.clearDialog();
+        component.showError("Error fetching tickets", component.getError(error));
       });
     },
     updateTableColumns: function(columns, headers) {
@@ -234,7 +239,7 @@ export default {
         }).catch(error => {
           component.loading = false;
           component.clearDialog();
-          component.showError("Error deleting ticket", error.response.data.message);
+          component.showError("Error deleting ticket", component.getError(error));
         });
       }
       this.dialog.cancel = function() {
@@ -257,7 +262,7 @@ export default {
         }).catch(error => {
           component.loadingCreatingRelVals = false;
           component.loading = false;
-          component.showError("Error creating RelVals", error.response.data.message);
+          component.showError("Error creating RelVals", component.getError(error));
         });
       }
       this.dialog.cancel = function() {

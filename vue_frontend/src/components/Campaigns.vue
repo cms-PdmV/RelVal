@@ -66,7 +66,7 @@
           {{errorDialog.title}}
         </v-card-title>
         <v-card-text>
-          {{errorDialog.description}}
+          <span v-html="errorDialog.description"></span>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -149,6 +149,10 @@ export default {
         component.dataItems = response.data.response.results.map(function (x) { x._actions = undefined; return x});
         component.totalItems = response.data.response.total_rows;
         component.loading = false;
+      }).catch(error => {
+        component.loading = false;
+        component.clearDialog();
+        component.showError("Error fetching campaigns", component.getError(error));
       });
     },
     updateTableColumns: function(columns, headers) {
@@ -189,7 +193,7 @@ export default {
         }).catch(error => {
           component.loading = false;
           component.clearDialog();
-          component.showError("Error deleting campaign", error.response.data.message);
+          component.showError("Error deleting campaign", component.getError(error));
         });
       }
       this.dialog.cancel = function() {
@@ -200,15 +204,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-
-h1 {
-  margin: 8px;
-}
-
-input[type="text"]:disabled {
-  background: #dddddd;
-}
-
-</style>

@@ -21,6 +21,15 @@ export const utilsMixin = {
         return [];
       }
       return str.replace(/,/g, '\n').split('\n').map(function(s) { return s.trim() }).filter(Boolean);
-    }
+    },
+    getError(response) {
+      if (response.response && response.response.data.message) {
+        return response.response.data.message;
+      }
+      return ('Error message could not be found in response, most likely SSO cookie has expired. ' +
+              'Try clicking <a href="/relval" target="blank">here</a>. ' +
+              'This will open RelVal homepage in a new tab and hopefully refresh your SSO cookie. ' +
+              'You can then close the newly opened tab, dismiss this alert and try performing same action again.');
+    },
   }
 }

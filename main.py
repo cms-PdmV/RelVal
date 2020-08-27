@@ -66,7 +66,9 @@ def catch_all(_path):
     try:
         return render_template('index.html')
     except TemplateNotFound:
-        return 'Webpage is starting, please wait a few minutes...'
+        response = '<script>setTimeout(function() {location.reload();}, 5000);</script>'
+        response += 'Webpage is starting, please wait a few minutes...'
+        return response
 
 
 @app.route('/api', defaults={'_path': ''})

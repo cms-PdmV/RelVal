@@ -21,8 +21,8 @@
           <td><textarea v-model="editableObject.notes" placeholder="E.g. Goals, comments, links to TWiki and HN" :disabled="!editingInfo.notes"></textarea></td>
         </tr>
       </table>
-      <v-btn small class="mr-1 mt-2" color="primary" @click="save()">Save</v-btn>
-      <v-btn small class="mr-1 mb-1" color="error" @click="cancel()">Cancel</v-btn>
+      <v-btn small class="mr-1 mt-1" color="primary" @click="save()">Save</v-btn>
+      <v-btn small class="mr-1 mt-1" color="error" @click="cancel()">Cancel</v-btn>
     </v-card>
     <LoadingOverlay :visible="loading"/>
     <v-dialog v-model="errorDialog.visible"
@@ -32,7 +32,7 @@
           {{errorDialog.title}}
         </v-card-title>
         <v-card-text>
-          {{errorDialog.description}}
+          <span v-html="errorDialog.description"></span>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -88,7 +88,7 @@ export default {
       component.loading = false;
     }).catch(error => {
       component.loading = false;
-      component.showError('Error fetching editing information', error.response.data.message);
+      component.showError('Error fetching editing information', component.getError(error));
     });
   },
   methods: {
@@ -108,7 +108,7 @@ export default {
         window.location = 'campaigns?prepid=' + response.data.response.prepid;
       }).catch(error => {
         component.loading = false;
-        component.showError('Error saving campaign', error.response.data.message);
+        component.showError('Error saving campaign', component.getError(error));
       });
     },
     cancel: function() {

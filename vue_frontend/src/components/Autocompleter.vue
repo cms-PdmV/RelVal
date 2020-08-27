@@ -56,6 +56,9 @@
         selectedIndex: 0,
       }
     },
+    created () {
+      this.realValue = this.value;
+    },
     watch:{
       isFocused (focused) {
         if (!focused) {

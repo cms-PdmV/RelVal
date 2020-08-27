@@ -60,7 +60,7 @@
                 <tr>
                   <td>CMSSW Release</td><td><input type="text" v-model="step.cmssw_release" :disabled="!editingInfo.steps"></td>
                 </tr>
-                <tr v-if="index == 0 && step_type != 'input'">
+                <tr v-if="index == 0 && step.step_type != 'input'">
                   <td>Events per lumi</td><td><input type="text" v-model="step.events_per_lumi" :disabled="!editingInfo.steps"></td>
                 </tr>
                 <tr v-if="index != 0">
@@ -178,7 +178,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td>Extra</td><td><input type="text" v-model="step.driver.extra" placeholder="Any arguments not mentioned above" :disabled="!editingInfo.steps"></td>
+                    <td>Extra</td><td><input type="text" v-model="step.driver.extra" placeholder="Any arguments that are not specified above" :disabled="!editingInfo.steps"></td>
                   </tr>
                 </template>
               </table>
@@ -201,8 +201,8 @@
           <td><input type="text" v-model="editableObject.workflow_name" :disabled="!editingInfo.workflow_name"></td>
         </tr>
       </table>
-      <v-btn small class="mr-1 mb-1" color="primary" @click="save()">Save</v-btn>
-      <v-btn small class="mr-1 mb-1" color="error" @click="cancel()">Cancel</v-btn>
+      <v-btn small class="mr-1 mt-1" color="primary" @click="save()">Save</v-btn>
+      <v-btn small class="mr-1 mt-1" color="error" @click="cancel()">Cancel</v-btn>
     </v-card>
     <LoadingOverlay :visible="loading"/>
     <v-dialog v-model="errorDialog.visible"
@@ -212,7 +212,7 @@
           {{errorDialog.title}}
         </v-card-title>
         <v-card-text>
-          {{errorDialog.description}}
+          <span v-html="errorDialog.description"></span>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -277,7 +277,7 @@ export default {
       component.loading = false;
     }).catch(error => {
       component.loading = false;
-      component.showError('Error getting RelVal information', error.response.data.message);
+      component.showError('Error getting RelVal information', component.getError(error));
     });
   },
   methods: {
@@ -303,7 +303,7 @@ export default {
         window.location = 'relvals?prepid=' + response.data.response.prepid;
       }).catch(error => {
         component.loading = false;
-        component.showError('Error saving relval', error.response.data.message)
+        component.showError('Error saving relval', component.getError(error))
       });
     },
     cancel: function() {
@@ -345,7 +345,7 @@ export default {
         component.loading = false;
       }).catch(error => {
         component.loading = false;
-        component.showError('Error getting step information', error.response.data.message);
+        component.showError('Error getting step information', component.getError(error));
       });
     },
     deleteStep: function(index) {
