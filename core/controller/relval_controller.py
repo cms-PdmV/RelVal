@@ -2,6 +2,7 @@
 Module that contains RelValController class
 """
 import json
+import itertools
 import xml.etree.ElementTree as XMLet
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
@@ -69,17 +70,18 @@ class RelValController(ControllerBase):
 
         return relval
 
-    def update(self, json_data, force_update=False):
-        # Update scram arch for all steps
-        for step in json_data.get('steps'):
-            cmssw_release = step['cmssw_release']
-            scram_arch = RelValController.get_scram_arch(cmssw_release)
-            if not scram_arch:
-                raise Exception(f'Could not find scram arch for {cmssw_release}')
+    def before_update(self, old_obj, new_obj, changed_values):
+        new_steps = new_obj.get('steps')
+        old_steps = old_obj.get('steps')
+        for old_step, new_step in itertools.zip_longest(old_steps, new_steps):
+            old_cmssw_release = old_step.get('cmssw_release') if old_step else None
+            new_cmssw_release = new_step.get('cmssw_release') if new_step else None
+            if new_step and old_cmssw_release != new_cmssw_release:
+                scram_arch = RelValController.get_scram_arch(new_cmssw_release)
+                if not scram_arch:
+                    raise Exception(f'Could not find scram arch for {cmssw_release}')
 
-            step['scram_arch'] = scram_arch
-
-        return super().update(json_data, force_update)
+                new_step.set('scram_arch', scram_arch)
 
     def get_editing_info(self, obj):
         editing_info = super().get_editing_info(obj)
@@ -121,7 +123,7 @@ class RelValController(ControllerBase):
 
         return True
 
-    def before_delete(self, obj):
+    def after_delete(self, obj):
         prepid = obj.get_prepid()
         tickets_db = Database('tickets')
         tickets = tickets_db.query(f'created_relvals={prepid}')
@@ -138,8 +140,6 @@ class RelValController(ControllerBase):
                 ticket.set('created_relvals', created_relvals)
                 ticket.add_history('remove_relval', prepid, None)
                 tickets_db.save(ticket.get_json())
-
-        return True
 
     def get_cmsdriver(self, relval, for_submission=False):
         """

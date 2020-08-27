@@ -48,4 +48,3 @@ class CampaignController(ControllerBase):
             raise Exception(f'It is not allowed to delete campaigns that have tickets created. '
                             f'{prepid} has {len(tickets)} tickets')
 
-        return True
