@@ -36,6 +36,7 @@ class RelValStep(ModelBase):
             'geometry': '',
             'hltProcess': '',
             'mc': False,
+            'number': '',
             'nStreams': '',
             'pileup': '',
             'pileup_input': '',

@@ -182,7 +182,7 @@ class TicketController(ControllerBase):
             additional_command = ticket.get('command').strip()
             if additional_command:
                 additional_command = additional_command.replace('"', '\\"')
-                additional_command = f'-c "{additional_command}"'
+                additional_command = f'-c="{additional_command}"'
             else:
                 additional_command = ''
 
@@ -206,9 +206,9 @@ class TicketController(ControllerBase):
                 command.extend(cmssw_setup(cmssw_release).split('\n'))
                 command += [f'cd {ticket_prepid}',
                             'python runTheMatrixPdmV.py '
-                            f'-l {workflow_ids} '
-                            f'-w {matrix} '
-                            f'-o {file_name} '
+                            f'-l={workflow_ids} '
+                            f'-w={matrix} '
+                            f'-o={file_name} '
                             f'{additional_command} '
                             f'{recycle_gs_flag}']
                 _, err, code = ssh_executor.execute_command(command)

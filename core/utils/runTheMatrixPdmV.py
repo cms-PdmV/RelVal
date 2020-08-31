@@ -37,7 +37,7 @@ def extract_events_per_lumi(step):
     if 'process.source.numberEventsInLuminosityBlock' not in customise_commands:
         return None
 
-    regex = 'process.source.numberEventsInLuminosityBlock=cms.untracked.uint32\(([0-9]*)\)'
+    regex = 'process.source.numberEventsInLuminosityBlock=cms.untracked.uint32\\(([0-9]*)\\)'
     events_per_lumi = re.findall(regex, customise_commands)
     if not events_per_lumi or not events_per_lumi[-1].isdigit():
         return
@@ -59,13 +59,18 @@ def split_command_to_dict(command):
     Split string command into a dictionary
     """
     command_dict = {}
+    # Split by spaces
     command = [x for x in command.strip().split(' ') if x.strip()]
-    for i in range(len(command)):
-        if command[i].startswith('-'):
-            if i + 1 < len(command) and not command[i + 1].startswith('-'):
-                command_dict[command[i]] = command[i + 1]
+    # Split by equal signs
+    command = [x.split('=', 1) for x in command]
+    # Flatten the list
+    command = [x for command_part in command for x in command_part]
+    for index, value in enumerate(command):
+        if value.startswith('-'):
+            if index + 1 < len(command) and not command[index + 1].startswith('-'):
+                command_dict[value] = command[index + 1]
             else:
-                command_dict[command[i]] = ''
+                command_dict[value] = ''
 
     return command_dict
 
@@ -174,7 +179,14 @@ def main():
                                                 workflow_step])
             if opt.command:
                 command_dict = split_command_to_dict(opt.command)
-                print('Merging %s' % (command_dict))
+                if '--step' in command_dict:
+                    command_dict['-s'] = command_dict.pop('--step')
+
+                if '--number' in command_dict:
+                    command_dict['-n'] = command_dict.pop('--number')
+
+                print('Merging user commands %s' % (command_dict))
+                print('Merging to %s' % (workflow_step))
                 workflow_step = steps_module.merge([command_dict, workflow_step])
 
             step = {'name': workflow_step_name}
@@ -204,7 +216,9 @@ def main():
                 if 'cfg' in workflow_step:
                     workflow_step['type'] = workflow_step.pop('cfg')
 
-                workflow_step.pop('-n', None)
+                if '-n' in workflow_step:
+                    workflow_step['--number'] = workflow_step.pop('-n')
+
                 # Change "flags" value to True, e.g. --data, --mc, --fast
                 for arg_name, arg_value in workflow_step.items():
                     if arg_value == '':
