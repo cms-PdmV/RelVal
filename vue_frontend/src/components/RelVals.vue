@@ -24,10 +24,10 @@
             <a style="text-decoration: underline;" @click="deleteRelVals([item])" v-if="role('manager')">Delete</a>&nbsp;
             <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>&nbsp;
             <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>&nbsp;
-            <a :href="'api/relvals/get_config_upload/' + item.prepid" title="Show config upload script">Config upload</a>&nbsp;
+            <a :href="'api/relvals/get_config_upload/' + item.prepid" v-if="role('administrator')" title="Show config upload script">Config upload</a>&nbsp;
             <a style="text-decoration: underline;" @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>&nbsp;
             <a style="text-decoration: underline;" @click="nextStatus([item])" v-if="role('manager')" title="Move to next status">Next</a>&nbsp;
-            <a style="text-decoration: underline;" @click="updateWorkflows([item])" v-if="role('manager') && item.status == 'submitted'" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
+            <a style="text-decoration: underline;" @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted'" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
             <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done'" title="Show workflows of this RelVal in Stats2">Stats2</a>         
           </template>
           <template v-slot:item.prepid="{ item }">
@@ -82,7 +82,8 @@
             {{item.recycle_gs ? 'Yes' : 'No'}}
           </template>
           <template v-slot:item.campaign="{ item }">
-            <a :href="'relvals?campaign=' + item.campaign" :title="'Show all RelVals with ' + item.campaign + ' campaign'">{{item.campaign}}</a>
+            <a :href="'relvals?campaign=' + item.campaign" :title="'Show all RelVals with ' + item.campaign + ' campaign'">{{item.campaign}}</a>&nbsp;
+            <a :href="'campaigns?prepid=' + item.campaign" :title="'Open ' + item.campaign + ' campaign'">Campaign</a>
           </template>
           <template v-slot:item.status="{ item }">
             <a :href="'relvals?status=' + item.status" :title="'Show all RelVals with status ' + item.status">{{item.status}}</a>
@@ -188,7 +189,7 @@ export default {
         {'dbName': 'size_per_event', 'displayName': 'Size per Event', 'visible': 0},
         {'dbName': 'steps', 'displayName': 'Steps', 'visible': 0},
         {'dbName': 'time_per_event', 'displayName': 'Time per Event', 'visible': 0},
-        {'dbName': 'workflows', 'displayName': 'Workflows (jobs)', 'visible': 0},
+        {'dbName': 'workflows', 'displayName': 'Workflows (jobs in ReqMgr2)', 'visible': 0},
       ],
       headers: [],
       dataItems: [],

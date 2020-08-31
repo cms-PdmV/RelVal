@@ -36,6 +36,15 @@ class SearchAPI(APIBase):
         sort = args.pop('sort', None)
         sort_asc = args.pop('sort_asc', True)
 
+        # Special cases
+        from_ticket = args.pop('ticket', None)
+        if db_name == 'relvals' and from_ticket:
+            ticket_database = Database('tickets')
+            ticket = ticket_database.get(from_ticket)
+            created_relvals = ','.join(ticket['created_relvals'])
+            prepid_query = args.pop('prepid', '')
+            args['prepid'] = ('%s,%s' % (prepid_query, created_relvals)).strip(',')
+
         query_string = '&&'.join(['%s=%s' % (pair) for pair in args.items()])
         database = Database(db_name)
         query_string = database.build_query_with_types(query_string, self.classes[db_name])

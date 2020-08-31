@@ -50,11 +50,12 @@
             <span v-if="item.workflow_ids.length">{{item.workflow_ids.length}} workflows: <small>{{item.workflow_ids.join(', ')}}</small></span>
           </template>
           <template v-slot:item.campaign="{ item }">
-            <a :href="'tickets?campaign=' + item.campaign" :title="'Show all tickets with ' + item.campaign + ' campaign'">{{item.campaign}}</a>
+            <a :href="'tickets?campaign=' + item.campaign" :title="'Show all tickets with ' + item.campaign + ' campaign'">{{item.campaign}}</a>&nbsp;
+            <a :href="'campaigns?prepid=' + item.campaign" :title="'Open ' + item.campaign + ' campaign'">Campaign</a>
           </template>
           <template v-slot:item.created_relvals="{ item }">
+            <span v-if="item.created_relvals && item.created_relvals.length > 0"><a :href="'relvals?ticket=' + item.prepid">{{item.created_relvals.length}} RelVals:</a></span>
             <ul>
-              <li v-if="item.created_relvals && item.created_relvals.length > 1"><a :href="'relvals?prepid=' + item.created_relvals.join(',')">All ({{item.created_relvals.length}})</a></li>
               <li v-for="relval in item.created_relvals" :key="relval">
                 <a :href="'relvals?prepid=' + relval" :title="'Open ' + relval + ' RelVal'">{{relval}}</a>
               </li>
