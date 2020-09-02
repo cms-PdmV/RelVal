@@ -36,7 +36,7 @@ class RelValStep(ModelBase):
             'geometry': '',
             'hltProcess': '',
             'mc': False,
-            'number': '',
+            'number': '10',
             'nStreams': '',
             'pileup': '',
             'pileup_input': '',
@@ -341,7 +341,7 @@ class RelValStep(ModelBase):
             return None
 
         index = self.get_index_in_parent()
-        return f'step_{index}_cfg'
+        return f'step_{index + 1}_cfg'
 
     def get_relval_events(self):
         """

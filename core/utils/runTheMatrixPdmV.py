@@ -155,7 +155,15 @@ def main():
 
         workflow_matrix = workflows_module.workflows[workflow_id]
         print('Matrix: %s' % (workflow_matrix))
-        workflows[workflow_id] = {'steps': [], 'workflow_name': workflow_matrix[0]}
+        workflow_name = workflow_matrix[0]
+        if isinstance(workflow_name, list):
+            if workflow_name:
+                workflow_name = workflow_name[0]
+            else:
+                workflow_name = ''
+
+        print('Workflow name: %s' % (workflow_name))
+        workflows[workflow_id] = {'steps': [], 'workflow_name': workflow_name}
         if workflow_matrix.overrides:
             print('Overrides: %s' % (workflow_matrix.overrides))
 
