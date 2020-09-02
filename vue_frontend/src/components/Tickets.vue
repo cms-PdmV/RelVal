@@ -21,6 +21,7 @@
             <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager')" title="Delete ticket">Delete</a>&nbsp;
             <a :href="'tickets/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone ticket">Clone</a>&nbsp;
             <a style="text-decoration: underline;" @click="showCreateRelValsDialog(item)" v-if="role('manager') && item.status == 'new'" title="Create RelVals from this ticket">Create RelVals</a>&nbsp;
+            <a :href="'relvals?ticket=' + item.prepid" v-if="item.created_relvals && item.created_relvals.length > 0" title="Show all RelVals created from this ticket">Show RelVals</a>&nbsp;
           </template>
           <template v-slot:item.prepid="{ item }">
             <a :href="'tickets?prepid=' + item.prepid" title="Show only this ticket">{{item.prepid}}</a>
@@ -50,8 +51,7 @@
             <span v-if="item.workflow_ids.length">{{item.workflow_ids.length}} workflows: <small>{{item.workflow_ids.join(', ')}}</small></span>
           </template>
           <template v-slot:item.campaign="{ item }">
-            <a :href="'tickets?campaign=' + item.campaign" :title="'Show all tickets with ' + item.campaign + ' campaign'">{{item.campaign}}</a>&nbsp;
-            <a :href="'campaigns?prepid=' + item.campaign" :title="'Open ' + item.campaign + ' campaign'">Campaign</a>
+            <a :href="'campaigns?prepid=' + item.campaign" :title="'Go to ' + item.campaign + ' campaign'">{{item.campaign}}</a>
           </template>
           <template v-slot:item.created_relvals="{ item }">
             <span v-if="item.created_relvals && item.created_relvals.length > 0"><a :href="'relvals?ticket=' + item.prepid">{{item.created_relvals.length}} RelVals:</a></span>

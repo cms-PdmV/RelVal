@@ -82,8 +82,7 @@
             {{item.recycle_gs ? 'Yes' : 'No'}}
           </template>
           <template v-slot:item.campaign="{ item }">
-            <a :href="'relvals?campaign=' + item.campaign" :title="'Show all RelVals with ' + item.campaign + ' campaign'">{{item.campaign}}</a>&nbsp;
-            <a :href="'campaigns?prepid=' + item.campaign" :title="'Open ' + item.campaign + ' campaign'">Campaign</a>
+            <a :href="'campaigns?prepid=' + item.campaign" :title="'Go to ' + item.campaign + ' campaign'">{{item.campaign}}</a>
           </template>
           <template v-slot:item.status="{ item }">
             <a :href="'relvals?status=' + item.status" :title="'Show all RelVals with status ' + item.status">{{item.status}}</a>
@@ -146,7 +145,7 @@
       <a v-if="role('manager') && selectedItems.length" @click="deleteRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
       <a v-if="role('manager') && selectedItems.length" @click="previousStaus(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
       <a v-if="role('manager') && selectedItems.length" @click="nextStatus(selectedItems)" title="Move selected RelVals to next status">Next</a>
-      <a v-if="role('manager') && selectedItems.length" @click="updateWorkflows(selectedItems)" title="Update selected RelVals' information from Stats2">Update from Stats2</a>
+      <a v-if="role('administrator') && selectedItems.length" @click="updateWorkflows(selectedItems)" title="Update selected RelVals' information from Stats2">Update from Stats2</a>
       <Paginator :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
     </footer>

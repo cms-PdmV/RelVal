@@ -3,9 +3,20 @@
     <ul>
       <li v-for="(step, index) in data" :key="index">
         {{step.name}}:
-        <ul>
-          <li v-for="(value, key) in stepValues(step)" :key="key" class="monospace">{{key}} {{value}}</li>
+        <ul class="monospace">
+          <li>CMSSW Release: {{step.cmssw_release}} ({{step.scram_arch}})</li>
+          <template v-if="isDriver(step)">
+            <li v-if="step.events_per_lumi && step.events_per_lumi.length">Events per Lumi: {{step.events_per_lumi}}</li>
+            <li v-if="step.lumis_per_job && step.lumis_per_job.length">Lumis Per Job: {{step.lumis_per_job}}</li>
+            <li v-for="(value, key) in stepValues(step.driver)" :key="key">{{key}} {{value}}</li>
+          </template>
+          <template v-else>
+            <li>Dataset: {{step.input.dataset}}</li>
+            <li>Lumisections and runs: {{step.input.lumisection}}</li>
+            <li>Label: {{step.input.label}}</li>
+          </template>
         </ul>
+        <!-- <pre>{{JSON.stringify(step, null, 2)}}</pre> -->
       </li>
     </ul>
   </div>
@@ -22,8 +33,20 @@
       }
     },
     methods: {
+      cleanUpDict: function(dict) {
+        for (let key in dict) {
+          if (dict[key] == "") {
+            delete dict[key];
+          } else if (Array.isArray(dict[key])) {
+            dict[key] = dict[key].join(',');
+          }
+        }
+      },
+      isDriver: function(step) {
+        return !step.input.dataset || step.input.dataset.length == 0;
+      },
       stepKeys: function(step) {
-        return Object.keys(step).filter(s => step[s] && step[s] !== '' && s != 'driver' && s != 'input');
+        return Object.keys(step).filter(s => step[s] && step[s] !== '' && s != 'driver' && s != 'input' && s != 'type');
       },
       stepKey: function(key) {
         return key == 'extra' ? 'EXTRA: ' : '--' + key;
@@ -40,15 +63,6 @@
         let newData = {};
         for (let key of this.stepKeys(value)) {
           newData[this.stepKey(key)] = this.stepValue(value[key]);
-        }
-        if (value.input && value.input.dataset && value.input.dataset) {
-          for (let key of this.stepKeys(value.input)) {
-            newData[this.stepKey(key)] = this.stepValue(value.input[key]);
-          }
-        } else {
-          for (let key of this.stepKeys(value.driver)) {
-            newData[this.stepKey(key)] = this.stepValue(value.driver[key]);
-          }
         }
         return newData;
       }
