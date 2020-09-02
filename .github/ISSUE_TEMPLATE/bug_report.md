@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report a bug that you found and help us make RelVal machine better
 title: ''
 labels: bug
 assignees: justinasr
