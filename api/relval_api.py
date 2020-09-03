@@ -4,6 +4,7 @@ Module that contains all relval APIs
 import json
 import flask
 from core_lib.api.api_base import APIBase
+from core_lib.utils.common_utils import clean_split
 from core.model.relval import RelVal
 from core.controller.relval_controller import RelValController
 
@@ -78,8 +79,16 @@ class UpdateRelValAPI(APIBase):
         """
         data = flask.request.data
         relval_json = json.loads(data.decode('utf-8'))
-        obj = relval_controller.update(relval_json)
-        return self.output_text({'response': obj, 'success': True, 'message': ''})
+        if isinstance(relval_json, dict):
+            results = relval_controller.update(relval_json)
+        elif isinstance(relval_json, list):
+            results = []
+            for single_relval_json in relval_json:
+                results.append(relval_controller.update(single_relval_json))
+        else:
+            raise Exception('Expected a single RelVal dict or a list of RelVal dicts')
+
+        return self.output_text({'response': results, 'success': True, 'message': ''})
 
 
 class GetRelValAPI(APIBase):
@@ -113,12 +122,24 @@ class GetEditableRelValAPI(APIBase):
         Endpoint for getting information on which relval fields are editable
         """
         if prepid:
-            relval = relval_controller.get(prepid)
+            prepid = clean_split(prepid, ',')
+            if len(prepid) == 1:
+                # Return one object if there is only one prepid
+                relval = relval_controller.get(prepid[0])
+                editing_info = relval_controller.get_editing_info(relval)
+                relval = relval.get_json()
+            else:
+                # Return a list if there are multiple prepids
+                relval = [relval_controller.get(p) for p in prepid]
+                editing_info = [relval_controller.get_editing_info(r) for r in relval]
+                relval = [r.get_json() for r in relval]
+
         else:
             relval = RelVal()
+            editing_info = relval_controller.get_editing_info(relval)
+            relval = relval.get_json()
 
-        editing_info = relval_controller.get_editing_info(relval)
-        return self.output_text({'response': {'object': relval.get_json(),
+        return self.output_text({'response': {'object': relval,
                                               'editing_info': editing_info},
                                  'success': True,
                                  'message': ''})

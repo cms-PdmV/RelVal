@@ -303,7 +303,7 @@ export default {
         window.location = 'relvals?prepid=' + response.data.response.prepid;
       }).catch(error => {
         component.loading = false;
-        component.showError('Error saving relval', component.getError(error))
+        component.showError('Error saving RelVal', component.getError(error))
       });
     },
     cancel: function() {

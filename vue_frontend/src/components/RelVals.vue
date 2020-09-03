@@ -142,6 +142,7 @@
     <footer>
       <a :href="'relvals/edit'" v-if="role('manager') && !selectedItems.length">New RelVal</a>
       <span v-if="role('manager') && selectedItems.length">Selected items ({{selectedItems.length}}) actions:</span>
+      <a v-if="role('manager') && selectedItems.length > 1" @click="editRelVals(selectedItems)" title="Edit selected RelVals">Edit</a>
       <a v-if="role('manager') && selectedItems.length" @click="deleteRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
       <a v-if="role('manager') && selectedItems.length" @click="previousStaus(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
       <a v-if="role('manager') && selectedItems.length" @click="nextStatus(selectedItems)" title="Move selected RelVals to next status">Next</a>
@@ -373,6 +374,10 @@ export default {
         component.showError("Error updating RelVal info", component.getError(error));
         component.selectedItems = [];
       });
+    },
+    editRelVals: function(relvals) {
+      let prepids = relvals.map(x => x['prepid']);
+      window.location = 'relvals/edit_many?prepid=' + prepids.join(',');
     },
   }
 }

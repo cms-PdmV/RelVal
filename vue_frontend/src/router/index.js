@@ -6,6 +6,7 @@ import Tickets from '@/components/Tickets'
 import TicketsEdit from '@/components/TicketsEdit'
 import RelVals from '@/components/RelVals'
 import RelValsEdit from '@/components/RelValsEdit'
+import RelValsMultipleEdit from '@/components/RelValsMultipleEdit'
 import Campaigns from '@/components/Campaigns'
 import CampaignsEdit from '@/components/CampaignsEdit'
 import qs from 'qs';
@@ -38,6 +39,11 @@ const routes = [
     path: '/relvals/edit',
     name: 'relvals_edit',
     component: RelValsEdit
+  },
+  {
+    path: '/relvals/edit_many',
+    name: 'relvals_edit_many',
+    component: RelValsMultipleEdit
   },
   {
     path: '/relvals',
