@@ -54,19 +54,16 @@ class RelValController(ControllerBase):
 
             step['scram_arch'] = RelValController.get_scram_arch(step['cmssw_release'])
 
-        settings = Settings()
-        with self.locker.get_lock('generate-relval-prepid'):
+        relval_db = Database('relvals')
+        with self.locker.get_lock(f'generate-relval-prepid-{prepid_part}'):
             # Get a new serial number
-            serial_numbers = settings.get('relvals_prepid_sequence', {})
-            serial_number = serial_numbers.get(prepid_part, 0)
+            serial_number = self.get_highest_serial_number(relval_db,
+                                                           f'{prepid_part}-*')
             serial_number += 1
             # Form a new temporary prepid
             prepid = f'{prepid_part}-{serial_number:05d}'
             json_data['prepid'] = prepid
             relval = super().create(json_data)
-            # After successful save update serial numbers in settings
-            serial_numbers[prepid_part] = serial_number
-            settings.save('relvals_prepid_sequence', serial_numbers)
 
         return relval
 

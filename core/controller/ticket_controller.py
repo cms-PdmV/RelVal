@@ -34,24 +34,17 @@ class TicketController(ControllerBase):
         if not campaign_json:
             raise Exception(f'Campaign {campaign_name} does not exist')
 
-        campaign = Campaign(json_input=campaign_json)
-        cmssw_release = campaign.get('cmssw_release')
-        batch_name = campaign.get('batch_name')
-        prepid_part = f'{cmssw_release}__{batch_name}'
-        json_data['prepid'] = f'{prepid_part}-00000'
-        settings = Settings()
-        with self.locker.get_lock('generate-ticket-prepid'):
+        ticket_db = Database('tickets')
+        json_data['prepid'] = f'{campaign_name}-00000'
+        with self.locker.get_lock(f'generate-ticket-prepid-{campaign_name}'):
             # Get a new serial number
-            serial_numbers = settings.get('tickets_prepid_sequence', {})
-            serial_number = serial_numbers.get(prepid_part, 0)
+            serial_number = self.get_highest_serial_number(ticket_db,
+                                                           f'{campaign_name}-*')
             serial_number += 1
             # Form a new temporary prepid
-            prepid = f'{prepid_part}-{serial_number:05d}'
+            prepid = f'{campaign_name}-{serial_number:05d}'
             json_data['prepid'] = prepid
             ticket = super().create(json_data)
-            # After successful save update serial numbers in settings
-            serial_numbers[prepid_part] = serial_number
-            settings.save('tickets_prepid_sequence', serial_numbers)
 
         return ticket
 
