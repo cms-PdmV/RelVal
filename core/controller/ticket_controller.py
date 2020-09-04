@@ -7,7 +7,6 @@ from random import Random
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
-from core_lib.utils.settings import Settings
 from core_lib.utils.common_utils import clean_split, cmssw_setup
 from core_lib.utils.global_config import Config
 from core.model.ticket import Ticket

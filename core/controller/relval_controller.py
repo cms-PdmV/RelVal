@@ -6,12 +6,12 @@ import itertools
 import xml.etree.ElementTree as XMLet
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
-from core_lib.utils.settings import Settings
 from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.locker import Locker
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.global_config import Config
 from core_lib.utils.cache import TimeoutCache
+from core_lib.utils.common_utils import clean_split, cmssw_setup
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
@@ -76,7 +76,7 @@ class RelValController(ControllerBase):
             if new_step and old_cmssw_release != new_cmssw_release:
                 scram_arch = RelValController.get_scram_arch(new_cmssw_release)
                 if not scram_arch:
-                    raise Exception(f'Could not find scram arch for {cmssw_release}')
+                    raise Exception(f'Could not find scram arch for {new_cmssw_release}')
 
                 new_step.set('scram_arch', scram_arch)
 
@@ -242,14 +242,26 @@ class RelValController(ControllerBase):
             task_dict['ConfigCacheID'] = step.get('config_id')
             task_dict['KeepOutput'] = True
             task_dict['ScramArch'] = step.get('scram_arch')
-            task_dict['GlobalTag'] = step.get('driver')['conditions']
-            task_dict['ProcessingString'] = task_dict['GlobalTag']
+            resolved_globaltag = step.get('resolved_globaltag')
+            if resolved_globaltag:
+                task_dict['GlobalTag'] = resolved_globaltag
+
+            processing_string = relval.get_processing_string(step_index)
+            if processing_string:
+                task_dict['ProcessingString'] = processing_string
+
             task_dict['CMSSWVersion'] = step.get('cmssw_release')
             task_dict['Memory'] = relval.get('memory')
             task_dict['Multicore'] = relval.get('cpu_cores')
             task_dict['Campaign'] = job_dict['Campaign']
-            if step.get('driver').get('nStreams'):
-                task_dict['EventStreams'] = int(step.get('driver')['nStreams'])
+            driver = step.get('driver')
+            if driver.get('nStreams'):
+                task_dict['EventStreams'] = int(driver['nStreams'])
+
+            if driver.get('pileup_input'):
+                task_dict['MCPileup'] = driver['pileup_input']
+                while task_dict['MCPileup'][0] != '/':
+                    task_dict['MCPileup'] = task_dict['MCPileup'][1:]
 
             # Add task to main dict
             task_number += 1
@@ -259,14 +271,80 @@ class RelValController(ControllerBase):
         # Set main scram arch to first task scram arch
         job_dict['ScramArch'] = job_dict['Task1']['ScramArch']
         # Set main globaltag to first task globaltag
-        job_dict['GlobalTag'] = job_dict['Task1']['GlobalTag']
+        if job_dict['Task1'].get('GlobalTag'):
+            job_dict['GlobalTag'] = job_dict['Task1']['GlobalTag']
+
         # Set main processing string to first task processing string
-        job_dict['ProcessingString'] = job_dict['Task1']['ProcessingString']
+        if job_dict['Task1'].get('ProcessingString'):
+            job_dict['ProcessingString'] = job_dict['Task1']['ProcessingString']
+
         # Set main CMSSW version to first task CMSSW version
         job_dict['CMSSWVersion'] = job_dict['Task1']['CMSSWVersion']
         job_dict['AcquisitionEra'] = job_dict['Task1']['CMSSWVersion']
 
         return job_dict
+
+    def resolve_auto_conditions(self, relval):
+        """
+        Go through all steps and resolve their auto: conditions into global tags
+        """
+        steps = [s for s in relval.get('steps') if s.get_step_type() != 'input_file']
+        steps_to_resolve = []
+        for step in steps:
+            conditions = step.get('driver')['conditions']
+            if conditions.startswith('auto:'):
+                # Leave only those tasks that have auto:... global tag
+                steps_to_resolve.append(step)
+            else:
+                step.set('resolved_globaltag', conditions)
+
+        if not steps_to_resolve:
+            return
+
+        prepid = relval.get_prepid()
+        credentials_file = Config.get('credentials_path')
+        ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_file)
+        remote_directory = Config.get('remote_path').rstrip('/')
+        remote_directory = f'{remote_directory}/{prepid}'
+        ssh_executor.execute_command([f'rm -rf {remote_directory}',
+                                      f'mkdir -p {remote_directory}'])
+        # Upload python script to resolve auto globaltag by upload script
+        ssh_executor.upload_file('./core/utils/resolveAutoGlobalTag.py',
+                                 f'{remote_directory}/resolveAutoGlobalTag.py')
+
+        command = [f'cd {remote_directory}']
+        previous_cmssw = None
+        for step in steps_to_resolve:
+            cmssw_version = step.get('cmssw_release')
+            conditions = step.get('driver')['conditions']
+            if cmssw_version != previous_cmssw:
+                command.extend(cmssw_setup(cmssw_version).split('\n'))
+                previous_cmssw = cmssw_version
+
+            command += [f'python resolveAutoGlobalTag.py {conditions}']
+
+        stdout, stderr, exit_code = ssh_executor.execute_command(command)
+        if exit_code != 0:
+            self.logger.error('Error resolving %s auto global tags:\nstdout:%s\nstderr:%s',
+                              prepid,
+                              stdout,
+                              stderr)
+            raise Exception(f'Error resolving auto globaltags: {stderr}')
+
+        tags = [x for x in clean_split(stdout, '\n') if x.startswith('GlobalTag:')]
+        for step, resolved_tag in zip(steps_to_resolve, tags):
+            split_resolved_tag = clean_split(resolved_tag, ' ')
+            conditions = step.get('driver')['conditions']
+            if conditions != split_resolved_tag[1]:
+                self.logger.error('Mismatch: %s != %s', conditions, split_resolved_tag[1])
+                raise Exception('Mismatch in resolved auto global tags')
+
+            self.logger.debug('Resolved %s to %s for %s of %s',
+                              split_resolved_tag[1],
+                              split_resolved_tag[2],
+                              step.get('name'),
+                              prepid)
+            step.set('resolved_globaltag', split_resolved_tag[2])
 
     def get_default_step(self):
         """
@@ -327,6 +405,8 @@ class RelValController(ControllerBase):
         """
         Try to move RelVal to approved
         """
+        # Resolve auto:conditions to actual globaltags
+        self.resolve_auto_conditions(relval)
         self.update_status(relval, 'approved')
         return relval
 
@@ -373,6 +453,9 @@ class RelValController(ControllerBase):
         """
         Try to move RelVal back to new
         """
+        for step in relval.get('steps'):
+            step.set('resolved_globaltag', '')
+
         self.update_status(relval, 'new')
         return relval
 

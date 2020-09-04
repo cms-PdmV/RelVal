@@ -153,51 +153,49 @@ class RelVal(ModelBase):
 
         return built_command.strip()
 
-    def get_relval_type(self):
+    def get_relval_string_suffix(self):
         """
-        RelVal type string based on step contents:
-        RelVal
+        A string based on step contents:
+        RelVal label
+        RelVal_<first step label>
         gen
         FastSim
-        dblMiniAOD
         """
-        relval_type = ''
         steps = self.get('steps')
-        if steps[0].get_step_type() == 'input_file':
-            first_step_label = steps[0].get('input')['label']
-        else:
-            first_step_label = ''
+        parts = []
+        # RelVal label
+        label = self.get('label')
+        if label:
+            parts.append(label)
 
-        for step in steps:
-            if 'HARVESTGEN' in step.get('name'):
-                relval_type += '_gen'
-                break
+        # gen for RelVals from gen matrix
+        if self.get('matrix') == 'generator':
+            parts.append('gen')
 
-        for step in steps:
-            if 'DBLMINIAODMCUP15NODQM' in step.get('name'):
-                relval_type += '_dblMiniAOD'
-                break
-
+        # FastSim for RelVals with --fast
         for step in steps:
             if step.get('driver')['fast']:
-                relval_type += '_FastSim'
+                parts.append('FastSim')
                 break
 
-        for step in steps:
-            if step.get('driver')['data'] and first_step_label:
-                relval_type += f'_RelVal_{first_step_label}_'
-                break
+        # RelVal_<firstStepLabel> for --data
+        if steps[0].get_step_type() == 'input_file':
+            first_step_label = steps[0].get('input')['label']
+            for step in steps:
+                if step.get('driver')['data']:
+                    parts.append(f'RelVal_{first_step_label}')
+                    break
 
-        self.logger.info('RelVal type string: %s', relval_type)
-        return relval_type.strip('_')
-
+        suffix = '_'.join(parts)
+        self.logger.info('RelVal suffix string: %s', suffix)
+        return suffix
 
     def get_request_string(self):
         """
         Return request string made of CMSSW release and various labels
 
         Example: RVCMSSW_11_0_0_pre4RunDoubleMuon2018C__gcc8_RelVal_2018C
-        RV{cmssw_release}{relval_name}__{label}_{relval_type}
+        RV{cmssw_release}{relval_name}__{suffix}
         """
         steps = self.get('steps')
         for step in steps:
@@ -207,18 +205,11 @@ class RelVal(ModelBase):
         else:
             raise Exception('No steps have CMSSW release')
 
-        relval_label = self.get('label')
         relval_name = self.get_name()
-        relval_type = self.get_relval_type()
-
-        request_string = f'RV{cmssw_release}{relval_name}__'
-        if relval_label:
-            request_string += f'{relval_label}_'
-
-        if relval_type:
-            request_string += f'{relval_type}_'
-
-        return request_string.strip('_')
+        suffix = self.get_relval_string_suffix()
+        request_string = f'RV{cmssw_release}{relval_name}__{suffix}'
+        request_string = request_string.strip('_')
+        return request_string
 
     def get_name(self):
         """
@@ -243,3 +234,28 @@ class RelVal(ModelBase):
         steps = self.get('steps')
         first_step_name = steps[0].get('name')
         return f'RelVal{first_step_name}'
+
+    def get_processing_string(self, step_index):
+        """
+        Get processing string of a step
+        """
+        step = self.get('steps')[step_index]
+        resolved_globaltag = step.get('resolved_globaltag')
+        if not resolved_globaltag:
+            return ''
+
+        driver = step.get('driver')
+        pileup = driver.get('pileup')
+        pileup_input = driver.get('pileup_input')
+        # --procModifiers=premix_stage2
+        if pileup_input and 'premix_stage2' in driver.get('extra'):
+            prefix = 'PUpmx_'
+        elif pileup:
+            prefix = 'PU_'
+        else:
+            prefix = ''
+
+        suffix = self.get_relval_string_suffix()
+        processing_string = f'{prefix}{resolved_globaltag}_{suffix}'
+        processing_string = processing_string.strip('_')
+        return processing_string

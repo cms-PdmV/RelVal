@@ -57,6 +57,8 @@ class RelValStep(ModelBase):
         },
         # Lumis per job - applicable to non-first steps
         'lumis_per_job': '',
+        # Actual globaltag, resolved from auto:... conditions
+        'resolved_globaltag': '',
         # CMSSW scram arch
         'scram_arch': '',
     }
@@ -110,6 +112,8 @@ class RelValStep(ModelBase):
 
         while len(name) > 50:
             name = '_'.join(name.split('_')[:-1])
+            if '_' not in name:
+                break
 
         return name
 

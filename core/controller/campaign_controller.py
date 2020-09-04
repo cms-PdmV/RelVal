@@ -47,4 +47,3 @@ class CampaignController(ControllerBase):
         if tickets:
             raise Exception(f'It is not allowed to delete campaigns that have tickets created. '
                             f'{prepid} has {len(tickets)} tickets')
-
