@@ -107,7 +107,7 @@
           {{dialog.title}}
         </v-card-title>
         <v-card-text>
-          {{dialog.description}}
+          <span v-html="dialog.description"></span>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -144,7 +144,7 @@
       <span v-if="role('manager') && selectedItems.length">Selected items ({{selectedItems.length}}) actions:</span>
       <a v-if="role('manager') && selectedItems.length > 1" @click="editRelVals(selectedItems)" title="Edit selected RelVals">Edit</a>
       <a v-if="role('manager') && selectedItems.length" @click="deleteRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
-      <a v-if="role('manager') && selectedItems.length" @click="previousStaus(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
+      <a v-if="role('manager') && selectedItems.length" @click="previousStatus(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
       <a v-if="role('manager') && selectedItems.length" @click="nextStatus(selectedItems)" title="Move selected RelVals to next status">Next</a>
       <a v-if="role('administrator') && selectedItems.length" @click="updateWorkflows(selectedItems)" title="Update selected RelVals' information from Stats2">Update from Stats2</a>
       <Paginator :totalRows="totalItems"
@@ -329,7 +329,7 @@ export default {
       }
       if (showDataWarning) {
         this.dialog.title = "Make sure RelVal datasets are available on disk";
-        this.dialog.description = "Please make sure that data RelVals have required dataset blocks on a disk";
+        this.dialog.description = "Please make sure that data RelVals have required dataset blocks on a disk. List of datasets <a href='https://twiki.cern.ch/twiki/bin/view/CMS/Run2DataForRelVals' target='_blank'>can be found on TWiki</a>";
         this.dialog.ok = submit;
         this.dialog.cancel = this.clearDialog;
         this.dialog.visible = true;
