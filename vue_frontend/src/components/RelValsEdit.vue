@@ -48,6 +48,10 @@
           <td>Sample Tag</td>
           <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run2, Run3, Phase2, HIN, GEN, ..." :disabled="!editingInfo.sample_tag"></td>
         </tr>
+        <tr>
+          <td>Size per event</td>
+          <td><input type="number" v-model="editableObject.size_per_event" :disabled="!editingInfo.size_per_event">kB</td>
+        </tr>
         <tr v-if="editableObject.steps">
           <td>Steps ({{listLength(editableObject.steps)}})</td>
           <td>

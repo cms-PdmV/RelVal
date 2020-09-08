@@ -28,6 +28,10 @@
           <td>Sample Tag</td>
           <td><input type="text" v-model="fakeEditableObject.sample_tag" placeholder="E.g. Run2, Run3, Phase2, HIN, GEN, ..."></td>
         </tr>
+        <tr>
+          <td>Size per event</td>
+          <td><input type="number" v-model="fakeEditableObject.size_per_event">kB</td>
+        </tr>
 
         <tr v-if="fakeEditableObject.steps">
           <td>Steps ({{listLength(fakeEditableObject.steps)}})</td>
