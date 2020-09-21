@@ -20,6 +20,8 @@ class RelVal(ModelBase):
         'prepid': '',
         # Campaign name
         'campaign': '',
+
+        'campaign_timestamp': 0,
         # CPU cores
         'cpu_cores': 1,
         # Action history

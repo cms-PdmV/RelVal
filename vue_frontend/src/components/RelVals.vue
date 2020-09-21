@@ -31,7 +31,7 @@
             <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done'" title="Show workflows of this RelVal in Stats2">Stats2</a>         
           </template>
           <template v-slot:item.prepid="{ item }">
-            <a :href="'relvals?prepid=' + item.prepid">{{item.prepid}}</a>
+            <a :href="'relvals?prepid=' + item.prepid" title="Show only this RelVal">{{item.prepid}}</a>
           </template>
           <template v-slot:item.history="{ item }">
             <HistoryCell :data="item.history"/>
@@ -83,6 +83,14 @@
           </template>
           <template v-slot:item.campaign="{ item }">
             <a :href="'campaigns?prepid=' + item.campaign" :title="'Go to ' + item.campaign + ' campaign'">{{item.campaign}}</a>
+          </template>
+          <template v-slot:item.campaign_timestamp="{ item }">
+            <template v-if="item.campaign_timestamp">
+              <a :href="'relvals?campaign=' + item.campaign + '&campaign_timestamp=' + item.campaign_timestamp" :title="'Show RelVals in ' + item.campaign + ' campaign with ' + item.campaign_timestamp + ' timestamp'">{{item.campaign_timestamp}}</a> | {{niceDate(item.campaign_timestamp)}}
+            </template>
+            <template v-else>
+              Not set
+            </template>
           </template>
           <template v-slot:item.status="{ item }">
             <a :href="'relvals?status=' + item.status" :title="'Show all RelVals with status ' + item.status">{{item.status}}</a>
@@ -161,6 +169,8 @@ import HistoryCell from './HistoryCell'
 import StepsCell from './StepsCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js'
 import { utilsMixin } from '../mixins/UtilsMixin.js'
+import dateFormat from 'dateformat'
+
 export default {
   components: {
     ColumnSelector,
@@ -182,6 +192,7 @@ export default {
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
         {'dbName': '_workflow', 'displayName': 'Workflow', 'visible': 1},
+        {'dbName': 'campaign_timestamp', 'displayName': 'Campaign Timestamp', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
         {'dbName': 'output_datasets', 'displayName': 'Output Datasets', 'visible': 0},
@@ -379,6 +390,12 @@ export default {
       let prepids = relvals.map(x => x['prepid']);
       window.location = 'relvals/edit_many?prepid=' + prepids.join(',');
     },
+    niceDate: function (time) {
+      if (!time) {
+        time = 0;
+      }
+      return dateFormat(new Date(time * 1000), 'yyyy-mm-dd HH:MM:ss')
+    }
   }
 }
 </script>

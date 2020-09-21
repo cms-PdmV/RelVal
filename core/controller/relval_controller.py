@@ -2,6 +2,7 @@
 Module that contains RelValController class
 """
 import json
+import time
 import itertools
 import xml.etree.ElementTree as XMLet
 from core_lib.database.database import Database
@@ -88,7 +89,7 @@ class RelValController(ControllerBase):
         creating_new = not bool(prepid)
         editing_info['prepid'] = False
         editing_info['campaign'] = creating_new
-        editing_info['conditions_globaltag'] = is_new
+        editing_info['campaign_timestamp'] = False
         editing_info['cpu_cores'] = is_new
         editing_info['memory'] = is_new
         editing_info['label'] = is_new
@@ -168,6 +169,10 @@ class RelValController(ControllerBase):
         prepid = relval.get_prepid()
         self.logger.debug('Getting job dict for %s', prepid)
         steps = relval.get('steps')
+        campaign = relval.get('campaign')
+        campaign_timestamp = relval.get('campaign_timestamp')
+        if campaign_timestamp:
+            campaign = f'{campaign}-{campaign_timestamp}'
 
         job_dict = {}
         job_dict['Group'] = 'PPD'
@@ -178,7 +183,7 @@ class RelValController(ControllerBase):
         job_dict['RequestType'] = 'TaskChain'
         job_dict['SubRequestType'] = 'RelVal'
         job_dict['RequestString'] = relval.get_request_string()
-        job_dict['Campaign'] = relval.get('campaign')
+        job_dict['Campaign'] = campaign
         job_dict['RequestPriority'] = 500000
         job_dict['TimePerEvent'] = relval.get('time_per_event')
         job_dict['SizePerEvent'] = relval.get('size_per_event')
@@ -414,6 +419,36 @@ class RelValController(ControllerBase):
         """
         Try to add RelVal to submitted and get sumbitted
         """
+        campaign = relval.get('campaign')
+        relval_db = Database('relvals')
+        # Threshold in seconds
+        threshold = 60
+        with self.locker.get_lock(f'move-relval-to-submitting-{campaign}'):
+            now = int(time.time())
+            # Get RelVal with newest timestamp in this campaign
+            relvals = relval_db.query(f'campaign={campaign}',
+                                      limit=1,
+                                      sort_attr='campaign_timestamp',
+                                      sort_asc=False)
+            newest_timestamp = 0
+            if relvals:
+                newest_timestamp = relvals[0].get('campaign_timestamp', 0)
+
+            self.logger.info('Newest timestamp for %s is %s (%s), threshold is %s',
+                             campaign,
+                             newest_timestamp,
+                             (newest_timestamp - now),
+                             threshold)
+            if newest_timestamp == 0:
+                newest_timestamp = now
+            elif newest_timestamp < now - threshold:
+                newest_timestamp = now
+
+            self.logger.info('Campaign timestamp for %s will be set to %s',
+                             campaign,
+                             newest_timestamp)
+            relval.set('campaign_timestamp', newest_timestamp)
+
         self.update_status(relval, 'submitting')
         RequestSubmitter().add(relval, self)
         return relval
@@ -474,6 +509,7 @@ class RelValController(ControllerBase):
         for step in relval.get('steps'):
             step.set('config_id', '')
 
+        relval.set('campaign_timestamp', 0)
         self.update_status(relval, 'approved')
         return relval
 
