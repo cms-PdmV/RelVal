@@ -17,37 +17,26 @@
 
 <script>
 
-  import dateFormat from 'dateformat'
+import dateFormat from 'dateformat'
 
-  export default {
-    props:{
-      data: {
-        type: Array
+export default {
+  props:{
+    data: {
+      type: Array
+    }
+  },
+  methods: {
+    niceDate: function (time) {
+      return dateFormat(new Date(time * 1000), 'yyyy-mm-dd HH:MM:ss')
+    },
+    historyValue: function(value) {
+      if (typeof value === 'string' || value instanceof String) {
+        return value;
       }
-    },
-    data () {
-      return {
-      }
-    },
-    created () {
-    },
-    watch:{
-    },
-    methods: {
-      niceDate: function (time) {
-        return dateFormat(new Date(time * 1000), 'yyyy-mm-dd HH:MM:ss')
-      },
-      historyValue: function(value) {
-        if (typeof value === 'string' || value instanceof String) {
-          return value;
-        }
-        return '<pre>' + JSON.stringify(value, null, 2) + '</pre>';
-      }
-    },
-    computed: {
-      
+      return '<pre>' + JSON.stringify(value, null, 2) + '</pre>';
     }
   }
+}
 </script>
 
 <style scoped>

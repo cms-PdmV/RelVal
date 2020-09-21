@@ -4,11 +4,18 @@
     <v-card raised class="page-card">
       <h3>Submission threads ({{Object.keys(submission_workers).length}})</h3>
       <ul>
-        <li v-for="(info, worker) in submission_workers" :key="worker">Thread "{{worker}}" is {{info.job_name ? 'working on ' + info.job_name + ' for ' + info.job_time + 's' : 'not busy'}}</li>
+        <li v-for="(info, worker) in submission_workers" :key="worker">"{{worker}}" is
+          <template v-if="info.job_name">
+            working on <a :href="'relvals?prepid=' + info.job_name" title="Show this RelVal">{{info.job_name}}</a> for {{info.job_time}}s
+          </template>
+          <template v-else>
+            not busy
+          </template>
+        </li>
       </ul>
       <h3>Submission queue ({{submission_queue.length}})</h3>
       <ul>
-        <li v-for="name in submission_queue" :key="name">{{name}}</li>
+        <li v-for="name in submission_queue" :key="name"><a :href="'relvals?prepid=' + name" title="Show this RelVal">{{name}}</a> is waiting in queue</li>
       </ul>
       <h3 v-if="role('manager')">Settings ({{Object.keys(settings).length}})</h3>
       <small v-if="role('manager')">
