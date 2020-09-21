@@ -34,7 +34,7 @@ class SearchAPI(APIBase):
         page = int(args.pop('page', 0))
         limit = int(args.pop('limit', 20))
         sort = args.pop('sort', None)
-        sort_asc = args.pop('sort_asc', True)
+        sort_asc = args.pop('sort_asc', 'true').lower() == 'true'
 
         # Special cases
         from_ticket = args.pop('ticket', None)
