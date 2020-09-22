@@ -4,7 +4,6 @@
     <v-card raised class="page-card">
       <h3>Objects in RelVal database:</h3>
       <ul>
-        <li><a :href="'campaigns'">Campaigns</a></li>
         <li><a :href="'tickets'">Tickets</a></li>
         <li><a :href="'relvals'">RelVals</a></li>
       </ul>

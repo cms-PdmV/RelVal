@@ -32,14 +32,8 @@ class RelValController(ControllerBase):
             self.__class__.scram_arch_cache = TimeoutCache(3600)
 
     def create(self, json_data):
-        # Clean up the input
-        campaign_name = json_data.get('campaign')
-        campaign_db = Database('campaigns')
-        campaign_json = campaign_db.get(campaign_name)
-        if not campaign_json:
-            raise Exception(f'Campaign {campaign_name} does not exist')
-
-        cmssw_release = campaign_json.get('cmssw_release')
+        cmssw_release = json_data.get('cmssw_release')
+        batch_name = json_data.get('batch_name')
         # Use workflow name for prepid if possible, if not - first step name
         if json_data.get('workflow_name'):
             workflow_name = json_data['workflow_name']
@@ -47,7 +41,7 @@ class RelValController(ControllerBase):
             first_step = RelValStep(json_input=json_data.get('steps')[0])
             workflow_name = first_step.get_short_name()
 
-        prepid_part = f'{campaign_name}-{workflow_name}'
+        prepid_part = f'{cmssw_release}__{batch_name}-{workflow_name}'
         json_data['prepid'] = f'{prepid_part}-00000'
         for step in json_data['steps']:
             if not step.get('cmssw_release'):
@@ -88,8 +82,9 @@ class RelValController(ControllerBase):
         is_new = status == 'new'
         creating_new = not bool(prepid)
         editing_info['prepid'] = False
-        editing_info['campaign'] = creating_new
+        editing_info['batch_name'] = creating_new
         editing_info['campaign_timestamp'] = False
+        editing_info['cmssw_release'] = creating_new
         editing_info['cpu_cores'] = is_new
         editing_info['memory'] = is_new
         editing_info['label'] = is_new
@@ -103,23 +98,6 @@ class RelValController(ControllerBase):
         editing_info['steps'] = is_new
 
         return editing_info
-
-    def check_for_create(self, obj):
-        campaign_database = Database('campaigns')
-        campaign_name = obj.get('campaign')
-        if not campaign_database.document_exists(campaign_name):
-            raise Exception('Campaign %s does not exist' % (campaign_name))
-
-        return True
-
-    def check_for_update(self, old_obj, new_obj, changed_values):
-        if 'campaign' in changed_values:
-            campaign_database = Database('campaigns')
-            campaign_name = new_obj.get('campaign')
-            if not campaign_database.document_exists(campaign_name):
-                raise Exception('Campaign %s does not exist' % (campaign_name))
-
-        return True
 
     def after_delete(self, obj):
         prepid = obj.get_prepid()
@@ -169,10 +147,13 @@ class RelValController(ControllerBase):
         prepid = relval.get_prepid()
         self.logger.debug('Getting job dict for %s', prepid)
         steps = relval.get('steps')
-        campaign = relval.get('campaign')
+        batch_name = relval.get('batch_name')
+        cmssw_release = relval.get('cmssw_release')
         campaign_timestamp = relval.get('campaign_timestamp')
         if campaign_timestamp:
-            campaign = f'{campaign}-{campaign_timestamp}'
+            campaign = f'{cmssw_release}__{batch_name}-{campaign_timestamp}'
+        else:
+            campaign = f'{cmssw_release}__{batch_name}'
 
         job_dict = {}
         job_dict['Group'] = 'PPD'
@@ -258,7 +239,7 @@ class RelValController(ControllerBase):
             task_dict['CMSSWVersion'] = step.get('cmssw_release')
             task_dict['Memory'] = relval.get('memory')
             task_dict['Multicore'] = relval.get('cpu_cores')
-            task_dict['Campaign'] = job_dict['Campaign']
+            task_dict['Campaign'] = campaign
             driver = step.get('driver')
             if driver.get('nStreams'):
                 task_dict['EventStreams'] = int(driver['nStreams'])
@@ -419,14 +400,15 @@ class RelValController(ControllerBase):
         """
         Try to add RelVal to submitted and get sumbitted
         """
-        campaign = relval.get('campaign')
+        batch_name = relval.get('batch_name')
+        cmssw_release = relval.get('cmssw_release')
         relval_db = Database('relvals')
         # Threshold in seconds
         threshold = 60
-        with self.locker.get_lock(f'move-relval-to-submitting-{campaign}'):
+        with self.locker.get_lock(f'move-relval-to-submitting-{cmssw_release}__{batch_name}'):
             now = int(time.time())
-            # Get RelVal with newest timestamp in this campaign
-            relvals = relval_db.query(f'campaign={campaign}',
+            # Get RelVal with newest timestamp in this campaign (CMSSW Release + Batch Name)
+            relvals = relval_db.query(f'cmssw_release={cmssw_release}&&batch_name={batch_name}',
                                       limit=1,
                                       sort_attr='campaign_timestamp',
                                       sort_asc=False)
@@ -434,8 +416,9 @@ class RelValController(ControllerBase):
             if relvals:
                 newest_timestamp = relvals[0].get('campaign_timestamp', 0)
 
-            self.logger.info('Newest timestamp for %s is %s (%s), threshold is %s',
-                             campaign,
+            self.logger.info('Newest timestamp for %s__%s is %s (%s), threshold is %s',
+                             cmssw_release,
+                             batch_name,
                              newest_timestamp,
                              (newest_timestamp - now),
                              threshold)
@@ -444,8 +427,9 @@ class RelValController(ControllerBase):
             elif newest_timestamp < now - threshold:
                 newest_timestamp = now
 
-            self.logger.info('Campaign timestamp for %s will be set to %s',
-                             campaign,
+            self.logger.info('Campaign timestamp for %s__%s will be set to %s',
+                             cmssw_release,
+                             batch_name,
                              newest_timestamp)
             relval.set('campaign_timestamp', newest_timestamp)
 

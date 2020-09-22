@@ -50,8 +50,11 @@
           <template v-slot:item.workflow_ids="{ item }">
             <span v-if="item.workflow_ids.length">{{item.workflow_ids.length}} workflows: <small>{{item.workflow_ids.join(', ')}}</small></span>
           </template>
-          <template v-slot:item.campaign="{ item }">
-            <a :href="'campaigns?prepid=' + item.campaign" :title="'Go to ' + item.campaign + ' campaign'">{{item.campaign}}</a>
+          <template v-slot:item.cmssw_release="{ item }">
+            <a :href="'tickets?cmssw_release=' + item.cmssw_release" :title="'Show all tickets with ' + item.cmssw_release">{{(item.cmssw_release || '').replace('_', ' ').replace(/_/g, '.')}}</a>
+          </template>
+          <template v-slot:item.batch_name="{ item }">
+            <a :href="'tickets?batch_name=' + item.batch_name" :title="'Show all tickets with ' + item.batch_name">{{item.batch_name}}</a>
           </template>
           <template v-slot:item.created_relvals="{ item }">
             <span v-if="item.created_relvals && item.created_relvals.length > 0"><a :href="'relvals?ticket=' + item.prepid">{{item.created_relvals.length}} RelVals:</a></span>
@@ -144,7 +147,8 @@ export default {
         {'dbName': 'prepid', 'displayName': 'PrepID', 'visible': 1},
         {'dbName': '_actions', 'displayName': 'Actions', 'visible': 1},
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
-        {'dbName': 'campaign', 'displayName': 'Campaign', 'visible': 1},
+        {'dbName': 'batch_name', 'displayName': 'Batch Name', 'visible': 1},
+        {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 1},
         {'dbName': 'matrix', 'displayName': 'Matrix', 'visible': 1},
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},

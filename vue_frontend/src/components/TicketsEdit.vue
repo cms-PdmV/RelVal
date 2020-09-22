@@ -9,14 +9,12 @@
           <td><input type="text" v-model="editableObject.prepid" :disabled="!editingInfo.prepid"></td>
         </tr>
         <tr>
-          <td>Campaign</td>
-          <td>
-            <autocompleter
-              v-model="editableObject.campaign"
-              :getSuggestions="getCampaignSuggestions"
-              :disabled="!editingInfo.campaign">
-            </autocompleter>
-          </td>
+          <td>Batch name (-b)</td>
+          <td><input type="text" v-model="editableObject.batch_name" placeholder="E.g. fullsim_noPU_..." :disabled="!editingInfo.batch_name"></td>
+        </tr>
+        <tr>
+          <td>CMSSW Release</td>
+          <td><input type="text" v-model="editableObject.cmssw_release" placeholder="E.g. CMSSW_11_..." :disabled="!editingInfo.cmssw_release"></td>
         </tr>
         <tr>
           <td>Command (--command)</td>
@@ -99,13 +97,11 @@
 import axios from 'axios'
 import { utilsMixin } from '../mixins/UtilsMixin.js'
 import LoadingOverlay from './LoadingOverlay.vue'
-import Autocompleter from './Autocompleter.vue'
 
 export default {
   name: 'TicketsEdit',
   components: {
     LoadingOverlay,
-    Autocompleter,
   },
   mixins: [
     utilsMixin
@@ -152,9 +148,6 @@ export default {
       } else {
         component.editableObject = response.data.response.object;
         component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
-        if (query.campaign && query.campaign.length) {
-          component.editableObject.campaign = query.campaign;
-        }
         component.editingInfo = response.data.response.editing_info;
         component.loading = false;
       }
@@ -201,16 +194,6 @@ export default {
       this.errorDialog.title = title;
       this.errorDialog.description = description;
       this.errorDialog.visible = true;
-    },
-    getCampaignSuggestions: function(value, callback) {
-      if (!value || value.length == 0) {
-        callback([]);
-      }
-      axios.get('api/suggestions?db_name=campaigns&query=' + value).then(response => {
-        callback(response.data.response);
-      }).catch(error => {
-        callback([]);
-      });
     },
     workflowListLength: function(list) {
       return this.cleanSplit(list).length;

@@ -15,8 +15,10 @@ class Ticket(ModelBase):
         '_id': '',
         # PrepID
         'prepid': '',
+        # Batch name
+        'batch_name': '',
         # CMSSW release
-        'campaign': '',
+        'cmssw_release': '',
         # Additional command to add to all cmsDrivers
         'command': '',
         # CPU cores
@@ -47,13 +49,14 @@ class Ticket(ModelBase):
 
     lambda_checks = {
         'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,75}'),
-        'rewrite_gt_string': lambda rgs: ModelBase.matches_regex(rgs, '[a-zA-Z0-9\\.\\-_]{0,199}'),
-        'campaign': ModelBase.lambda_check('campaign'),
+        'batch_name': ModelBase.lambda_check('batch_name'),
+        'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         '__created_relvals': ModelBase.lambda_check('relval'),
         'label': ModelBase.lambda_check('label'),
         'matrix': ModelBase.lambda_check('matrix'),
         'memory': ModelBase.lambda_check('memory'),
+        'rewrite_gt_string': lambda rgs: ModelBase.matches_regex(rgs, '[a-zA-Z0-9\\.\\-_]{0,199}'),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
         'status': lambda status: status in ('new', 'done'),
         'workflow_ids': lambda wf: len(wf) > 0,

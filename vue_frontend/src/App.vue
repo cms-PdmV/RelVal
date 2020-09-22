@@ -11,12 +11,6 @@
       <v-btn
         text
         class="mr-2"
-        href="campaigns">
-        <span>Campaigns</span>
-      </v-btn>
-      <v-btn
-        text
-        class="mr-2"
         href="tickets">
         <span>Tickets</span>
       </v-btn>

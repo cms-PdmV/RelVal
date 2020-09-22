@@ -7,7 +7,6 @@ from core_lib.api.api_base import APIBase
 from core_lib.database.database import Database
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
-from core.model.campaign import Campaign
 
 
 class SearchAPI(APIBase):
@@ -18,8 +17,7 @@ class SearchAPI(APIBase):
     def __init__(self):
         APIBase.__init__(self)
         self.classes = {'tickets': Ticket,
-                        'relvals': RelVal,
-                        'campaigns': Campaign}
+                        'relvals': RelVal,}
 
     @APIBase.exceptions_to_errors
     def get(self):

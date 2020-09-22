@@ -9,14 +9,12 @@
           <td><input type="text" v-model="editableObject.prepid" :disabled="!editingInfo.prepid"></td>
         </tr>
         <tr>
-          <td>Campaign</td>
-          <td>
-            <autocompleter
-              v-model="editableObject.campaign"
-              :getSuggestions="getCampaignSuggestions"
-              :disabled="!editingInfo.campaign">
-            </autocompleter>
-          </td>
+          <td>Batch name (-b)</td>
+          <td><input type="text" v-model="editableObject.batch_name" placeholder="E.g. fullsim_noPU_..." :disabled="!editingInfo.batch_name"></td>
+        </tr>
+        <tr>
+          <td>CMSSW Release</td>
+          <td><input type="text" v-model="editableObject.cmssw_release" placeholder="E.g. CMSSW_11_..." :disabled="!editingInfo.cmssw_release"></td>
         </tr>
         <tr>
           <td>CPU Cores (-t)</td>
@@ -233,12 +231,10 @@
 import axios from 'axios'
 import { utilsMixin } from '../mixins/UtilsMixin.js'
 import LoadingOverlay from './LoadingOverlay.vue'
-import Autocompleter from './Autocompleter.vue'
 
 export default {
   components: {
-    LoadingOverlay,
-    Autocompleter,
+    LoadingOverlay
   },
   mixins: [
     utilsMixin
@@ -363,16 +359,6 @@ export default {
         this.lumisectionJSONValid = false;
       }
     },
-    getCampaignSuggestions: function(value, callback) {
-      if (!value || value.length == 0) {
-        callback([]);
-      }
-      axios.get('api/suggestions?db_name=campaigns&query=' + value).then(response => {
-        callback(response.data.response);
-      }).catch(error => {
-        callback([]);
-      });
-    }
   }
 }
 </script>

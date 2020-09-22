@@ -81,12 +81,15 @@
           <template v-slot:item.recycle_gs="{ item }">
             {{item.recycle_gs ? 'Yes' : 'No'}}
           </template>
-          <template v-slot:item.campaign="{ item }">
-            <a :href="'campaigns?prepid=' + item.campaign" :title="'Go to ' + item.campaign + ' campaign'">{{item.campaign}}</a>
+          <template v-slot:item.cmssw_release="{ item }">
+            <a :href="'relvals?cmssw_release=' + item.cmssw_release" :title="'Show all RelVals with ' + item.cmssw_release + ' CMSSW release'">{{(item.cmssw_release || '').replace('_', ' ').replace(/_/g, '.')}}</a>
+          </template>
+          <template v-slot:item.batch_name="{ item }">
+            <a :href="'relvals?batch_name=' + item.batch_name" :title="'Show all RelVals with ' + item.batch_name + ' batch name'">{{item.batch_name}}</a>
           </template>
           <template v-slot:item.campaign_timestamp="{ item }">
             <template v-if="item.campaign_timestamp">
-              <a :href="'relvals?campaign=' + item.campaign + '&campaign_timestamp=' + item.campaign_timestamp" :title="'Show RelVals in ' + item.campaign + ' campaign with ' + item.campaign_timestamp + ' timestamp'">{{item.campaign_timestamp}}</a> | {{niceDate(item.campaign_timestamp)}}
+              <a :href="'relvals?cmssw_release=' + item.cmssw_release + '&batch_name=' + item.batch_name + '&campaign_timestamp=' + item.campaign_timestamp" :title="'Show RelVals in ' + item.cmssw_release + '__' + item.batch_name + ' campaign with ' + item.campaign_timestamp + ' timestamp'">{{item.campaign_timestamp}}</a> | {{niceDate(item.campaign_timestamp)}}
             </template>
             <template v-else>
               Not set
@@ -186,7 +189,8 @@ export default {
         {'dbName': 'prepid', 'displayName': 'PrepID', 'visible': 1},
         {'dbName': '_actions', 'displayName': 'Actions', 'visible': 1},
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1},
-        {'dbName': 'campaign', 'displayName': 'Campaign', 'visible': 1},
+        {'dbName': 'batch_name', 'displayName': 'Batch Name', 'visible': 1},
+        {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 1},
         {'dbName': 'matrix', 'displayName': 'Matrix', 'visible': 1},
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},

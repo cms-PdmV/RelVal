@@ -18,7 +18,6 @@ class ModelBase(PdmVModelBase):
     __sample_tag_regex = '[a-zA-Z0-9_\\-]{0,75}'
     default_lambda_checks = {
         'batch_name': lambda batch: ModelBase.matches_regex(batch, '[a-zA-Z0-9_\\-]{0,75}'),
-        'campaign': lambda campaign: ModelBase.matches_regex(campaign, '[a-zA-Z0-9_\\-]{1,75}'),
         'cmssw_release': lambda cmssw: ModelBase.matches_regex(cmssw, ModelBase.__cmssw_regex),
         'cpu_cores': lambda cpus: 1 <= cpus <= 8,
         'dataset': lambda ds: ModelBase.matches_regex(ds, ModelBase.__dataset_regex),

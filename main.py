@@ -32,11 +32,6 @@ from api.relval_api import (CreateRelValAPI,
                             RelValNextStatus,
                             RelValPreviousStatus,
                             UpdateRelValWorkflowsAPI)
-from api.campaign_api import (CreateCampaignAPI,
-                              DeleteCampaignAPI,
-                              UpdateCampaignAPI,
-                              GetCampaignAPI,
-                              GetEditableCampaignAPI)
 from api.settings_api import SettingsAPI
 
 log_format = '[%(asctime)s][%(levelname)s] %(message)s'
@@ -138,14 +133,6 @@ api.add_resource(GetDefaultRelValStepAPI, '/api/relvals/get_default_step')
 api.add_resource(RelValNextStatus, '/api/relvals/next_status')
 api.add_resource(RelValPreviousStatus, '/api/relvals/previous_status')
 api.add_resource(UpdateRelValWorkflowsAPI, '/api/relvals/update_workflows')
-
-api.add_resource(CreateCampaignAPI, '/api/campaigns/create')
-api.add_resource(DeleteCampaignAPI, '/api/campaigns/delete')
-api.add_resource(UpdateCampaignAPI, '/api/campaigns/update')
-api.add_resource(GetCampaignAPI, '/api/campaigns/get/<string:prepid>')
-api.add_resource(GetEditableCampaignAPI,
-                 '/api/campaigns/get_editable',
-                 '/api/campaigns/get_editable/<string:prepid>')
 
 
 def main():

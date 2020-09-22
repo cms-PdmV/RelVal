@@ -7,7 +7,7 @@
              sm=6
              md=3
              lg=2
-             v-for="columnInfo in columnsLocal"
+             v-for="columnInfo in columnsLocalWithoutPrepID"
              :key="columnInfo.dbName">
         <v-checkbox :label="columnInfo.displayName"
                     v-model="columnInfo.visible"
@@ -45,7 +45,7 @@
       this.updateVisibleFromShown();
       this.$router.replace({query: query}).catch(err => {});
     },
-    watch:{
+    watch: {
       columnsLocal: {
         handler: function () {
           this.updateShownFromVisible();
@@ -54,11 +54,16 @@
         deep: true
       },
     },
+    computed: {
+      columnsLocalWithoutPrepID: function() {
+        return this.columnsLocal.filter(entry => entry.dbName !== 'prepid');
+      }
+    },
     methods: {
       updateTableHeaders: function() {
         this.headers = [];
         this.columnsLocal.forEach(entry => {
-          if (entry.visible) {
+          if (entry.visible || entry.dbName === 'prepid') {
             this.headers.push({text: entry.displayName, value: entry.dbName});
           }
         });
@@ -75,7 +80,7 @@
         let shown = 0;
         this.columnsLocal.slice().reverse().forEach(entry => {
           shown = shown << 1;
-          if (entry.visible) {
+          if (entry.visible || entry.dbName === 'prepid') {
             shown = shown | 1;
           }
         });

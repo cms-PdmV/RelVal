@@ -10,7 +10,6 @@ from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.common_utils import clean_split, cmssw_setup
 from core_lib.utils.global_config import Config
 from core.model.ticket import Ticket
-from core.model.campaign import Campaign
 from core.model.relval_step import RelValStep
 from core.controller.relval_controller import RelValController
 
@@ -27,21 +26,18 @@ class TicketController(ControllerBase):
 
     def create(self, json_data):
         # Clean up the input
-        campaign_name = json_data.get('campaign')
-        campaign_db = Database('campaigns')
-        campaign_json = campaign_db.get(campaign_name)
-        if not campaign_json:
-            raise Exception(f'Campaign {campaign_name} does not exist')
-
+        cmssw_release = json_data.get('cmssw_release')
+        batch_name = json_data.get('batch_name')
+        prepid_part = f'{cmssw_release}__{batch_name}'
         ticket_db = Database('tickets')
-        json_data['prepid'] = f'{campaign_name}-00000'
-        with self.locker.get_lock(f'generate-ticket-prepid-{campaign_name}'):
+        json_data['prepid'] = f'{prepid_part}-00000'
+        with self.locker.get_lock(f'generate-ticket-prepid-{prepid_part}'):
             # Get a new serial number
             serial_number = self.get_highest_serial_number(ticket_db,
-                                                           f'{campaign_name}-*')
+                                                           f'{prepid_part}-*')
             serial_number += 1
             # Form a new temporary prepid
-            prepid = f'{campaign_name}-{serial_number:05d}'
+            prepid = f'{prepid_part}-{serial_number:05d}'
             json_data['prepid'] = prepid
             ticket = super().create(json_data)
 
@@ -54,7 +50,8 @@ class TicketController(ControllerBase):
         creating_new = not bool(prepid)
         not_done = status != 'done'
         editing_info['prepid'] = False
-        editing_info['campaign'] = creating_new
+        editing_info['batch_name'] = creating_new
+        editing_info['cmssw_release'] = creating_new
         editing_info['command'] = not_done
         editing_info['cpu_cores'] = not_done
         editing_info['label'] = not_done
@@ -150,10 +147,9 @@ class TicketController(ControllerBase):
 
     def create_relvals_for_ticket(self, ticket):
         """
-        Create RelVals from given subcampaign ticket. Return list of relval prepids
+        Create RelVals from given ticket. Return list of relval prepids
         """
         ticket_db = Database(self.database_name)
-        campaign_db = Database('campaigns')
         ticket_prepid = ticket.get_prepid()
         credentials_path = Config.get('credentials_path')
         ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_path)
@@ -161,10 +157,9 @@ class TicketController(ControllerBase):
         created_relvals = []
         with self.locker.get_lock(ticket_prepid):
             ticket = self.get(ticket_prepid)
-            campaign_name = ticket.get('campaign')
-            campaign = Campaign(json_input=campaign_db.get(campaign_name))
+            cmssw_release = ticket.get('cmssw_release')
+            batch_name = ticket.get('batch_name')
             matrix = ticket.get('matrix')
-            cmssw_release = campaign.get('cmssw_release')
             label = ticket.get('label')
             sample_tag = ticket.get('sample_tag')
             cpu_cores = ticket.get('cpu_cores')
@@ -218,7 +213,8 @@ class TicketController(ControllerBase):
                 os.remove(f'/tmp/{file_name}')
                 # Iterate through workflows and create RelVals
                 for workflow_id, workflow_dict in workflows.items():
-                    workflow_json = {'campaign': campaign_name,
+                    workflow_json = {'batch_name': batch_name,
+                                     'cmssw_release': cmssw_release,
                                      'cpu_cores': cpu_cores,
                                      'label': label,
                                      'memory': memory,

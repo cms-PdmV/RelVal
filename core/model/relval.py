@@ -18,10 +18,12 @@ class RelVal(ModelBase):
         '_id': '',
         # PrepID
         'prepid': '',
-        # Campaign name
-        'campaign': '',
-
+        # Batch name
+        'batch_name': '',
+        # Timestamp used in campaign name
         'campaign_timestamp': 0,
+        # CMSSW release
+        'cmssw_release': '',
         # CPU cores
         'cpu_cores': 1,
         # Action history
@@ -56,7 +58,9 @@ class RelVal(ModelBase):
 
     lambda_checks = {
         'prepid': ModelBase.lambda_check('relval'),
-        'campaign': ModelBase.lambda_check('campaign'),
+        'batch_name': ModelBase.lambda_check('batch_name'),
+        'campaign_timestamp': lambda ct: ct >= 0,
+        'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         'label': ModelBase.lambda_check('label'),
         'matrix': ModelBase.lambda_check('matrix'),
