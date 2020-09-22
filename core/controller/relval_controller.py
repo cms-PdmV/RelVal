@@ -404,7 +404,7 @@ class RelValController(ControllerBase):
         cmssw_release = relval.get('cmssw_release')
         relval_db = Database('relvals')
         # Threshold in seconds
-        threshold = 60
+        threshold = 3600
         with self.locker.get_lock(f'move-relval-to-submitting-{cmssw_release}__{batch_name}'):
             now = int(time.time())
             # Get RelVal with newest timestamp in this campaign (CMSSW Release + Batch Name)
