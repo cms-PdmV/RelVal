@@ -39,6 +39,7 @@ class RequestSubmitter(BaseSubmitter):
         relval.add_history('submission', 'failed', 'automatic')
         for step in relval.get('steps'):
             step.set('config_id', '')
+            step.set('resolved_globaltag', '')
 
         relval_db.save(relval.get_json())
         service_url = Config.get('service_url')
