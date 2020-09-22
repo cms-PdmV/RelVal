@@ -74,22 +74,33 @@ class TicketController(ControllerBase):
 
         return True
 
-    def rewrite_gt_string_if_needed(self, input_dict, dataset_rewrite):
+    def rewrite_gt_string_if_needed(self, step, gt_rewrite):
         """
-        Perform base dataset rewrite if needed
-        (rewrite middle part of input dataset name)
+        Perform base dataset rewrite if needed:
+          - rewrite middle part of input dataset name for input steps
+          - rewrite middle part of --pileup_input for driver steps
         """
-        if not dataset_rewrite or not input_dict.get('dataset'):
+        if not gt_rewrite:
             return
 
-        input_dataset = input_dict.get('dataset')
-        self.logger.info('Will rename %s middle part with %s',
-                         input_dataset,
-                         dataset_rewrite)
-        input_dataset_split = input_dataset.split('/')
-        input_dataset_split[2] = dataset_rewrite
-        input_dataset = '/'.join(input_dataset_split)
-        input_dict['dataset'] = input_dataset
+        input_dict = step['input']
+        driver_dict = step['driver']
+        if input_dict.get('dataset'):
+            # Input dataset step
+            input_dataset = input_dict['dataset']
+            self.logger.info('Will replace %s middle part with %s', input_dataset, gt_rewrite)
+            input_dataset_split = input_dataset.split('/')
+            input_dataset_split[2] = gt_rewrite
+            input_dataset = '/'.join(input_dataset_split)
+            input_dict['dataset'] = input_dataset
+        elif driver_dict.get('pileup_input'):
+            # Driver step
+            pileup_input = driver_dict['pileup_input']
+            self.logger.info('Will replace %s middle part with %s', pileup_input, gt_rewrite)
+            pileup_input_split = pileup_input.split('/')
+            pileup_input_split[2] = gt_rewrite
+            pileup_input = '/'.join(pileup_input_split)
+            driver_dict['pileup_input'] = pileup_input
 
     def make_relval_step_dict(self, step_dict):
         """
@@ -130,7 +141,7 @@ class TicketController(ControllerBase):
                         extra += f' {key} {value}'
 
         arguments['extra'] = extra.strip()
-
+        arguments = {k.lstrip('-'): v for k, v in arguments.items()}
         # Create a step
         name = step_dict['name']
         # Delete INPUT from step name
@@ -227,7 +238,7 @@ class TicketController(ControllerBase):
                     for step_dict in workflow_dict['steps']:
                         new_step = self.make_relval_step_dict(step_dict)
                         new_step['cmssw_release'] = cmssw_release
-                        self.rewrite_gt_string_if_needed(new_step['input'], rewrite_gt_string)
+                        self.rewrite_gt_string_if_needed(new_step, rewrite_gt_string)
                         workflow_json['steps'].append(new_step)
 
                     self.logger.debug('Will create %s', workflow_json)
