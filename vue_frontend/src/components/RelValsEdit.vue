@@ -69,7 +69,7 @@
                   <td>Lumis per job</td><td><input type="text" v-model="step.lumis_per_job" :disabled="!editingInfo.steps"></td>
                 </tr>
                 <tr v-if="index == 0">
-                  <td>Step type</td>
+                  <td>RelVal Step type</td>
                   <td>
                     <input type="radio" class="mr-1" v-model="step.step_type" :name="'step' + index" :value="'input'">Input dataset
                     <input type="radio" class="mr-1 ml-2" v-model="step.step_type" :name="'step' + index" :value="'driver'">cmsDriver
@@ -181,6 +181,9 @@
                   </tr>
                   <tr>
                     <td>Extra</td><td><input type="text" v-model="step.driver.extra" placeholder="Any arguments that are not specified above" :disabled="!editingInfo.steps"></td>
+                  </tr>
+                  <tr>
+                    <td>Type</td><td><input type="text" v-model="step.driver.type" placeholder="E.g. Configuration/Generator/<filename>.py" :disabled="!editingInfo.steps"></td>
                   </tr>
                 </template>
               </table>

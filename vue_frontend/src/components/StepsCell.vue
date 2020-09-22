@@ -7,6 +7,7 @@
           <li>CMSSW Release: {{step.cmssw_release}} ({{step.scram_arch}})</li>
           <template v-if="isDriver(step)">
             <li v-if="step.events_per_lumi && step.events_per_lumi.length">Events per Lumi: {{step.events_per_lumi}}</li>
+            <li v-if="step.driver.type && step.driver.type.length">Type: {{step.driver.type}}</li>
             <li v-if="step.lumis_per_job && step.lumis_per_job.length">Lumis Per Job: {{step.lumis_per_job}}</li>
             <li v-for="(value, key) in stepValues(step.driver)" :key="key">{{key}} {{value}}</li>
           </template>
