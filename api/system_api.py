@@ -86,13 +86,11 @@ class ObjectsInfoAPI(APIBase):
     def __init__(self):
         APIBase.__init__(self)
 
-    @APIBase.exceptions_to_errors
-    def get(self):
+    def get_relvals(self):
         """
-        Get number of RelVals with each status and processing strings of submitted requests
+        Return summary of RelVals by status and submitted RelVals by CMSSW and batch name
         """
-        relval_db = Database('relvals')
-        collection = relval_db.collection
+        collection = Database('relvals').collection
         by_status = collection.aggregate([{'$match': {'deleted': {'$ne': True}}},
                                           {'$group': {'_id': '$status',
                                                       'count': {'$sum': 1}}}])
@@ -104,13 +102,44 @@ class ObjectsInfoAPI(APIBase):
                                                      'counts': {'$sum': 1}}},
                                          {'$group': {"_id": "$_id.release",
                                                      "batches": {"$push": {"batch_name": "$_id.batch",
-                                                                           "count": "$counts"}}}}
-                                        ])
-
+                                                                           "count": "$counts"}}}}])
         statuses = ['new', 'approved', 'submitting', 'submitted', 'done']
         by_status = sorted(list(by_status), key=lambda x: statuses.index(x['_id']))
         by_batch = sorted(list(by_batch), key=lambda x: tuple(x['_id'].split('_')), reverse=True)
-        return self.output_text({'response': {'by_status': by_status,
-                                              'by_batch': by_batch},
+        return by_status, by_batch
+
+    def get_tickets(self):
+        """
+        Return summary of tickets by status and new tickets by CMSSW and batch name
+        """
+        collection = Database('tickets').collection
+        by_status = collection.aggregate([{'$match': {'deleted': {'$ne': True}}},
+                                          {'$group': {'_id': '$status',
+                                                      'count': {'$sum': 1}}}])
+
+        by_batch = collection.aggregate([{'$match': {'deleted': {'$ne': True}}},
+                                         {'$match': {'status': 'new'}},
+                                         {'$group': {'_id': {'release': '$cmssw_release',
+                                                             'batch': '$batch_name'},
+                                                     'counts': {'$sum': 1}}},
+                                         {'$group': {"_id": "$_id.release",
+                                                     "batches": {"$push": {"batch_name": "$_id.batch",
+                                                                           "count": "$counts"}}}}])
+        statuses = ['new', 'done']
+        by_status = sorted(list(by_status), key=lambda x: statuses.index(x['_id']))
+        by_batch = sorted(list(by_batch), key=lambda x: tuple(x['_id'].split('_')), reverse=True)
+        return by_status, by_batch
+
+    @APIBase.exceptions_to_errors
+    def get(self):
+        """
+        Get number of RelVals with each status and processing strings of submitted requests
+        """
+        relvals_by_status, relvals_by_batch = self.get_relvals()
+        tickets_by_status, tickets_by_batch = self.get_tickets()
+        return self.output_text({'response': {'relvals' : {'by_status': relvals_by_status,
+                                                           'by_batch': relvals_by_batch},
+                                              'tickets' : {'by_status': tickets_by_status,
+                                                           'by_batch': tickets_by_batch}},
                                  'success': True,
                                  'message': ''})
