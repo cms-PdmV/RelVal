@@ -37,7 +37,7 @@
             <HistoryCell :data="item.history"/>
           </template>
           <template v-slot:item.notes="{ item }">
-            <pre v-if="item.notes.length" class="notes">{{item.notes}}</pre>
+            <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
           </template>
           <template v-slot:item.memory="{ item }">
             {{item.memory}} MB

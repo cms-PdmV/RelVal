@@ -45,7 +45,7 @@
             {{item.memory}} MB
           </template>
           <template v-slot:item.notes="{ item }">
-            <pre v-if="item.notes.length" class="notes">{{item.notes}}</pre>
+            <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
           </template>
           <template v-slot:item.workflow_ids="{ item }">
             <span v-if="item.workflow_ids.length">{{item.workflow_ids.length}} workflows: <small>{{item.workflow_ids.join(', ')}}</small></span>
