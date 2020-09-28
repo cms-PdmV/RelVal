@@ -12,7 +12,8 @@ from core_lib.utils.global_config import Config
 from api.system_api import (LockerStatusAPI,
                             UserInfoAPI,
                             SubmissionWorkerStatusAPI,
-                            SubmissionQueueAPI,)
+                            SubmissionQueueAPI,
+                            ObjectsInfoAPI)
 from api.search_api import SearchAPI, SuggestionsAPI
 from api.ticket_api import (CreateTicketAPI,
                             DeleteTicketAPI,
@@ -102,6 +103,7 @@ api.add_resource(LockerStatusAPI, '/api/system/locks')
 api.add_resource(UserInfoAPI, '/api/system/user_info')
 api.add_resource(SubmissionWorkerStatusAPI, '/api/system/workers')
 api.add_resource(SubmissionQueueAPI, '/api/system/queue')
+api.add_resource(ObjectsInfoAPI, '/api/system/objects_info')
 
 api.add_resource(SettingsAPI,
                  '/api/settings/get',
