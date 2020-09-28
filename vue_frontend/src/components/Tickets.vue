@@ -70,6 +70,9 @@
           <template v-slot:item.command="{ item }">
             <pre v-if="item.command && item.command.length" class="notes">{{item.command}}</pre>
           </template>
+          <template v-slot:item._created="{ item }">
+            Created by <a :href="'tickets?created_by=' + item.history[0].user" :title="'Show all tickets created by ' + item.history[0].user">{{item.history[0].user}}</a> on {{niceDate(item.history[0].time)}}
+          </template>
         </v-data-table>
       </div>
     </div>
@@ -131,6 +134,7 @@ import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js'
 import LoadingOverlay from './LoadingOverlay.vue'
 import { utilsMixin } from '../mixins/UtilsMixin.js'
+import dateFormat from 'dateformat'
 
 export default {
   components: {
@@ -157,6 +161,7 @@ export default {
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
         {'dbName': 'command', 'displayName': 'Command', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
+        {'dbName': '_created', 'displayName': 'Creation', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
         {'dbName': 'rewrite_gt_string', 'displayName': 'Rewrite GT String', 'visible': 0},
@@ -274,7 +279,10 @@ export default {
         component.clearDialog();
       }
       this.dialog.visible = true;
-    }
+    },
+    niceDate: function (time) {
+      return dateFormat(new Date(time * 1000), 'yyyy-mm-dd HH:MM:ss')
+    },
   }
 }
 </script>

@@ -32,7 +32,7 @@ class SearchAPI(APIBase):
         page = int(args.pop('page', 0))
         limit = int(args.pop('limit', 20))
         sort = args.pop('sort', None)
-        sort_asc = args.pop('sort_asc', 'true').lower() == 'true'
+        sort_asc = args.pop('sort_asc', None)
 
         # Special cases
         from_ticket = args.pop('ticket', None)
@@ -43,6 +43,15 @@ class SearchAPI(APIBase):
             prepid_query = args.pop('prepid', '')
             args['prepid'] = ('%s,%s' % (prepid_query, created_relvals)).strip(',')
 
+        # Special sorting for tickets
+        if db_name == 'tickets':
+            if sort is None:
+                sort = 'created_on'
+
+            if sort == 'created_on' and sort_asc is None:
+                sort_asc = False
+
+        sort_asc = str(True if sort_asc is None else sort_asc).lower() == 'true'
         query_string = '&&'.join(['%s=%s' % (pair) for pair in args.items()])
         database = Database(db_name)
         query_string = database.build_query_with_types(query_string, self.classes[db_name])

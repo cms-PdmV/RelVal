@@ -7,9 +7,7 @@
       Page size:
     </div>
     <div class="button-group paginator-item">
-      <button class="button-group-button" v-bind:class="[pageSize === 20 ? 'clicked' : '']" v-on:click="pageSize = 20">20</button>
-      <button class="button-group-button" v-bind:class="[pageSize === 50 ? 'clicked' : '']" v-on:click="pageSize = 50">50</button>
-      <button class="button-group-button" v-bind:class="[pageSize === 100 ? 'clicked' : '']" v-on:click="pageSize = 100">100</button>
+      <button class="button-group-button" v-for="limit in limits" :key="limit" v-bind:class="[pageSize === limit ? 'clicked' : '']" v-on:click="pageSize = limit">{{limit}}</button>
     </div>
     <div class="button-group paginator-item">
       <button class="button-group-button" v-if="page > 0" v-on:click="page -= 1">

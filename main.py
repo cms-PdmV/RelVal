@@ -160,6 +160,10 @@ def main():
     if database_auth:
         Database.set_credentials_file(database_auth)
 
+    Database.add_search_rename('tickets', 'created_on', 'history.0.time')
+    Database.add_search_rename('tickets', 'created_by', 'history.0.user')
+    Database.add_search_rename('relvals', 'created_on', 'history.0.time')
+    Database.add_search_rename('relvals', 'created_by', 'history.0.user')
     debug = args.get('debug', False)
     port = int(config.get('port', 8005))
     host = config.get('host', '0.0.0.0')
