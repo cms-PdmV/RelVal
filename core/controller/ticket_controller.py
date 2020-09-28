@@ -261,3 +261,24 @@ class TicketController(ControllerBase):
                 raise ex
 
         return [r.get('prepid') for r in created_relvals]
+
+    def get_workflows_list(self, ticket):
+        """
+        Get a list of workflow names of created RelVals for RelMon Service
+        """
+        relvals_db = Database('relvals')
+        created_relvals = ticket.get('created_relvals')
+        created_relvals_prepids = ','.join(created_relvals)
+        query = f'prepid={created_relvals_prepids}'
+        results, _ = relvals_db.query_with_total_rows(query, limit=len(created_relvals))
+        workflows = []
+        for relval in results:
+            if not relval['workflows']:
+                continue
+
+            workflows.append(relval['workflows'][-1]['name'])
+
+        if not workflows:
+            workflows.append('# No workflow names')
+
+        return workflows

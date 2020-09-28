@@ -20,7 +20,8 @@ from api.ticket_api import (CreateTicketAPI,
                             UpdateTicketAPI,
                             GetTicketAPI,
                             GetEditableTicketAPI,
-                            CreateRelValsForTicketAPI)
+                            CreateRelValsForTicketAPI,
+                            GetWorkflowsOfCreatedRelValsAPI)
 from api.relval_api import (CreateRelValAPI,
                             DeleteRelValAPI,
                             UpdateRelValAPI,
@@ -120,6 +121,8 @@ api.add_resource(GetEditableTicketAPI,
                  '/api/tickets/get_editable',
                  '/api/tickets/get_editable/<string:prepid>')
 api.add_resource(CreateRelValsForTicketAPI, '/api/tickets/create_relvals')
+api.add_resource(GetWorkflowsOfCreatedRelValsAPI,
+                 '/api/tickets/relvals_workflows/<string:prepid>')
 
 api.add_resource(CreateRelValAPI, '/api/relvals/create')
 api.add_resource(DeleteRelValAPI, '/api/relvals/delete')

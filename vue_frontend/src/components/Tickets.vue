@@ -22,6 +22,7 @@
             <a :href="'tickets/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone ticket">Clone</a>&nbsp;
             <a style="text-decoration: underline;" @click="showCreateRelValsDialog(item)" v-if="role('manager') && item.status == 'new'" title="Create RelVals from this ticket">Create RelVals</a>&nbsp;
             <a :href="'relvals?ticket=' + item.prepid" v-if="item.created_relvals && item.created_relvals.length > 0" title="Show all RelVals created from this ticket">Show RelVals</a>&nbsp;
+            <a :href="'api/tickets/relvals_workflows/' + item.prepid" target="_blank" v-if="item.created_relvals && item.created_relvals.length > 0" title="Show a list of computing workflows of RelVals created from this ticket">List for RelMon</a>&nbsp;
           </template>
           <template v-slot:item.prepid="{ item }">
             <a :href="'tickets?prepid=' + item.prepid" title="Show only this ticket">{{item.prepid}}</a>

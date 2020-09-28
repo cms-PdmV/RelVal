@@ -144,3 +144,22 @@ class CreateRelValsForTicketAPI(APIBase):
 
         result = ticket_controller.create_relvals_for_ticket(ticket)
         return self.output_text({'response': result, 'success': True, 'message': ''})
+
+
+class GetWorkflowsOfCreatedRelValsAPI(APIBase):
+    """
+    Endpoing for getting a list of computing workflows of created RelVals
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.exceptions_to_errors
+    def get(self, prepid):
+        """
+        Get twiki snippet for ticket
+        """
+        ticket = ticket_controller.get(prepid)
+        workflows = ticket_controller.get_workflows_list(ticket)
+        workflows = '\n'.join(workflows)
+        return self.output_text(workflows, content_type='text/plain')
