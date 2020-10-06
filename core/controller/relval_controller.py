@@ -403,6 +403,50 @@ class RelValController(ControllerBase):
         batch_name = relval.get('batch_name')
         cmssw_release = relval.get('cmssw_release')
         relval_db = Database('relvals')
+        # Make sure all datasets are VALID in DBS
+        datasets_to_check = set()
+        steps = relval.get('steps')
+        for step in steps:
+            if step.get_step_type() == 'input_file':
+                dataset = step.get('input')['dataset']
+            elif step.get('driver')['pileup_input']:
+                dataset = step.get('driver')['pileup_input']
+            else:
+                continue
+
+            while dataset and dataset[0] != '/':
+                dataset = dataset[1:]
+
+            datasets_to_check.add(dataset)
+
+        if datasets_to_check:
+            grid_cert = Config.get('grid_user_cert')
+            grid_key = Config.get('grid_user_key')
+            dbs_conn = ConnectionWrapper(host='cmsweb.cern.ch',
+                                         cert_file=grid_cert,
+                                         key_file=grid_key)
+            self.logger.info('Will check datasets: %s', datasets_to_check)
+            dbs_response = dbs_conn.api('POST',
+                                        '/dbs/prod/global/DBSReader/datasetlist',
+                                        {'dataset': list(datasets_to_check),
+                                        'detail': 1})
+            dbs_response = json.loads(dbs_response.decode('utf-8'))
+            for dataset in dbs_response:
+                dataset_name = dataset['dataset']
+                if dataset_name not in datasets_to_check:
+                    continue
+
+                access_type = dataset.get('dataset_access_type', 'unknown')
+                datasets_to_check.remove(dataset_name)
+                self.logger.debug('Dataset %s type is %s', dataset_name, access_type)
+                if access_type != 'VALID':
+                    raise Exception(f'{dataset_name} type is {access_type}, it must be VALID')
+
+            if datasets_to_check:
+                datasets_to_check = ', '.join(datasets_to_check)
+                raise Exception(f'Could not get status for these datasets: {datasets_to_check}')
+
+        # Create or find campaign timestamp
         # Threshold in seconds
         threshold = 3600
         with self.locker.get_lock(f'move-relval-to-submitting-{cmssw_release}__{batch_name}'):
