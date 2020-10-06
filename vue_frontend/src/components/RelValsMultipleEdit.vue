@@ -240,7 +240,7 @@
 </template>
 
 <script>
-import Vue from 'vue'
+
 import axios from 'axios'
 import { utilsMixin } from '../mixins/UtilsMixin.js'
 import LoadingOverlay from './LoadingOverlay.vue'
@@ -340,7 +340,7 @@ export default {
 
       this.loading = true;
       let httpRequest = axios.post('api/relvals/update', editableObjects)
-      httpRequest.then(response => {
+      httpRequest.then(() => {
         component.loading = false;
         window.location = 'relvals?prepid=' + this.prepids.join(',');
       }).catch(error => {
