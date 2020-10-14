@@ -17,16 +17,20 @@ def get_wmsplit():
     Get wmsplit dictionary from MatrixInjector prepare() method
     """
     try:
-        src = inspect.getsource(MatrixInjector.prepare)
-        src = [x.strip() for x in src.split('\n') if 'wmsplit' in x]
-        src = [x.replace(' ', '') for x in src if not x.startswith('#')]
-        src = [x for x in src if re.match('wmsplit\\[.*\\]=', x)]
-        src = [x.replace('wmsplit[\'', '').replace('\']', '') for x in src]
-        src = {x[0]: x[1] for x in [x.split('=') for x in src]}
+        src = MatrixInjector.get_wmsplit()
         return src
-    except Exception as ex:
-        print(ex)
-        return {}
+    except:
+        try:
+            src = inspect.getsource(MatrixInjector.prepare)
+            src = [x.strip() for x in src.split('\n') if 'wmsplit' in x]
+            src = [x.replace(' ', '') for x in src if not x.startswith('#')]
+            src = [x for x in src if re.match('wmsplit\\[.*\\]=', x)]
+            src = [x.replace('wmsplit[\'', '').replace('\']', '') for x in src]
+            src = {x[0]: x[1] for x in [x.split('=') for x in src]}
+            return src
+        except Exception as ex:
+            print(ex)
+            return {}
 
 
 def extract_events_per_lumi(step):
