@@ -13,7 +13,7 @@
         <li><a :href="'tickets'">Tickets</a>
           <ul v-if="objectsInfo">
             <li v-for="by_status_entry in objectsInfo.tickets.by_status" :key="by_status_entry._id">
-              <a :href="'relvals?status=' + by_status_entry._id">{{by_status_entry._id}}</a> - {{by_status_entry.count}} tickets
+              <a :href="'tickets?status=' + by_status_entry._id">{{by_status_entry._id}}</a> - {{by_status_entry.count}} tickets
               <ul v-if="by_status_entry._id == 'new'">
                 <li v-for="release_entry in objectsInfo.tickets.by_batch" :key="release_entry._id">
                   <a :href="'tickets?status=new&cmssw_release=' + release_entry._id">{{release_entry._id}}</a>
