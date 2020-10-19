@@ -699,22 +699,6 @@ class RelValController(ControllerBase):
             output_datasets = self.get_output_datasets(relval, all_workflows)
             new_workflows = self.pick_workflows(all_workflows, output_datasets)
             all_workflow_names = [x['name'] for x in new_workflows]
-            for new_workflow in reversed(new_workflows):
-                completed_events = -1
-                for output_dataset in new_workflow.get('output_datasets', []):
-                    if output_datasets and output_dataset['name'] == output_datasets[-1]:
-                        completed_events = output_dataset['events']
-                        break
-
-                if completed_events != -1:
-                    relval.set('completed_events', completed_events)
-                    break
-
-            if all_workflow_names:
-                newest_workflow = all_workflows[all_workflow_names[-1]]
-                if 'TotalEvents' in newest_workflow:
-                    relval.set('total_events', max(0, newest_workflow['TotalEvents']))
-
             relval.set('output_datasets', output_datasets)
             relval.set('workflows', new_workflows)
             relval_db.save(relval.get_json())
