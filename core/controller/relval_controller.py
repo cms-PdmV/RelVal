@@ -237,6 +237,7 @@ class RelValController(ControllerBase):
                 task_dict['ProcessingString'] = processing_string
 
             task_dict['CMSSWVersion'] = step.get('cmssw_release')
+            task_dict['AcquisitionEra'] = task_dict['CMSSWVersion']
             task_dict['Memory'] = relval.get('memory')
             task_dict['Multicore'] = relval.get('cpu_cores')
             task_dict['Campaign'] = campaign
@@ -266,7 +267,7 @@ class RelValController(ControllerBase):
 
         # Set main CMSSW version to first task CMSSW version
         job_dict['CMSSWVersion'] = job_dict['Task1']['CMSSWVersion']
-        job_dict['AcquisitionEra'] = job_dict['Task1']['CMSSWVersion']
+        job_dict['AcquisitionEra'] = job_dict['Task1']['AcquisitionEra']
 
         return job_dict
 
