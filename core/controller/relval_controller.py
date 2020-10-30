@@ -718,7 +718,13 @@ class RelValController(ControllerBase):
         output_datatiers = set(output_datatiers)
         self.logger.info('%s output datatiers are: %s', prepid, ', '.join(output_datatiers))
         output_datasets_tree = {k: {} for k in output_datatiers}
-        for _, workflow in all_workflows.items():
+        ignore_status = {'aborted', 'aborted-archived', 'rejected', 'rejected-archived', 'failed'}
+        for workflow_name, workflow in all_workflows.items():
+            status_history = set(x['Status'] for x in workflow.get('RequestTransition', []))
+            if ignore_status & status_history:
+                self.logger.debug('Ignoring %s', workflow_name)
+                continue
+
             for output_dataset in workflow.get('OutputDatasets', []):
                 output_dataset_parts = [x.strip() for x in output_dataset.split('/')]
                 output_dataset_datatier = output_dataset_parts[-1]
