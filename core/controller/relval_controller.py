@@ -12,7 +12,7 @@ from core_lib.utils.locker import Locker
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.global_config import Config
 from core_lib.utils.cache import TimeoutCache
-from core_lib.utils.common_utils import clean_split, cmssw_setup
+from core_lib.utils.common_utils import clean_split, cmssw_setup, get_scram_arch
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
@@ -47,7 +47,7 @@ class RelValController(ControllerBase):
             if not step.get('cmssw_release'):
                 step['cmssw_release'] = cmssw_release
 
-            step['scram_arch'] = RelValController.get_scram_arch(step['cmssw_release'])
+            step['scram_arch'] = get_scram_arch(step['cmssw_release'])
 
         relval_db = Database('relvals')
         with self.locker.get_lock(f'generate-relval-prepid-{prepid_part}'):
@@ -69,7 +69,7 @@ class RelValController(ControllerBase):
             old_cmssw_release = old_step.get('cmssw_release') if old_step else None
             new_cmssw_release = new_step.get('cmssw_release') if new_step else None
             if new_step and old_cmssw_release != new_cmssw_release:
-                scram_arch = RelValController.get_scram_arch(new_cmssw_release)
+                scram_arch = get_scram_arch(new_cmssw_release)
                 if not scram_arch:
                     raise Exception(f'Could not find scram arch for {new_cmssw_release}')
 
@@ -773,45 +773,3 @@ class RelValController(ControllerBase):
                                      indent=2,
                                      sort_keys=True))
         return output_datasets
-
-    @classmethod
-    def get_scram_arch(cls, cmssw_release, refetch_if_needed=True):
-        """
-        Get scram arch from
-        https://cmssdt.cern.ch/SDT/cgi-bin/ReleasesXML?anytype=1
-        Cache it in RelValController class
-        """
-        if not cmssw_release:
-            return None
-
-        cache = cls.scram_arch_cache
-        releases = cls.scram_arch_cache.get('releases', {})
-        cached_value = releases.get(cmssw_release)
-        if cached_value:
-            return cached_value
-
-        if not refetch_if_needed:
-            return None
-
-        with Locker().get_lock('relval-controller-get-scram-arch'):
-            # Maybe cache got updated while waiting for a lock
-            cached_value = cls.get_scram_arch(cmssw_release, False)
-            if cached_value:
-                return cached_value
-
-            connection = ConnectionWrapper(host='cmssdt.cern.ch')
-            response = connection.api('GET', '/SDT/cgi-bin/ReleasesXML?anytype=1')
-            root = XMLet.fromstring(response)
-            releases = {}
-            for architecture in root:
-                if architecture.tag != 'architecture':
-                    # This should never happen as children should be <architecture>
-                    continue
-
-                scram_arch = architecture.attrib.get('name')
-                for release in architecture:
-                    releases[release.attrib.get('label')] = scram_arch
-
-            cache.set('releases', releases)
-
-        return cls.get_scram_arch(cmssw_release, False)
