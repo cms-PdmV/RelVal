@@ -389,6 +389,9 @@ class RelValController(ControllerBase):
                 self.move_relval_back_to_approved(relval)
             elif relval.get('status') == 'submitted':
                 self.move_relval_back_to_approved(relval)
+            elif relval.get('status') == 'done':
+                self.move_relval_back_to_approved(relval)
+                self.move_relval_back_to_new(relval)
 
         return relval
 
