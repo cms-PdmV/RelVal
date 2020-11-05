@@ -317,6 +317,10 @@ export default {
           let relvalStep = relvalSteps[stepIndex];
           // Main RelVal step attributes
           for (let key in step) {
+            if (key == 'driver' || key == 'input') {
+              // driver and input will be handled later
+              continue
+            }
             relvalStep[key] = step[key];
           }
           // RelVal step input attributes
