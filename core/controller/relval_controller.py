@@ -168,10 +168,6 @@ class RelValController(ControllerBase):
         job_dict['RequestPriority'] = 500000
         job_dict['TimePerEvent'] = relval.get('time_per_event')
         job_dict['SizePerEvent'] = relval.get('size_per_event')
-        if not Config.get('development'):
-            # Do not upload to DQM GUI in dev
-            job_dict['DQMUploadUrl'] = 'https://cmsweb.cern.ch/dqm/relval'
-
         # Harvesting should run on single core with 3GB memory,
         # and each task will have it's own core and memory setting
         job_dict['Memory'] = 3000
@@ -190,6 +186,13 @@ class RelValController(ControllerBase):
                 # It goes in the main job_dict
                 job_dict['DQMConfigCacheID'] = step.get('config_id')
                 job_dict['EnableHarvesting'] = True
+                if not Config.get('development'):
+                    # Do not upload to prod DQM GUI in dev
+                    job_dict['DQMUploadUrl'] = 'https://cmsweb.cern.ch/dqm/relval'
+                else:
+                    # Upload to some dev DQM GUI
+                    job_dict['DQMUploadUrl'] = 'https://cmsweb.cern.ch/dqm/dev'
+
                 continue
 
             task_dict = {}
