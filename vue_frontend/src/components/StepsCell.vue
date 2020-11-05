@@ -1,20 +1,20 @@
 <template>
   <div>
     <ul>
-      <li v-for="(step, index) in data" :key="index">
+      <li v-for="(step, index) in internalData" :key="index">
         {{step.name}}:
         <ul class="monospace">
           <li>CMSSW Release: {{step.cmssw_release}} ({{step.scram_arch}})</li>
           <template v-if="isDriver(step)">
             <li v-if="step.events_per_lumi && step.events_per_lumi.length">Events per Lumi: {{step.events_per_lumi}}</li>
-            <li v-if="step.driver.type && step.driver.type.length">Type: {{step.driver.type}}</li>
+            <li v-if="step.type && step.type.length">Type: {{step.type}}</li>
             <li v-if="step.lumis_per_job && step.lumis_per_job.length">Lumis Per Job: {{step.lumis_per_job}}</li>
-            <li v-for="(value, key) in stepValues(step.driver)" :key="key">{{key}} {{value}}</li>
+            <li v-for="(value, key) in step.driver" :key="key">{{key}} {{value}}</li>
           </template>
           <template v-else>
             <li>Dataset: {{step.input.dataset}}</li>
-            <li>Lumisections and runs: {{step.input.lumisection}}</li>
-            <li>Label: {{step.input.label}}</li>
+            <li v-if="step.input.lumisection && step.input.lumisection.length">Lumisections and runs: {{step.input.lumisection}}</li>
+            <li v-if="step.input.label">Label: {{step.input.label}}</li>
           </template>
         </ul>
         <!-- <pre>{{JSON.stringify(step, null, 2)}}</pre> -->
@@ -24,53 +24,68 @@
 </template>
 
 <script>
+import { utilsMixin } from '../mixins/UtilsMixin.js'
 
-  export default {
-    props:{
-      data: Array
-    },
-    data () {
-      return {
-      }
-    },
-    methods: {
-      cleanUpDict: function(dict) {
-        for (let key in dict) {
-          if (dict[key] == "") {
-            delete dict[key];
-          } else if (Array.isArray(dict[key])) {
-            dict[key] = dict[key].join(',');
-          }
-        }
-      },
-      isDriver: function(step) {
-        return !step.input.dataset || step.input.dataset.length == 0;
-      },
-      stepKeys: function(step) {
-        return Object.keys(step).filter(s => step[s] && step[s] !== '' && s != 'driver' && s != 'input' && s != 'type');
-      },
-      stepKey: function(key) {
-        return key == 'extra' ? 'EXTRA: ' : '--' + key;
-      },
-      stepValue: function(value) {
-        if (Array.isArray(value)) {
-          return value.join(',');
-        } else if (value === true || value === false) {
-          return '';
-        }
-        return value;
-      },
-      stepValues: function(value) {
-        let newData = {};
-        for (let key of this.stepKeys(value)) {
-          newData[this.stepKey(key)] = this.stepValue(value[key]);
-        }
-        return newData;
-      }
-    },
-    computed: {
+export default {
+  mixins: [utilsMixin],
+  props:{
+    data: Array
+  },
+  data () {
+    return {
+      internalData: []
     }
-  }
+  },
+  watch:{
+    data: function (newValue) {
+      this.internalData = this.process(newValue);
+    }
+  },
+  created () {
+    this.internalData = this.process(this.data);
+  },
+  methods: {
+    process(data) {
+      data = this.makeCopy(data);
+      data.forEach(step => {
+        if (this.isDriver(step)) {
+          delete step['input'];
+          for (const [key, value] of Object.entries(step.driver)) {
+            if (!value || value.length == 0) {
+              delete step.driver[key];
+              continue
+            }
+            if (key == 'type') {
+              step.type = value;
+              delete step.driver[key]
+              continue
+            }
+            if (Array.isArray(value)) {
+              value = value.join(',');
+            }
+            if (key == 'extra') {
+              step.driver['EXTRA'] = value;
+            } else {
+              step.driver['--' + key] = value;
+            }
+            delete step.driver[key];
+          }
+          if ('EXTRA' in step.driver) {
+            let extra = step.driver['EXTRA'];
+            delete step.driver['EXTRA'];
+            step.driver[''] = extra;
+          }
+        } else {
+          delete step['driver'];
+        }
+      });
+      return data;
+    },
+    isDriver: function(step) {
+      return !step.input || !step.input.dataset || step.input.dataset.length == 0;
+    },
+  },
+}
 </script>
 
 <style scoped>
