@@ -50,7 +50,7 @@ export default {
       data.forEach(step => {
         if (this.isDriver(step)) {
           delete step['input'];
-          for (const [key, value] of Object.entries(step.driver)) {
+          for (let [key, value] of Object.entries(step.driver)) {
             if (!value || value.length == 0) {
               delete step.driver[key];
               continue
