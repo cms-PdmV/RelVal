@@ -22,7 +22,7 @@ class ModelBase(PdmVModelBase):
         'cpu_cores': lambda cpus: 1 <= cpus <= 8,
         'dataset': lambda ds: ModelBase.matches_regex(ds, ModelBase.__dataset_regex),
         'globaltag': lambda gt: ModelBase.matches_regex(gt, ModelBase.__globaltag_regex),
-        'label': lambda label: ModelBase.matches_regex(label, '[a-zA-Z0-9]{0,75}'),
+        'label': lambda label: ModelBase.matches_regex(label, '[a-zA-Z0-9_]{0,75}'),
         'matrix': lambda m: m in ('standard', 'upgrade', 'generator', 'pileup', 'premix'),
         'memory': lambda mem: 0 <= mem <= 32000,
         'processing_string': lambda ps: ModelBase.matches_regex(ps, ModelBase.__ps_regex),
