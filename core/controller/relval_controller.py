@@ -173,6 +173,12 @@ class RelValController(ControllerBase):
         job_dict['Memory'] = 3000
         job_dict['Multicore'] = 1
         job_dict['EnableHarvesting'] = False
+        # Set DbsUrl differently for dev and prod versions
+        # "URL to the DBS instance where the input data is registered"
+        if not Config.get('development'):
+            job_dict['DbsUrl'] = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
+        else:
+            job_dict['DbsUrl'] = 'https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader'
 
         task_number = 0
         for step_index, step in enumerate(steps):
@@ -440,7 +446,7 @@ class RelValController(ControllerBase):
             dbs_response = dbs_conn.api('POST',
                                         '/dbs/prod/global/DBSReader/datasetlist',
                                         {'dataset': list(datasets_to_check),
-                                        'detail': 1})
+                                         'detail': 1})
             dbs_response = json.loads(dbs_response.decode('utf-8'))
             for dataset in dbs_response:
                 dataset_name = dataset['dataset']
