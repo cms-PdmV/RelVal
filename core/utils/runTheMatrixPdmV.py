@@ -186,7 +186,12 @@ def main():
 
             # Merge user command, workflow and overrides
             workflow_step = steps_module.steps[workflow_step_name]
+            if workflow_step is None:
+                print('Workflow step %s is none, skipping it' % (workflow_step_name))
+                continue
+
             # Because first item in the list has highest priority
+            print('Step: %s' % (workflow_step))
             workflow_step = steps_module.merge([workflow_matrix.overrides,
                                                 workflow_step])
             if opt.command:
@@ -243,6 +248,10 @@ def main():
                 step['arguments'] = workflow_step
                 print(build_cmsdriver(step['arguments'], workflow_step_index))
 
+        # Additional newline inbetween each workflow
+        print('\n')
+
+    print('All workflows:')
     print(json.dumps(workflows, indent=2, sort_keys=True))
     if opt.output_file:
         with open(opt.output_file, 'w') as workflows_file:
