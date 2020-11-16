@@ -38,7 +38,7 @@
           <td>
             <div v-for="(step, index) in fakeEditableObject.steps" :key="index">
               <h3>Step {{index + 1}}</h3>
-              <table>
+              <table v-if="!step.deleted">
                 <tr>
                   <td>Name</td><td><input type="text" v-model="step.name"></td>
                 </tr>
@@ -163,6 +163,10 @@
                   <td>Extra</td><td><input type="text" v-model="step.driver.extra" placeholder="Any arguments that are not specified above"></td>
                 </tr>
               </table>
+              <v-btn v-if="!step.deleted" small class="mr-1 mb-1" color="error" @click="deleteStep(index)">Delete step {{index + 1}}</v-btn>
+              <span v-if="step.deleted">
+                Deleted
+              </span>
               <hr>
             </div>
           </td>
@@ -186,11 +190,11 @@
           </template>
         </div>
         <div v-for="(step, index) in fakeEditableObject.steps" :key="index">
-          <li v-if="Object.keys(step).length > 2 || Object.keys(step.input).length || Object.keys(step.driver).length">
+          <li v-if="(Object.keys(step).length > 3 || Object.keys(step.input).length || Object.keys(step.driver).length) && !step.deleted">
             Step {{index + 1}}:
             <ul>
               <div v-for="(value, key) in step" :key="key">
-                <template v-if="key != 'driver' && key != 'input'">
+                <template v-if="key != 'driver' && key != 'input' && key != 'deleted'">
                   <li>
                     <b>{{key}}</b> in <b>Step {{index + 1}}</b> will be set to <b>{{niceBoolean(value)}}</b>
                     <v-btn small class="ml-1 mb-1" style="height: 22px" color="error" @click="deleteAttribute(step, key)">Remove</v-btn>
@@ -212,6 +216,12 @@
                 </li>
               </div>
             </ul>
+          </li>
+          <li v-if="step.deleted">
+            Step {{index + 1}}:
+            <br>
+            Will be <b>deleted in all {{prepids.length}}</b> RelVals
+            <v-btn small class="ml-1 mb-1" style="height: 22px" color="error" @click="undeleteStep(index)">Bring back step {{index + 1}}</v-btn>
           </li>
         </div>
       </ul>
@@ -282,7 +292,7 @@ export default {
       }
       let steps = [];
       for (let i = 0; i < maxSteps; i++) {
-        steps.push({'input': {}, 'driver': {}});
+        steps.push({'input': {}, 'driver': {}, 'deleted': false});
       }
       this.$set(this.fakeEditableObject, 'steps', steps);
       component.editableObjects = response.data.response.object;
@@ -315,9 +325,14 @@ export default {
             continue;
           }
           let relvalStep = relvalSteps[stepIndex];
+          if (step.deleted) {
+            // Removal from list will happen later
+            relvalSteps[stepIndex] = undefined;
+            continue
+          }
           // Main RelVal step attributes
           for (let key in step) {
-            if (key == 'driver' || key == 'input') {
+            if (key == 'driver' || key == 'input' || key == 'deleted') {
               // driver and input will be handled later
               continue
             }
@@ -341,7 +356,9 @@ export default {
           }
         }
       }
-
+      for (let relval of editableObjects) {
+        relval.steps = relval.steps.filter(s => s !== undefined);
+      }
       this.loading = true;
       let httpRequest = axios.post('api/relvals/update', editableObjects)
       httpRequest.then(() => {
@@ -376,6 +393,12 @@ export default {
     deleteAttribute: function(obj, name) {
       obj[name] = undefined;
       delete obj[name];
+    },
+    deleteStep: function(stepIndex) {
+      this.fakeEditableObject.steps[stepIndex].deleted = true;
+    },
+    undeleteStep: function(stepIndex) {
+      this.fakeEditableObject.steps[stepIndex].deleted = false;
     }
   }
 }
