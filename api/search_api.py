@@ -51,7 +51,10 @@ class SearchAPI(APIBase):
             if sort == 'created_on' and sort_asc is None:
                 sort_asc = False
 
-        sort_asc = str(True if sort_asc is None else sort_asc).lower() == 'true'
+        if sort_asc is None:
+            sort_asc = True
+
+        sort_asc = str(sort_asc).lower() == 'true'
         query_string = '&&'.join(['%s=%s' % (pair) for pair in args.items()])
         database = Database(db_name)
         query_string = database.build_query_with_types(query_string, self.classes[db_name])
