@@ -168,6 +168,7 @@ class RelValController(ControllerBase):
         job_dict['RequestPriority'] = 500000
         job_dict['TimePerEvent'] = relval.get('time_per_event')
         job_dict['SizePerEvent'] = relval.get('size_per_event')
+        job_dict['ProcessingVersion'] = 1
         # Harvesting should run on single core with 3GB memory,
         # and each task will have it's own core and memory setting
         job_dict['Memory'] = 3000
