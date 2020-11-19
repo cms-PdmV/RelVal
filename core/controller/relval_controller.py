@@ -216,9 +216,9 @@ class RelValController(ControllerBase):
                 task_dict['EventsPerJob'] = events_per_job
                 if events_per_lumi:
                     # EventsPerLumi has to be <= EventsPerJob
-                    task_dict['EventsPerLumi'] = min(events_per_lumi, events_per_job)
+                    task_dict['EventsPerLumi'] = min(int(events_per_lumi), int(events_per_job))
                 else:
-                    task_dict['EventsPerLumi'] = events_per_job
+                    task_dict['EventsPerLumi'] = int(events_per_job)
             else:
                 input_step = steps[step.get_input_step_index()]
                 if input_step.get_step_type() == 'input_file':
