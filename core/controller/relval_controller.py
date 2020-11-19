@@ -319,7 +319,7 @@ class RelValController(ControllerBase):
             cmssw_version = step.get('cmssw_release')
             conditions = step.get('driver')['conditions']
             if cmssw_version != previous_cmssw:
-                command.extend(cmssw_setup(cmssw_version).split('\n'))
+                command.extend(cmssw_setup(cmssw_version, reuse_cmssw=True).split('\n'))
                 previous_cmssw = cmssw_version
 
             command += [f'python resolveAutoGlobalTag.py {conditions}']
@@ -346,6 +346,9 @@ class RelValController(ControllerBase):
                               step.get('name'),
                               prepid)
             step.set('resolved_globaltag', split_resolved_tag[2])
+
+        # Cleanup
+        ssh_executor.execute_command([f'rm -rf {remote_directory}'])
 
     def get_default_step(self):
         """

@@ -101,7 +101,7 @@ class RelVal(ModelBase):
         for step in self.get('steps'):
             step_cmssw = step.get('cmssw_release')
             if step_cmssw != previous_step_cmssw:
-                built_command += cmssw_setup(step_cmssw)
+                built_command += cmssw_setup(step_cmssw, reuse_cmssw=for_submission)
                 built_command += '\n\n'
 
             previous_step_cmssw = step_cmssw
