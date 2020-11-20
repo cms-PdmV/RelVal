@@ -44,7 +44,7 @@ def extract_events_per_lumi(step):
     regex = 'process.source.numberEventsInLuminosityBlock=cms.untracked.uint32\\(([0-9]*)\\)'
     events_per_lumi = re.findall(regex, customise_commands)
     if not events_per_lumi or not events_per_lumi[-1].isdigit():
-        return
+        return None
 
     events_per_job = int(step.get('--relval', '').split(',')[1])
     events_per_lumi = int(events_per_lumi[-1])

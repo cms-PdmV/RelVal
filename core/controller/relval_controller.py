@@ -4,11 +4,9 @@ Module that contains RelValController class
 import json
 import time
 import itertools
-import xml.etree.ElementTree as XMLet
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
-from core_lib.utils.locker import Locker
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.global_config import Config
 from core_lib.utils.cache import TimeoutCache
@@ -285,70 +283,48 @@ class RelValController(ControllerBase):
 
         return job_dict
 
-    def resolve_auto_conditions(self, relval):
+    def resolve_auto_conditions(self, conditions_tree):
         """
-        Go through all steps and resolve their auto: conditions into global tags
+        Iterate through conditions tree and resolve global tags
+        Conditions tree example:
+        {
+            "CMSSW_11_2_0_pre9": {
+                "auto:phase1_2021_realistic": None
+            }
+        }
         """
-        steps = [s for s in relval.get('steps') if s.get_step_type() != 'input_file']
-        steps_to_resolve = []
-        for step in steps:
-            conditions = step.get('driver')['conditions']
-            if conditions.startswith('auto:'):
-                # Leave only those tasks that have auto:... global tag
-                steps_to_resolve.append(step)
-            else:
-                step.set('resolved_globaltag', conditions)
-
-        if not steps_to_resolve:
-            return
-
-        prepid = relval.get_prepid()
         credentials_file = Config.get('credentials_path')
         ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_file)
         remote_directory = Config.get('remote_path').rstrip('/')
-        remote_directory = f'{remote_directory}/{prepid}'
-        ssh_executor.execute_command([f'rm -rf {remote_directory}',
-                                      f'mkdir -p {remote_directory}'])
         # Upload python script to resolve auto globaltag by upload script
         ssh_executor.upload_file('./core/utils/resolveAutoGlobalTag.py',
                                  f'{remote_directory}/resolveAutoGlobalTag.py')
 
         command = [f'cd {remote_directory}']
-        previous_cmssw = None
-        for step in steps_to_resolve:
-            cmssw_version = step.get('cmssw_release')
-            conditions = step.get('driver')['conditions']
-            if cmssw_version != previous_cmssw:
-                command.extend(cmssw_setup(cmssw_version, reuse_cmssw=True).split('\n'))
-                previous_cmssw = cmssw_version
-
-            command += [f'python resolveAutoGlobalTag.py {conditions}']
+        for cmssw_version, conditions in conditions_tree.items():
+            # Setup CMSSW environment
+            command.extend(cmssw_setup(cmssw_version).split('\n'))
+            conditions_string = ','.join(list(conditions.keys()))
+            command += [f'python resolveAutoGlobalTag.py "{cmssw_version}" "{conditions_string}"']
 
         stdout, stderr, exit_code = ssh_executor.execute_command(command)
         if exit_code != 0:
-            self.logger.error('Error resolving %s auto global tags:\nstdout:%s\nstderr:%s',
-                              prepid,
+            self.logger.error('Error resolving auto global tags:\nstdout:%s\nstderr:%s',
                               stdout,
                               stderr)
             raise Exception(f'Error resolving auto globaltags: {stderr}')
 
         tags = [x for x in clean_split(stdout, '\n') if x.startswith('GlobalTag:')]
-        for step, resolved_tag in zip(steps_to_resolve, tags):
+        for resolved_tag in tags:
             split_resolved_tag = clean_split(resolved_tag, ' ')
-            conditions = step.get('driver')['conditions']
-            if conditions != split_resolved_tag[1]:
-                self.logger.error('Mismatch: %s != %s', conditions, split_resolved_tag[1])
-                raise Exception('Mismatch in resolved auto global tags')
-
-            self.logger.debug('Resolved %s to %s for %s of %s',
-                              split_resolved_tag[1],
-                              split_resolved_tag[2],
-                              step.get('name'),
-                              prepid)
-            step.set('resolved_globaltag', split_resolved_tag[2])
-
-        # Cleanup
-        ssh_executor.execute_command([f'rm -rf {remote_directory}'])
+            cmssw_version = split_resolved_tag[1]
+            conditions = split_resolved_tag[2]
+            resolved = split_resolved_tag[3]
+            self.logger.debug('Resolved %s to %s in %s',
+                              conditions,
+                              resolved,
+                              cmssw_version)
+            conditions_tree[cmssw_version][conditions] = resolved
 
     def get_default_step(self):
         """
@@ -367,28 +343,37 @@ class RelValController(ControllerBase):
         relval.add_history('status', status, None, timestamp)
         relval_db.save(relval.get_json())
 
-    def next_status(self, relval):
+    def next_status(self, relvals):
         """
-        Trigger RelVal to move to next status
+        Trigger list of RelVals to move to next status
         """
-        prepid = relval.get_prepid()
-        with self.locker.get_nonblocking_lock(prepid):
-            if relval.get('status') == 'new':
-                return self.move_relval_to_approved(relval)
+        by_status = {}
+        for relval in relvals:
+            status = relval.get('status')
+            if status not in by_status:
+                by_status[status] = []
 
-            if relval.get('status') == 'approved':
-                return self.move_relval_to_submitting(relval)
+            by_status[status].append(relval)
 
-            if relval.get('status') == 'submitting':
-                raise Exception('RelVal is being submitted')
+        results = []
+        for status, relvals_with_status in by_status.items():
+            self.logger.info('%s RelVals with status %s', len(relvals_with_status), status)
+            if status == 'new':
+                results.extend(self.move_relvals_to_approved(relvals_with_status))
 
-            if relval.get('status') == 'submitted':
-                return self.move_relval_to_done(relval)
+            elif status == 'approved':
+                results.extend(self.move_relvals_to_submitting(relvals_with_status))
 
-            if relval.get('status') == 'done':
-                raise Exception('RelVal is already done')
+            elif status == 'submitting':
+                raise Exception('Cannot move RelVals that are being submitted to next status')
 
-        return relval
+            elif status == 'submitted':
+                results.extend(self.move_relvals_to_done(relvals_with_status))
+
+            elif status == 'done':
+                raise Exception('Cannot move RelVals that are already done to next status')
+
+        return results
 
     def previous_status(self, relval):
         """
@@ -408,130 +393,213 @@ class RelValController(ControllerBase):
 
         return relval
 
-    def move_relval_to_approved(self, relval):
+    def get_resolved_conditions(self, relvals):
         """
-        Try to move RelVal to approved
+        Get a dictionary of dicitonaries of resolved auto: conditions
         """
-        # Resolve auto:conditions to actual globaltags
-        self.resolve_auto_conditions(relval)
-        self.update_status(relval, 'approved')
-        return relval
-
-    def move_relval_to_submitting(self, relval):
-        """
-        Try to add RelVal to submitted and get sumbitted
-        """
-        batch_name = relval.get('batch_name')
-        cmssw_release = relval.get('cmssw_release')
-        relval_db = Database('relvals')
-        # Make sure all datasets are VALID in DBS
-        datasets_to_check = set()
-        steps = relval.get('steps')
-        for step in steps:
-            if step.get_step_type() == 'input_file':
-                dataset = step.get('input')['dataset']
-            elif step.get('driver')['pileup_input']:
-                dataset = step.get('driver')['pileup_input']
-            else:
+        conditions_tree = {}
+        # Collect auto: conditions by CMSSW release
+        for relval in relvals:
+            if relval.get('status') != 'new':
                 continue
 
-            while dataset and dataset[0] != '/':
-                dataset = dataset[1:]
-
-            datasets_to_check.add(dataset)
-
-        if datasets_to_check:
-            grid_cert = Config.get('grid_user_cert')
-            grid_key = Config.get('grid_user_key')
-            dbs_conn = ConnectionWrapper(host='cmsweb.cern.ch',
-                                         cert_file=grid_cert,
-                                         key_file=grid_key)
-            self.logger.info('Will check datasets: %s', datasets_to_check)
-            dbs_response = dbs_conn.api('POST',
-                                        '/dbs/prod/global/DBSReader/datasetlist',
-                                        {'dataset': list(datasets_to_check),
-                                         'detail': 1})
-            dbs_response = json.loads(dbs_response.decode('utf-8'))
-            for dataset in dbs_response:
-                dataset_name = dataset['dataset']
-                if dataset_name not in datasets_to_check:
+            for step in relval.get('steps'):
+                if step.get_step_type() != 'cms_driver':
+                    # Collect only driver steps that have conditions
                     continue
 
-                access_type = dataset.get('dataset_access_type', 'unknown')
-                datasets_to_check.remove(dataset_name)
-                self.logger.debug('Dataset %s type is %s', dataset_name, access_type)
-                if access_type != 'VALID':
-                    raise Exception(f'{dataset_name} type is {access_type}, it must be VALID')
+                conditions = step.get('driver')['conditions']
+                if not conditions.startswith('auto:'):
+                    # Collect only auto: ... conditions
+                    continue
 
-            if datasets_to_check:
-                datasets_to_check = ', '.join(datasets_to_check)
-                raise Exception(f'Could not get status for these datasets: {datasets_to_check}')
+                cmssw_version = step.get('cmssw_release')
+                if cmssw_version not in conditions_tree:
+                    conditions_tree[cmssw_version] = {}
 
-        # Create or find campaign timestamp
-        # Threshold in seconds
-        threshold = 3600
-        with self.locker.get_lock(f'move-relval-to-submitting-{cmssw_release}__{batch_name}'):
-            now = int(time.time())
-            # Get RelVal with newest timestamp in this campaign (CMSSW Release + Batch Name)
-            relvals = relval_db.query(f'cmssw_release={cmssw_release}&&batch_name={batch_name}',
-                                      limit=1,
-                                      sort_attr='campaign_timestamp',
-                                      sort_asc=False)
-            newest_timestamp = 0
-            if relvals:
-                newest_timestamp = relvals[0].get('campaign_timestamp', 0)
+                conditions_tree[cmssw_version][conditions] = None
 
-            self.logger.info('Newest timestamp for %s__%s is %s (%s), threshold is %s',
-                             cmssw_release,
-                             batch_name,
-                             newest_timestamp,
-                             (newest_timestamp - now),
-                             threshold)
-            if newest_timestamp == 0:
-                newest_timestamp = now
-            elif newest_timestamp < now - threshold:
-                newest_timestamp = now
+        # Resolve auto:conditions to actual globaltags
+        self.resolve_auto_conditions(conditions_tree)
+        return conditions_tree
 
-            self.logger.info('Campaign timestamp for %s__%s will be set to %s',
-                             cmssw_release,
-                             batch_name,
-                             newest_timestamp)
-            relval.set('campaign_timestamp', newest_timestamp)
+    def move_relvals_to_approved(self, relvals):
+        """
+        Try to move RelVals to approved status
+        """
+        conditions_tree = self.get_resolved_conditions(relvals)
+        results = []
+        # Go through relvals and set resolved globaltags from the updated dict
+        for relval in relvals:
+            prepid = relval.get_prepid()
+            with self.locker.get_nonblocking_lock(prepid):
+                for step in relval.get('steps'):
+                    if step.get_step_type() != 'cms_driver':
+                        # Collect only driver steps that have conditions
+                        continue
 
-        self.update_status(relval, 'submitting')
-        RequestSubmitter().add(relval, self)
-        return relval
+                    conditions = step.get('driver')['conditions']
+                    if conditions.startswith('auto:'):
+                        cmssw_version = step.get('cmssw_release')
+                        resolved_conditions = conditions_tree[cmssw_version][conditions]
+                        step.set('resolved_globaltag', resolved_conditions)
+                    else:
+                        step.set('resolved_globaltag', conditions)
 
-    def move_relval_to_done(self, relval):
+                self.update_status(relval, 'approved')
+                results.append(relval)
+
+        return results
+
+    def get_dataset_access_types(self, relvals):
+        """
+        Return a dictionary of dataset access types
+        """
+        dataset_access_types = {}
+        datasets_to_check = set()
+        for relval in relvals:
+            for step in relval.get('steps'):
+                if step.get_step_type() == 'input_file':
+                    dataset = step.get('input')['dataset']
+                elif step.get('driver')['pileup_input']:
+                    dataset = step.get('driver')['pileup_input']
+                else:
+                    continue
+
+                while dataset and dataset[0] != '/':
+                    dataset = dataset[1:]
+
+                datasets_to_check.add(dataset)
+
+        if not datasets_to_check:
+            return {}
+
+        grid_cert = Config.get('grid_user_cert')
+        grid_key = Config.get('grid_user_key')
+        dbs_conn = ConnectionWrapper(host='cmsweb.cern.ch',
+                                     cert_file=grid_cert,
+                                     key_file=grid_key)
+        self.logger.info('Will check datasets: %s', datasets_to_check)
+        dbs_response = dbs_conn.api('POST',
+                                    '/dbs/prod/global/DBSReader/datasetlist',
+                                    {'dataset': list(datasets_to_check),
+                                     'detail': 1})
+        dbs_response = json.loads(dbs_response.decode('utf-8'))
+        for dataset in dbs_response:
+            dataset_name = dataset['dataset']
+            if dataset_name not in datasets_to_check:
+                continue
+
+            access_type = dataset.get('dataset_access_type', 'unknown')
+            datasets_to_check.remove(dataset_name)
+            dataset_access_types[dataset_name] = access_type
+
+        if datasets_to_check:
+            datasets_to_check = ', '.join(list(datasets_to_check))
+            raise Exception(f'Could not get status for datasets: {datasets_to_check}')
+
+        return dataset_access_types
+
+    def move_relvals_to_submitting(self, relvals):
+        """
+        Try to add RelVals to submission queue and get sumbitted
+        """
+        results = []
+        dataset_access_types = self.get_dataset_access_types(relvals)
+        for relval in relvals:
+            prepid = relval.get_prepid()
+            with self.locker.get_nonblocking_lock(prepid):
+                batch_name = relval.get('batch_name')
+                cmssw_release = relval.get('cmssw_release')
+                relval_db = Database('relvals')
+                # Make sure all datasets are VALID in DBS
+                steps = relval.get('steps')
+                for step in steps:
+                    if step.get_step_type() == 'input_file':
+                        dataset = step.get('input')['dataset']
+                    elif step.get('driver')['pileup_input']:
+                        dataset = step.get('driver')['pileup_input']
+                    else:
+                        continue
+
+                    while dataset and dataset[0] != '/':
+                        dataset = dataset[1:]
+
+                    access_type = dataset_access_types[dataset]
+                    if access_type.lower() != 'valid':
+                        raise Exception(f'{dataset} type is {access_type}, it must be VALID')
+
+                # Create or find campaign timestamp
+                # Threshold in seconds
+                threshold = 3600
+                locker_key = f'move-relval-to-submitting-{cmssw_release}__{batch_name}'
+                with self.locker.get_lock(locker_key):
+                    now = int(time.time())
+                    # Get RelVal with newest timestamp in this campaign (CMSSW + Batch Name)
+                    db_query = f'cmssw_release={cmssw_release}&&batch_name={batch_name}'
+                    relvals_with_timestamp = relval_db.query(db_query,
+                                                             limit=1,
+                                                             sort_attr='campaign_timestamp',
+                                                             sort_asc=False)
+                    newest_timestamp = 0
+                    if relvals_with_timestamp:
+                        newest_timestamp = relvals_with_timestamp[0].get('campaign_timestamp', 0)
+
+                    self.logger.info('Newest timestamp for %s__%s is %s (%s), threshold is %s',
+                                     cmssw_release,
+                                     batch_name,
+                                     newest_timestamp,
+                                     (newest_timestamp - now),
+                                     threshold)
+                    if newest_timestamp == 0 or newest_timestamp < now - threshold:
+                        newest_timestamp = now
+
+                    self.logger.info('Campaign timestamp for %s__%s will be set to %s',
+                                     cmssw_release,
+                                     batch_name,
+                                     newest_timestamp)
+                    relval.set('campaign_timestamp', newest_timestamp)
+                    self.update_status(relval, 'submitting')
+
+                RequestSubmitter().add(relval, self)
+                results.append(relval)
+
+        return results
+
+    def move_relvals_to_done(self, relvals):
         """
         Try to move RelVal to done status
         """
-        prepid = relval.get_prepid()
-        relval = self.update_workflows(relval)
-        workflows = relval.get('workflows')
-        if workflows:
-            last_workflow = workflows[-1]
-            for output_dataset in last_workflow['output_datasets']:
-                dataset_type = output_dataset['type']
-                if dataset_type.lower() != 'valid':
-                    dataset_name = output_dataset['name']
-                    raise Exception(f'Could not move {prepid} to "done" '
-                                    f'because {dataset_name} is {dataset_type}')
+        results = []
+        for relval in relvals:
+            prepid = relval.get_prepid()
+            with self.locker.get_nonblocking_lock(prepid):
+                relval = self.update_workflows(relval)
+                workflows = relval.get('workflows')
+                if workflows:
+                    last_workflow = workflows[-1]
+                    for output_dataset in last_workflow['output_datasets']:
+                        dataset_type = output_dataset['type']
+                        if dataset_type.lower() != 'valid':
+                            dataset_name = output_dataset['name']
+                            raise Exception(f'Could not move {prepid} to "done" '
+                                            f'because {dataset_name} is {dataset_type}')
 
-            for status in last_workflow['status_history']:
-                if status['status'].lower() == 'completed':
-                    completed_timestamp = status['time']
-                    break
-            else:
-                last_workflow_name = last_workflow['name']
-                raise Exception(f'Could not move {prepid} to "done" because '
-                                f'{last_workflow_name} is not yet "completed"')
+                    for status in last_workflow['status_history']:
+                        if status['status'].lower() == 'completed':
+                            completed_timestamp = status['time']
+                            break
+                    else:
+                        last_workflow_name = last_workflow['name']
+                        raise Exception(f'Could not move {prepid} to "done" because '
+                                        f'{last_workflow_name} is not yet "completed"')
 
-            self.update_status(relval, 'done', completed_timestamp)
-        else:
-            raise Exception(f'{prepid} does not have any workflows in computing')
+                    self.update_status(relval, 'done', completed_timestamp)
+                    results.append(relval)
+                else:
+                    raise Exception(f'{prepid} does not have any workflows in computing')
 
-        return relval
+        return results
 
     def move_relval_back_to_new(self, relval):
         """

@@ -239,15 +239,16 @@ class RelValNextStatus(APIBase):
         if isinstance(relval_json, dict):
             prepid = relval_json.get('prepid')
             relval = relval_controller.get(prepid)
-            results = relval_controller.next_status(relval)
-            results = results.get_json()
+            results = relval_controller.next_status([relval])
+            results = results[0].get_json()
         elif isinstance(relval_json, list):
-            results = []
+            relvals = []
             for single_relval_json in relval_json:
                 prepid = single_relval_json.get('prepid')
                 relval = relval_controller.get(prepid)
-                results.append(relval_controller.next_status(relval))
+                relvals.append(relval)
 
+            results = relval_controller.next_status(relvals)
             results = [x.get_json() for x in results]
         else:
             raise Exception('Expected a single RelVal dict or a list of RelVal dicts')
