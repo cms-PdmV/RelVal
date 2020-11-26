@@ -162,7 +162,9 @@ class TicketController(ControllerBase):
         """
         ticket_db = Database(self.database_name)
         ticket_prepid = ticket.get_prepid()
+        ticket_dir = f'ticket_{ticket_prepid}'
         credentials_path = Config.get('credentials_path')
+        remote_directory = Config.get('remote_path').rstrip('/')
         ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_path)
         relval_controller = RelValController()
         created_relvals = []
@@ -188,22 +190,21 @@ class TicketController(ControllerBase):
                 workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
                 self.logger.info('Creating RelVals %s for %s', workflow_ids, ticket_prepid)
                 # Prepare empty directory with runTheMatrixPdmV.py
-                command = [f'rm -rf ~/relval_work/{ticket_prepid}',
-                           f'mkdir -p ~/relval_work/{ticket_prepid}']
+                command = [f'rm -rf {remote_directory}/{ticket_dir}',
+                           f'mkdir -p {remote_directory}/{ticket_dir}']
                 _, err, code = ssh_executor.execute_command(command)
                 if code != 0:
                     raise Exception(f'Error code {code} preparing workspace: {err}')
 
                 ssh_executor.upload_file('core/utils/runTheMatrixPdmV.py',
-                                         f'relval_work/{ticket_prepid}/runTheMatrixPdmV.py')
+                                         f'{remote_directory}/{ticket_dir}/runTheMatrixPdmV.py')
                 # Create a random name for temporary file
                 random = Random()
                 file_name = f'{ticket_prepid}_{int(random.randint(1000, 9999))}.json'
                 # Execute runTheMatrixPdmV.py
-                command = ['cd ~/relval_work/']
-                command.extend(cmssw_setup(cmssw_release).split('\n'))
-                command += [f'cd {ticket_prepid}',
-                            'python runTheMatrixPdmV.py '
+                command = [f'cd {remote_directory}/{ticket_dir}']
+                command.extend(cmssw_setup(cmssw_release, reuse_cmssw=True).split('\n'))
+                command += ['python runTheMatrixPdmV.py '
                             f'-l={workflow_ids} '
                             f'-w={matrix} '
                             f'-o={file_name} '
@@ -213,11 +214,11 @@ class TicketController(ControllerBase):
                 if code != 0:
                     raise Exception(f'Error code {code} creating RelVals: {err}')
 
-                ssh_executor.download_file(f'relval_work/{ticket_prepid}/{file_name}',
+                ssh_executor.download_file(f'{remote_directory}/{ticket_dir}/{file_name}',
                                            f'/tmp/{file_name}')
 
                 # Cleanup remote directory
-                ssh_executor.execute_command(f'rm -rf relval_work/{ticket_prepid}')
+                ssh_executor.execute_command(f'rm -rf {remote_directory}/{ticket_dir}')
                 with open(f'/tmp/{file_name}', 'r') as workflows_file:
                     workflows = json.load(workflows_file)
 

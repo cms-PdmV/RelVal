@@ -21,12 +21,12 @@
                       v-model="selectedItems">
           <template v-slot:item._actions="{ item }">
             <a :href="'relvals/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>&nbsp;
-            <a style="text-decoration: underline;" @click="deleteRelVals([item])" v-if="role('manager')">Delete</a>&nbsp;
+            <a style="text-decoration: underline;" @click="deleteRelVals([item])" v-if="item.status == 'new' && role('manager')">Delete</a>&nbsp;
             <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>&nbsp;
             <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>&nbsp;
             <a :href="'api/relvals/get_config_upload/' + item.prepid" v-if="role('administrator')" title="Show config upload script">Config upload</a>&nbsp;
             <a style="text-decoration: underline;" @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>&nbsp;
-            <a style="text-decoration: underline;" @click="nextStatus([item])" v-if="role('manager')" title="Move to next status">Next</a>&nbsp;
+            <a style="text-decoration: underline;" @click="nextStatus([item])" v-if="role('manager') && item.status != 'done'" title="Move to next status">Next</a>&nbsp;
             <a style="text-decoration: underline;" @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted'" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
             <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done'" title="Show workflows of this RelVal in Stats2">Stats2</a>         
           </template>
@@ -153,7 +153,7 @@
     <footer>
       <a :href="'relvals/edit'" v-if="role('manager') && !selectedItems.length">New RelVal</a>
       <span v-if="role('manager') && selectedItems.length">Selected items ({{selectedItems.length}}) actions:</span>
-      <a v-if="role('manager') && selectedItems.length > 1" @click="editRelVals(selectedItems)" title="Edit selected RelVals">Edit</a>
+      <a v-if="role('manager') && selectedItems.length" @click="editRelVals(selectedItems)" title="Edit selected RelVals">Edit</a>
       <a v-if="role('manager') && selectedItems.length" @click="deleteRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
       <a v-if="role('manager') && selectedItems.length" @click="previousStatus(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
       <a v-if="role('manager') && selectedItems.length" @click="nextStatus(selectedItems)" title="Move selected RelVals to next status">Next</a>

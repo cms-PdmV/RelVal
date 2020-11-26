@@ -25,14 +25,15 @@ def main():
     """
     Main
     """
-    if len(sys.argv) < 2:
-        print('Missing auto GlobalTag argument')
-        print('usage: %s <auto:globaltag>[,<auto:globaltag2>]' % (sys.argv[0]))
+    if len(sys.argv) < 3:
+        print('Missing auto GlobalTag label argument')
+        print('usage: %s <label> <auto:globaltag>[,<auto:globaltag2>]' % (sys.argv[0]))
         sys.exit(1)
 
-    tags = [t.strip() for t in sys.argv[1].split(',') if t.strip()]
+    label = sys.argv[1].strip()
+    tags = [t.strip() for t in sys.argv[2].split(',') if t.strip()]
     for tag in tags:
-        print('GlobalTag: %s %s' % (tag, resolve_globaltag(tag)))
+        print('GlobalTag: %s %s %s' % (label, tag, resolve_globaltag(tag)))
 
 
 if __name__ == '__main__':
