@@ -274,6 +274,12 @@ class RelValStep(ModelBase):
 
         return False
 
+    def has_eventcontent(self, eventcontent):
+        """
+        Return if this RelValStep has certain eventcontent in --eventcontent argument
+        """
+        return eventcontent in self.get('driver')['eventcontent']
+
     def get_input_step_index(self):
         """
         Get index of step that will be used as input step for current step
@@ -290,13 +296,13 @@ class RelValStep(ModelBase):
             if step.has_step('HARVESTING'):
                 continue
 
-            # AlCa step ins never input
+            # AlCa step is never input
             step_step = step.get('driver')['step']
             if step_step and step_step[0].startswith('ALCA'):
                 continue
 
             # Harvesting step needs DQM as input
-            if this_is_harvesting and not step.has_step('DQM'):
+            if this_is_harvesting and not step.has_eventcontent('DQM'):
                 continue
 
             # AlCa step needs RECO as input
