@@ -218,7 +218,7 @@ class WildSearchAPI(APIBase):
             return [item[attribute]]
 
         values = []
-        matcher = re.compile(query.replace('*', '.*'))
+        matcher = re.compile(query.replace('*', '.*'), re.IGNORECASE)
         self.logger.info('Item: %s, attribute: %s, query: %s, db name: %s',
                          item['prepid'],
                          attribute,
