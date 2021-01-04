@@ -37,6 +37,7 @@
               <option>generator</option>
               <option>pileup</option>
               <option>premix</option>
+              <option>extendedgen</option>
             </select>
           </td>
         </tr>
