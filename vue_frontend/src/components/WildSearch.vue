@@ -106,7 +106,7 @@ import axios from 'axios'
               component.items = response.data.response;
               component.cache[newValue] = component.items;
               component.loading = false;
-            }).catch(error => {
+            }).catch(() => {
               component.loading = false;
             });
           }, this.suggestionsWait);
