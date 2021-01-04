@@ -158,6 +158,7 @@
       <a v-if="role('manager') && selectedItems.length" @click="previousStatus(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
       <a v-if="role('manager') && selectedItems.length" @click="nextStatus(selectedItems)" title="Move selected RelVals to next status">Next</a>
       <a v-if="role('administrator') && selectedItems.length" @click="updateWorkflows(selectedItems)" title="Update selected RelVals' information from Stats2">Update from Stats2</a>
+      <a v-if="selectedItems.length" @click="openPmpMany(selectedItems)" title="Show selected RelVals in pMp">pMp</a>
       <Paginator :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
     </footer>
@@ -399,6 +400,11 @@ export default {
         time = 0;
       }
       return dateFormat(new Date(time * 1000), 'yyyy-mm-dd HH:MM:ss')
+    },
+    openPmpMany: function(relvals) {
+      let prepids = relvals.map(x => x['prepid']);
+      let url = 'https://cms-pdmv.cern.ch/pmp/historical?r=' + prepids.join(',');
+      window.open(url, '_blank');
     }
   }
 }
