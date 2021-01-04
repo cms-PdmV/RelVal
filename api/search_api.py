@@ -54,6 +54,7 @@ class SearchAPI(APIBase):
         if sort_asc is None:
             sort_asc = True
 
+        limit = max(1, min(limit, 500))
         sort_asc = str(sort_asc).lower() == 'true'
         query_string = '&&'.join(['%s=%s' % (pair) for pair in args.items()])
         database = Database(db_name)

@@ -103,9 +103,13 @@ class ObjectsInfoAPI(APIBase):
                                          {'$group': {"_id": "$_id.release",
                                                      "batches": {"$push": {"batch_name": "$_id.batch",
                                                                            "count": "$counts"}}}}])
+        by_status = list(by_status)
+        by_batch = list(by_batch)
+        for release in by_batch:
+            release['batches'] = sorted(release['batches'], key=lambda x: (x['count'], x['batch_name'].lower()), reverse=True)
+
         statuses = ['new', 'approved', 'submitting', 'submitted', 'done']
-        by_status = sorted(list(by_status), key=lambda x: statuses.index(x['_id']))
-        by_batch = sorted(list(by_batch), key=lambda x: tuple(x['_id'].split('_')), reverse=True)
+        by_status = sorted(by_status, key=lambda x: statuses.index(x['_id']))
         return by_status, by_batch
 
     def get_tickets(self):
@@ -125,9 +129,13 @@ class ObjectsInfoAPI(APIBase):
                                          {'$group': {"_id": "$_id.release",
                                                      "batches": {"$push": {"batch_name": "$_id.batch",
                                                                            "count": "$counts"}}}}])
+        by_status = list(by_status)
+        by_batch = list(by_batch)
+        for release in by_batch:
+            release['batches'] = sorted(release['batches'], key=lambda x: (x['count'], x['batch_name'].lower()), reverse=True)
+
         statuses = ['new', 'done']
-        by_status = sorted(list(by_status), key=lambda x: statuses.index(x['_id']))
-        by_batch = sorted(list(by_batch), key=lambda x: tuple(x['_id'].split('_')), reverse=True)
+        by_status = sorted(by_status, key=lambda x: statuses.index(x['_id']))
         return by_status, by_batch
 
     @APIBase.exceptions_to_errors
