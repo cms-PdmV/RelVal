@@ -14,7 +14,7 @@ from api.system_api import (LockerStatusAPI,
                             SubmissionWorkerStatusAPI,
                             SubmissionQueueAPI,
                             ObjectsInfoAPI)
-from api.search_api import SearchAPI, SuggestionsAPI
+from api.search_api import SearchAPI, SuggestionsAPI, WildSearchAPI
 from api.ticket_api import (CreateTicketAPI,
                             DeleteTicketAPI,
                             UpdateTicketAPI,
@@ -112,6 +112,7 @@ api.add_resource(SettingsAPI,
 
 api.add_resource(SearchAPI, '/api/search')
 api.add_resource(SuggestionsAPI, '/api/suggestions')
+api.add_resource(WildSearchAPI, '/api/wild_search')
 
 api.add_resource(CreateTicketAPI, '/api/tickets/create')
 api.add_resource(DeleteTicketAPI, '/api/tickets/delete')
@@ -165,8 +166,10 @@ def main():
 
     Database.add_search_rename('tickets', 'created_on', 'history.0.time')
     Database.add_search_rename('tickets', 'created_by', 'history.0.user')
+    Database.add_search_rename('tickets', 'workflows', 'workflow_ids<float>')
     Database.add_search_rename('relvals', 'created_on', 'history.0.time')
     Database.add_search_rename('relvals', 'created_by', 'history.0.user')
+    Database.add_search_rename('relvals', 'workflows', 'workflows.name')
     debug = args.get('debug', False)
     port = int(config.get('port', 8005))
     host = config.get('host', '0.0.0.0')

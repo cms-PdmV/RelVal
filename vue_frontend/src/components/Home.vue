@@ -2,6 +2,8 @@
   <div>
     <h1 class="page-title">Home</h1>
     <v-card raised class="page-card">
+      <h3>Search:</h3>
+      <wild-search></wild-search>
       <h3>Quick links:</h3>
       <ul>
         <li><a :href="'tickets/edit'">Create new Ticket</a></li>
@@ -53,12 +55,16 @@
 
 import axios from 'axios'
 import { roleMixin } from '../mixins/UserRoleMixin.js'
+import WildSearch from './WildSearch'
 
 export default {
   name: 'home',
   mixins: [
     roleMixin
   ],
+  components: {
+    WildSearch
+  },
   data () {
     return {
       objectsInfo: undefined
