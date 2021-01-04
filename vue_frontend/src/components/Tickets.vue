@@ -52,7 +52,7 @@
             <span v-if="item.workflow_ids.length">{{item.workflow_ids.length}} workflows: <small>{{item.workflow_ids.join(', ')}}</small></span>
           </template>
           <template v-slot:item.cmssw_release="{ item }">
-            <a :href="'tickets?cmssw_release=' + item.cmssw_release" :title="'Show all tickets with ' + item.cmssw_release">{{(item.cmssw_release || '').replace('_', ' ').replace(/_/g, '.')}}</a>
+            <a :href="'tickets?cmssw_release=' + item.cmssw_release" :title="'Show all tickets with ' + item.cmssw_release">{{item.cmssw_release}}</a>
           </template>
           <template v-slot:item.batch_name="{ item }">
             <a :href="'tickets?batch_name=' + item.batch_name" :title="'Show all tickets with ' + item.batch_name">{{item.batch_name}}</a>
