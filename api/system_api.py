@@ -105,6 +105,7 @@ class ObjectsInfoAPI(APIBase):
                                                                            "count": "$counts"}}}}])
         by_status = list(by_status)
         by_batch = list(by_batch)
+        by_batch = sorted(by_batch, key=lambda x: x['_id'], reverse=True)
         for release in by_batch:
             release['batches'] = sorted(release['batches'], key=lambda x: (x['count'], x['batch_name'].lower()), reverse=True)
 
@@ -131,6 +132,7 @@ class ObjectsInfoAPI(APIBase):
                                                                            "count": "$counts"}}}}])
         by_status = list(by_status)
         by_batch = list(by_batch)
+        by_batch = sorted(by_batch, key=lambda x: x['_id'], reverse=True)
         for release in by_batch:
             release['batches'] = sorted(release['batches'], key=lambda x: (x['count'], x['batch_name'].lower()), reverse=True)
 
