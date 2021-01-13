@@ -66,20 +66,29 @@ class RelValStep(ModelBase):
     lambda_checks = {
         'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'config_id': lambda cid: ModelBase.matches_regex(cid, '[a-f0-9]{0,50}'),
+        '_driver': {
+            'conditions': lambda c: not c or ModelBase.matches_regex(c, '[a-zA-Z0-9_]{0,50}'),
+            'era': lambda e: not e or ModelBase.matches_regex(e, '[a-zA-Z0-9_\\,]{0,50}'),
+            'scenario': lambda s: not s or s in {'pp', 'cosmics', 'nocoll', 'HeavyIons'},
+        },
+        '_input': {
+            'dataset': lambda ds: not ds or ModelBase.lambda_check('dataset')(ds),
+            'label': lambda l: not l or ModelBase.lambda_check('label')(l)
+        },
         'lumis_per_job': lambda l: l == '' or int(l) > 0,
         'name': lambda n: ModelBase.matches_regex(n, '[a-zA-Z0-9_\\-]{1,150}'),
         'scram_arch': ModelBase.lambda_check('scram_arch'),
     }
 
-    def __init__(self, json_input=None, parent=None):
+    def __init__(self, json_input=None, parent=None, check_attributes=True):
         if json_input:
             json_input = deepcopy(json_input)
             # Remove -- from argument names
             if json_input.get('input', {}).get('dataset'):
-                json_input['driver'] = {}
+                json_input['driver'] = self.schema().get('driver')
             else:
                 json_input['driver'] = {k.lstrip('-'): v for k, v in json_input['driver'].items()}
-                json_input['input'] = {}
+                json_input['input'] =  self.schema().get('input')
                 driver = json_input['driver']
                 if driver.get('data') and driver.get('mc'):
                     raise  Exception('Both --data and --mc are not allowed in the same step')
@@ -87,7 +96,7 @@ class RelValStep(ModelBase):
                 if driver.get('data') and driver.get('fast'):
                     raise Exception('Both --data and --fast are not allowed in the same step')
 
-        ModelBase.__init__(self, json_input)
+        ModelBase.__init__(self, json_input, check_attributes)
         if parent:
             self.parent = weakref.ref(parent)
         else:
