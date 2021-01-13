@@ -163,3 +163,21 @@ class GetWorkflowsOfCreatedRelValsAPI(APIBase):
         workflows = ticket_controller.get_workflows_list(ticket)
         workflows = '\n'.join(workflows)
         return self.output_text(workflows, content_type='text/plain')
+
+
+class GetRunTheMatrixOfTicketAPI(APIBase):
+    """
+    Endpoing for getting an automatically generated runTheMatrix.py command for a gicen ticket
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.exceptions_to_errors
+    def get(self, prepid):
+        """
+        Get runTheMatrix.py command of a ticket
+        """
+        ticket = ticket_controller.get(prepid)
+        command = ticket_controller.get_run_the_matrix(ticket)
+        return self.output_text(command, content_type='text/plain')

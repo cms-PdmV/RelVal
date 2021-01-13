@@ -283,3 +283,34 @@ class TicketController(ControllerBase):
             workflows.append('# No workflow names')
 
         return workflows
+
+    def get_run_the_matrix(self, ticket):
+        """
+        Get a runTheMatrix command for the ticket using ticket's attributes
+        """
+        command = 'runTheMatrix.py'
+        batch_name = ticket.get('batch_name')
+        matrix = ticket.get('matrix')
+        label = ticket.get('label')
+        cpu_cores = ticket.get('cpu_cores')
+        memory = ticket.get('memory')
+        custom_command = ticket.get('command')
+        workflows = ','.join([str(x) for x in ticket.get('workflow_ids')])
+        adjusted_memory = max(1000, memory - ((cpu_cores - 1) * 1500))
+        recycle_gs = ticket.get('recycle_gs')
+        # Build the command
+        command += f' -w "{matrix}"'
+        command += f' -b "{batch_name}"'
+        if label:
+            command += f' --label "{label}"'
+
+        command += f' -t {cpu_cores}'
+        command += f' -m {adjusted_memory}'
+        command += f' -l {workflows}'
+        if recycle_gs:
+            command += f' -i all'
+
+        if custom_command:
+            command += f' --command="{custom_command}"'
+
+        return command
