@@ -75,12 +75,14 @@ class RelVal(ModelBase):
         'workflow_name': lambda wn: ModelBase.matches_regex(wn, '[a-zA-Z0-9_\\-]{0,99}')
     }
 
-    def __init__(self, json_input=None):
+    def __init__(self, json_input=None, check_attributes=True):
         if json_input:
             json_input = deepcopy(json_input)
             step_objects = []
             for step_index, step_json in enumerate(json_input.get('steps', [])):
-                step = RelValStep(json_input=step_json, parent=self)
+                step = RelValStep(json_input=step_json,
+                                  parent=self,
+                                  check_attributes=check_attributes)
                 step_objects.append(step)
                 if step_index > 0 and step.get_step_type() == 'input_file':
                     raise Exception('Only first step can be input file')
@@ -90,7 +92,7 @@ class RelVal(ModelBase):
             if not isinstance(json_input['workflow_id'], (float, int)):
                 json_input['workflow_id'] = float(json_input['workflow_id'])
 
-        ModelBase.__init__(self, json_input)
+        ModelBase.__init__(self, json_input, check_attributes)
 
     def get_cmsdrivers(self, for_submission=False):
         """
