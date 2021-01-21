@@ -313,4 +313,5 @@ class TicketController(ControllerBase):
         if custom_command:
             command += f' --command="{custom_command}"'
 
+        command += ' --noCaf --wm force'
         return command
