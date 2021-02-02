@@ -1,14 +1,18 @@
 """
 Main module that starts flask web server
 """
+import sys
 import logging
+import logging.handlers
 import argparse
+import os.path
 from flask_restful import Api
 from flask_cors import CORS
 from flask import Flask, render_template
 from jinja2.exceptions import TemplateNotFound
 from core_lib.database.database import Database
 from core_lib.utils.global_config import Config
+from core_lib.utils.username_filter import UsernameFilter
 from api.system_api import (LockerStatusAPI,
                             UserInfoAPI,
                             SubmissionWorkerStatusAPI,
@@ -45,6 +49,8 @@ app = Flask(__name__,
             template_folder='./vue_frontend/dist')
 # Set flask logging to warning
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
+# Set paramiko logging to warning
+logging.getLogger('paramiko').setLevel(logging.WARNING)
 
 app.url_map.strict_slashes = False
 api = Api(app)
@@ -143,6 +149,30 @@ api.add_resource(RelValPreviousStatus, '/api/relvals/previous_status')
 api.add_resource(UpdateRelValWorkflowsAPI, '/api/relvals/update_workflows')
 
 
+def setup_logging(debug):
+    """
+    Setup logging format and place - console for debug mode and rotating files for production
+    """
+    logger = logging.getLogger()
+    logger.propagate = False
+    if debug:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.DEBUG)
+    else:
+        if not os.path.isdir('logs'):
+            os.mkdir('logs')
+
+        handler = logging.handlers.RotatingFileHandler('logs/rereco.log', 'a', 8*1024*1024, 50)
+        handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s')
+    handler.setFormatter(formatter)
+    handler.addFilter(UsernameFilter())
+    logger.handlers.clear()
+    logger.addHandler(handler)
+    return logger
+
+
 def main():
     """
     Main function: start Flask web server
@@ -173,9 +203,14 @@ def main():
     Database.add_search_rename('relvals', 'created_by', 'history.0.user')
     Database.add_search_rename('relvals', 'workflows', 'workflows.name')
     Database.add_search_rename('relvals', 'output_dataset', 'output_datasets')
+
     debug = args.get('debug', False)
     port = int(config.get('port', 8005))
     host = config.get('host', '0.0.0.0')
+
+    logger = setup_logging(debug)
+    logger.info('Starting... Debug: %s, Host: %s, Port: %s', debug, host, port)
+
     app.run(host=host,
             port=port,
             threaded=True,
