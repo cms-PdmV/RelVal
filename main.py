@@ -162,7 +162,7 @@ def setup_logging(debug):
         if not os.path.isdir('logs'):
             os.mkdir('logs')
 
-        handler = logging.handlers.RotatingFileHandler('logs/rereco.log', 'a', 8*1024*1024, 50)
+        handler = logging.handlers.RotatingFileHandler('logs/relval.log', 'a', 8*1024*1024, 50)
         handler.setLevel(logging.INFO)
 
     formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s')
