@@ -105,3 +105,6 @@ venv.bak/
 
 # nohup
 nohup.out
+
+# pid file
+*.pid

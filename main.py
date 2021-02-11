@@ -1,6 +1,7 @@
 """
 Main module that starts flask web server
 """
+import os
 import sys
 import logging
 import logging.handlers
@@ -207,8 +208,14 @@ def main():
     debug = args.get('debug', False)
     port = int(config.get('port', 8005))
     host = config.get('host', '0.0.0.0')
-
     logger = setup_logging(debug)
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        # Do only once, before the reloader
+        pid = os.getpid()
+        logger.info('PID: %s', pid)
+        with open('relval.pid', 'w') as pid_file:
+            pid_file.write(str(pid))
+
     logger.info('Starting... Debug: %s, Host: %s, Port: %s', debug, host, port)
 
     app.run(host=host,
