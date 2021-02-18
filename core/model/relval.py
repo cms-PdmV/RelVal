@@ -213,10 +213,25 @@ class RelVal(ModelBase):
         else:
             raise Exception('No steps have CMSSW release')
 
+        # Maximum length of ReqMgr2 workflow name is 100 characters and
+        # pdmvserv_..._000000_000000_0000 take up 28 characters, so 100 - 28 = 72
         relval_name = self.get_name()
         suffix = self.get_relval_string_suffix()
-        request_string = f'RV{cmssw_release}{relval_name}__{suffix}'
-        request_string = request_string.strip('_')
+        request_string = f'RV{cmssw_release}{relval_name}__{suffix}'.strip('_')
+        while len(request_string) > 72:
+            # Cut down workflow name
+            self.logger.debug('Request string %s too long (%s char)',
+                              request_string,
+                              len(request_string))
+            relval_name = '_'.join(relval_name.split('_')[:-1])
+            request_string = f'RV{cmssw_release}{relval_name}__{suffix}'.strip('_')
+            self.logger.debug('Request string shortened to %s (%s char)',
+                              request_string,
+                              len(request_string))
+            if '_' not in relval_name:
+                # Avoid infinite loop
+                break
+
         return request_string
 
     def get_name(self):
