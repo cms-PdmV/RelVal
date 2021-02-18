@@ -5,7 +5,6 @@ from copy import deepcopy
 from core.model.model_base import ModelBase
 from core.model.relval_step import RelValStep
 from core_lib.utils.common_utils import cmssw_setup
-from core_lib.utils.global_config import Config
 
 
 class RelVal(ModelBase):
@@ -109,55 +108,6 @@ class RelVal(ModelBase):
             previous_step_cmssw = step_cmssw
             built_command += step.get_command(for_submission)
             built_command += '\n\n\n\n'
-
-        return built_command.strip()
-
-    def get_config_upload(self):
-        """
-        Get config upload commands for this RelVal
-        """
-        built_command = ''
-        built_command += 'python --version\n'
-        self.logger.debug('Getting config upload script for %s', self.get_prepid())
-        database_url = Config.get('cmsweb_url') + '/couchdb'
-        file_check = 'if [ ! -s "%s.py" ]; then\n'
-        file_check += '  echo "File %s.py is missing" >&2\n'
-        file_check += '  exit 1\n'
-        file_check += 'fi\n\n'
-        for step in self.get('steps'):
-            # Run config check
-            config_name = step.get_config_file_name()
-            if config_name:
-                built_command += file_check % (config_name, config_name)
-
-        # Add path to WMCore
-        # This should be done in a smarter way
-        built_command += 'git clone --quiet https://github.com/dmwm/WMCore.git\n'
-        built_command += 'export PYTHONPATH=$(pwd)/WMCore/src/python/:$PYTHONPATH\n\n'
-        file_upload = ('python config_uploader.py --file $(pwd)/%s.py --label %s '
-                       f'--group ppd --user $(echo $USER) --db {database_url} || exit $?\n')
-        previous_step_cmssw = None
-        cmssw_versions = []
-        for step in self.get('steps'):
-            # Run config check
-            config_name = step.get_config_file_name()
-            if config_name:
-                step_cmssw = step.get('cmssw_release')
-                if step_cmssw != previous_step_cmssw:
-                    built_command += '\n'
-                    built_command += cmssw_setup(step_cmssw)
-                    built_command += '\n\n'
-                    if step_cmssw not in cmssw_versions:
-                        cmssw_versions.append(step_cmssw)
-
-                previous_step_cmssw = step_cmssw
-                built_command += file_upload % (config_name, config_name)
-
-        # Remove WMCore in order not to run out of space
-        built_command += '\n'
-        built_command += 'rm -rf WMCore\n'
-        for cmssw_version in cmssw_versions:
-            built_command += f'rm -rf {cmssw_version}\n'
 
         return built_command.strip()
 

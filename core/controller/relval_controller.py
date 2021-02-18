@@ -10,7 +10,10 @@ from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.global_config import Config
 from core_lib.utils.cache import TimeoutCache
-from core_lib.utils.common_utils import clean_split, cmssw_setup, get_scram_arch
+from core_lib.utils.common_utils import (clean_split,
+                                         cmssw_setup,
+                                         get_scram_arch,
+                                         config_cache_lite_setup)
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
@@ -127,16 +130,45 @@ class RelValController(ControllerBase):
 
         return cms_driver
 
-    def get_config_upload_file(self, relval):
+    def get_config_upload_file(self, relval, for_submission=False):
         """
         Get bash script that would upload config files to ReqMgr2
         """
         self.logger.debug('Getting config upload script for %s', relval.get_prepid())
-        upload_command = '#!/bin/bash\n\n'
-        upload_command += relval.get_config_upload()
-        upload_command += '\n\n'
+        database_url = Config.get('cmsweb_url').replace('https://', '').replace('http://', '')
+        command = '#!/bin/bash'
+        # Check if all expected config files are present
+        common_check_part = '\n\nif [ ! -s "%s.py" ]; then\n'
+        common_check_part += '  echo "File %s.py is missing" >&2\n'
+        common_check_part += '  exit 1\n'
+        common_check_part += 'fi'
+        for step in relval.get('steps'):
+            # Run config check
+            config_name = step.get_config_file_name()
+            if config_name:
+                command += common_check_part % (config_name, config_name)
 
-        return upload_command
+        # Use ConfigCacheLite and TweakMakerLite instead of WMCore
+        command += '\n\n'
+        command += config_cache_lite_setup(reuse_files=for_submission)
+        # Upload command will be identical for all configs
+        common_upload_part = ('\npython config_uploader.py --file $(pwd)/%s.py --label %s '
+                              f'--group ppd --user $(echo $USER) --db {database_url} || exit $?')
+        previous_step_cmssw = None
+        for step in relval.get('steps'):
+            # Run config uploader
+            config_name = step.get_config_file_name()
+            if config_name:
+                step_cmssw = step.get('cmssw_release')
+                if step_cmssw != previous_step_cmssw:
+                    command += '\n\n'
+                    command += cmssw_setup(step_cmssw, reuse_cmssw=for_submission)
+                    command += '\n'
+
+                command += common_upload_part % (config_name, config_name)
+                previous_step_cmssw = step_cmssw
+
+        return command.strip()
 
     def get_job_dict(self, relval):
         """
@@ -298,6 +330,7 @@ class RelValController(ControllerBase):
         command = [f'cd {remote_directory}']
         for cmssw_version, conditions in conditions_tree.items():
             # Setup CMSSW environment
+            # No need to explicitly reuse CMSSW as this happens in relval_submission directory
             command.extend(cmssw_setup(cmssw_version).split('\n'))
             conditions_string = ','.join(list(conditions.keys()))
             command += [f'python resolveAutoGlobalTag.py "{cmssw_version}" "{conditions_string}"']
