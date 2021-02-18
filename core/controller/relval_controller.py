@@ -294,12 +294,7 @@ class RelValController(ControllerBase):
         }
         """
         credentials_file = Config.get('credentials_path')
-        ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_file)
         remote_directory = Config.get('remote_path').rstrip('/')
-        # Upload python script to resolve auto globaltag by upload script
-        ssh_executor.upload_file('./core/utils/resolveAutoGlobalTag.py',
-                                 f'{remote_directory}/resolveAutoGlobalTag.py')
-
         command = [f'cd {remote_directory}']
         for cmssw_version, conditions in conditions_tree.items():
             # Setup CMSSW environment
@@ -307,7 +302,12 @@ class RelValController(ControllerBase):
             conditions_string = ','.join(list(conditions.keys()))
             command += [f'python resolveAutoGlobalTag.py "{cmssw_version}" "{conditions_string}"']
 
-        stdout, stderr, exit_code = ssh_executor.execute_command(command)
+        with SSHExecutor('lxplus.cern.ch', credentials_file) as ssh_executor:
+            # Upload python script to resolve auto globaltag by upload script
+            ssh_executor.upload_file('./core/utils/resolveAutoGlobalTag.py',
+                                     f'{remote_directory}/resolveAutoGlobalTag.py')
+            stdout, stderr, exit_code = ssh_executor.execute_command(command)
+
         if exit_code != 0:
             self.logger.error('Error resolving auto global tags:\nstdout:%s\nstderr:%s',
                               stdout,
@@ -687,7 +687,6 @@ class RelValController(ControllerBase):
 
         credentials_path = Config.get('credentials_path')
         with self.locker.get_lock('refresh-stats'):
-            ssh_executor = SSHExecutor('vocms074.cern.ch', credentials_path)
             workflow_update_commands = ['cd /home/pdmvserv/private',
                                         'source setup_credentials.sh',
                                         'cd /home/pdmvserv/Stats2']
@@ -697,7 +696,10 @@ class RelValController(ControllerBase):
                 )
 
             self.logger.info('Will make Stats2 refresh these workflows: %s', ', '.join(workflows))
-            ssh_executor.execute_command(workflow_update_commands)
+            with SSHExecutor('vocms074.cern.ch', credentials_path) as ssh_executor:
+                ssh_executor.execute_command(workflow_update_commands)
+
+            self.logger.info('Finished making Stats2 refresh workflows')
 
     def reject_workflows(self, workflows):
         """

@@ -260,6 +260,9 @@ class TicketController(ControllerBase):
 
                 # And reraise the exception
                 raise ex
+            finally:
+                # Close all SSH connections
+                ssh_executor.close_connections()
 
         return [r.get('prepid') for r in created_relvals]
 

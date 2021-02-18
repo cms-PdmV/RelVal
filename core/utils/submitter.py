@@ -189,7 +189,6 @@ class RequestSubmitter(BaseSubmitter):
         """
         prepid = relval.get_prepid()
         credentials_file = Config.get('credentials_path')
-        ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_file)
         remote_directory = Config.get('remote_path').rstrip('/')
         remote_directory = f'{remote_directory}/{prepid}'
         prepid = relval.get_prepid()
@@ -200,12 +199,17 @@ class RequestSubmitter(BaseSubmitter):
             relval = controller.get(prepid)
             try:
                 self.__check_for_submission(relval)
-                self.__prepare_workspace(relval, controller, ssh_executor, remote_directory)
-                # Start executing commands
-                # Create configs
-                self.__generate_configs(relval, ssh_executor, remote_directory)
-                # Upload configs
-                config_hashes = self.__upload_configs(relval, ssh_executor, remote_directory)
+                with SSHExecutor('lxplus.cern.ch', credentials_file) as ssh_executor:
+                    # Start executing commands
+                    self.__prepare_workspace(relval, controller, ssh_executor, remote_directory)
+                    # Create configs
+                    self.__generate_configs(relval, ssh_executor, remote_directory)
+                    # Upload configs
+                    config_hashes = self.__upload_configs(relval, ssh_executor, remote_directory)
+                    # Remove remote directory
+                    ssh_executor.execute_command([f'rm -rf {remote_directory}'])
+
+                self.logger.debug(config_hashes)
                 # Iterate through uploaded configs and save their hashes in RelVal steps
                 self.__update_steps_with_config_hashes(relval, config_hashes)
                 # Submit job dict to ReqMgr2
@@ -214,7 +218,6 @@ class RequestSubmitter(BaseSubmitter):
                 grid_cert = Config.get('grid_user_cert')
                 grid_key = Config.get('grid_user_key')
                 connection = ConnectionWrapper(host=cmsweb_url,
-                                               keep_open=True,
                                                cert_file=grid_cert,
                                                key_file=grid_key)
                 workflow_name = self.submit_job_dict(job_dict, connection)
@@ -226,7 +229,6 @@ class RequestSubmitter(BaseSubmitter):
                 time.sleep(3)
                 self.approve_workflow(workflow_name, connection)
                 connection.close()
-                ssh_executor.execute_command([f'rm -rf {remote_directory}'])
                 controller.force_stats_to_refresh([workflow_name])
             except Exception as ex:
                 self.__handle_error(relval, str(ex))
