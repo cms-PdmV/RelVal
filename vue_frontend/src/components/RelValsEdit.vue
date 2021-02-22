@@ -20,6 +20,12 @@
           <td>CPU Cores (-t)</td>
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="8"></td>
         </tr>
+        <tr v-if="editableObject.fragment">
+          <td>Custom Fragment</td>
+          <td>
+            <pre style="font-size: 0.8em"><textarea style="white-space: nowrap" v-model="editableObject.fragment" :disabled="!editingInfo.fragment"></textarea></pre>
+          </td>
+        </tr>
         <tr>
           <td>Label (--label)</td>
           <td><input type="text" v-model="editableObject.label" placeholder="E.g. gcc8 or rsb or pmx" :disabled="!editingInfo.label"></td>
