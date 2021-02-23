@@ -149,7 +149,7 @@ h1.page-title {
   margin: auto;
   margin-bottom: 16px;
   padding: 16px;
-  max-width: 777px !important;
+  max-width: 850px !important;
 }
 
 .page-card table {

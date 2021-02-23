@@ -4,13 +4,13 @@
     <v-card raised class="page-card">
       <h3>Search:</h3>
       <wild-search></wild-search>
-      <h3>Quick links:</h3>
+      <h3 class="mt-3">Quick links:</h3>
       <ul>
         <li><a :href="'tickets/edit'">Create new Ticket</a></li>
         <li v-if="userInfo"><a :href="'tickets?created_by=' + userInfo.username">My Tickets</a> - show tickets created by me</li>
         <li v-if="userInfo"><a :href="'relvals?created_by=' + userInfo.username + '&sort=created_on&sort_asc=false'">My RelVals</a> - show RelVals created by me</li>
       </ul>
-      <h3>Objects in RelVal database:</h3>
+      <h3 class="mt-3">Objects in RelVal database:</h3>
       <ul>
         <li><a :href="'tickets'">Tickets</a>
           <ul v-if="objectsInfo">
