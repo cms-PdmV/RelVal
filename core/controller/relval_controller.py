@@ -87,6 +87,7 @@ class RelValController(ControllerBase):
         editing_info['campaign_timestamp'] = False
         editing_info['cmssw_release'] = creating_new
         editing_info['cpu_cores'] = is_new
+        editing_info['fragment'] = is_new
         editing_info['memory'] = is_new
         editing_info['label'] = is_new
         editing_info['notes'] = True

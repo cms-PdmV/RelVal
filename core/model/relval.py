@@ -25,6 +25,8 @@ class RelVal(ModelBase):
         'cmssw_release': '',
         # CPU cores
         'cpu_cores': 1,
+        # Custom fragment for the first step
+        'fragment': '',
         # Action history
         'history': [],
         # Label
@@ -99,17 +101,45 @@ class RelVal(ModelBase):
         """
         built_command = ''
         previous_step_cmssw = None
-        for step in self.get('steps'):
+        fragment = self.get('fragment')
+        prepid = self.get_prepid()
+        for index, step in enumerate(self.get('steps')):
             step_cmssw = step.get('cmssw_release')
             if step_cmssw != previous_step_cmssw:
                 built_command += cmssw_setup(step_cmssw, reuse_cmssw=for_submission)
                 built_command += '\n\n'
 
             previous_step_cmssw = step_cmssw
-            built_command += step.get_command(for_submission)
+            if index == 0 and fragment and step.get_step_type() == 'cms_driver':
+                # If this is the first step, is cmsDriver and fragment is present,
+                # then add the fragment and rebuild CMSSW
+                fragment_file = f'Configuration/GenProduction/python/{prepid}-{index}-fragment.py'
+                built_command += self.get_fragment_command(fragment, fragment_file)
+                built_command += '\n\n'
+                step.get('driver')['type'] = fragment_file
+
+            built_command += step.get_command(for_submission=for_submission)
             built_command += '\n\n\n\n'
 
         return built_command.strip()
+
+    def get_fragment_command(self, fragment, fragment_file):
+        """
+        Create a bash command that makes a fragment file and rebuilds the CMSSW
+        """
+        fragment = fragment.replace('\n', '\\n').replace('"', '\\"')
+        command = ['# Custom fragment for step 1:',
+                   'cd $CMSSW_SRC',
+                   f'mkdir -p $(dirname {fragment_file})',
+                   '',
+                   '# Write framgment to file',
+                   f'printf "{fragment}" > {fragment_file}',
+                   '',
+                   '# Rebuild the CMSSW with new fragment:',
+                   'scram b',
+                   'cd $ORG_PWD']
+
+        return '\n'.join(command)
 
     def get_relval_string_suffix(self):
         """
