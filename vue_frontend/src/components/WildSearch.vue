@@ -198,6 +198,7 @@ import axios from 'axios'
   margin-bottom: 2px;
   display:flex;
   justify-content: space-between;
+  font-size: 0.9em;
 }
 
 .suggestion-item-hover {

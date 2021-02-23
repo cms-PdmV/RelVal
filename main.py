@@ -203,6 +203,7 @@ def main():
     Database.add_search_rename('relvals', 'created_on', 'history.0.time')
     Database.add_search_rename('relvals', 'created_by', 'history.0.user')
     Database.add_search_rename('relvals', 'workflows', 'workflows.name')
+    Database.add_search_rename('relvals', 'workflow', 'workflows.name')
     Database.add_search_rename('relvals', 'output_dataset', 'output_datasets')
 
     debug = args.get('debug', False)

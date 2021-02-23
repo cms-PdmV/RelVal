@@ -13,17 +13,17 @@
           </template>
         </li>
       </ul>
-      <h3>Submission queue ({{submission_queue.length}})</h3>
+      <h3 class="mt-3">Submission queue ({{submission_queue.length}})</h3>
       <ul>
         <li v-for="name in submission_queue" :key="name"><a :href="'relvals?prepid=' + name" title="Show this RelVal">{{name}}</a> is waiting in queue</li>
       </ul>
-      <h3 v-if="role('manager')">Settings ({{Object.keys(settings).length}})</h3>
+      <h3 class="mt-3" v-if="role('manager')">Settings ({{Object.keys(settings).length}})</h3>
       <small v-if="role('manager')">
         <ul>
           <li v-for="setting in settings" :key="setting._id">{{setting._id}}: <pre>{{JSON.stringify(setting.value, null, 2)}}</pre></li>
         </ul>
       </small>
-      <h3 v-if="role('administrator')">Locked objects ({{Object.keys(locks).length}})</h3>
+      <h3 class="mt-3" v-if="role('administrator')">Locked objects ({{Object.keys(locks).length}})</h3>
       <small v-if="role('administrator')">
         <ul>
           <li v-for="(info, lock) in locks" :key="lock">{{lock}}: {{info}}</li>
