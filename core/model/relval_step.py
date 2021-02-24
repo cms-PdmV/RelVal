@@ -150,7 +150,7 @@ class RelValStep(ModelBase):
         Build a cmsDriver command from given arguments
         Add comment in front of the command
         """
-        cmsdriver_type = self.get('driver')['type']
+        cmsdriver_type = arguments['type']
         if not cmsdriver_type:
             cmsdriver_type = f'step{step_index + 1}'
 
@@ -214,7 +214,7 @@ class RelValStep(ModelBase):
         command += f'echo \'{lumi_json}\' > {lumis_name}'
         return comment + '\n' + command
 
-    def get_command(self, for_submission=False):
+    def get_command(self, custom_fragment=None, for_submission=False):
         """
         Return a cmsDriver command for this step
         Config file is named like this
@@ -228,6 +228,8 @@ class RelValStep(ModelBase):
             return self.__build_das_command(index)
 
         arguments_dict = deepcopy(self.get('driver'))
+        if custom_fragment:
+            arguments_dict['type'] = custom_fragment
 
         # No execution
         arguments_dict['no_exec'] = True

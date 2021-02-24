@@ -106,19 +106,28 @@ class RelVal(ModelBase):
         for index, step in enumerate(self.get('steps')):
             step_cmssw = step.get('cmssw_release')
             if step_cmssw != previous_step_cmssw:
-                built_command += cmssw_setup(step_cmssw, reuse_cmssw=for_submission)
+                reuse_cmssw = for_submission and (index != 0 or not fragment)
+                built_command += cmssw_setup(step_cmssw, reuse_cmssw=reuse_cmssw)
                 built_command += '\n\n'
 
             previous_step_cmssw = step_cmssw
+            custom_fragment_name = None
             if index == 0 and fragment and step.get_step_type() == 'cms_driver':
                 # If this is the first step, is cmsDriver and fragment is present,
                 # then add the fragment and rebuild CMSSW
-                fragment_file = f'Configuration/GenProduction/python/{prepid}-{index}-fragment.py'
-                built_command += self.get_fragment_command(fragment, fragment_file)
-                built_command += '\n\n'
-                step.get('driver')['type'] = fragment_file
+                fragment_name = step.get('driver')['type']
+                if not fragment_name:
+                    fragment_name = f'{prepid}-{index}-fragment'
 
-            built_command += step.get_command(for_submission=for_submission)
+                custom_fragment_name = f'Configuration/GenProduction/python/{fragment_name}'
+                if not custom_fragment_name.endswith('.py'):
+                    custom_fragment_name += '.py'
+
+                built_command += self.get_fragment_command(fragment, custom_fragment_name)
+                built_command += '\n\n'
+
+            built_command += step.get_command(custom_fragment=custom_fragment_name,
+                                              for_submission=for_submission)
             built_command += '\n\n\n\n'
 
         return built_command.strip()
