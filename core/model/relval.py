@@ -118,6 +118,10 @@ class RelVal(ModelBase):
                 fragment_name = step.get('driver')['type']
                 if not fragment_name:
                     fragment_name = f'{prepid}-{index}-fragment'
+                else:
+                    # Sometimes there is a full path
+                    fragment_name = fragment_name.split('/')[-1]
+                    fragment_name = f'custom-{fragment_name}'
 
                 custom_fragment_name = f'Configuration/GenProduction/python/{fragment_name}'
                 if not custom_fragment_name.endswith('.py'):
