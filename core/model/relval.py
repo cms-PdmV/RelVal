@@ -145,7 +145,7 @@ class RelVal(ModelBase):
                    'cd $CMSSW_SRC',
                    f'mkdir -p $(dirname {fragment_file})',
                    '',
-                   '# Write framgment to file',
+                   '# Write fragment to file',
                    f'printf "{fragment}" > {fragment_file}',
                    '',
                    '# Rebuild the CMSSW with new fragment:',

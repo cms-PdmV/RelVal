@@ -10,7 +10,7 @@
       <td>{{niceDate(entry.time)}}</td>
       <td>{{entry.user}}</td>
       <td>{{entry.action}}</td>
-      <td v-html='historyValue(entry.value)'></td>
+      <td v-html='historyValue(entry)'></td>
     </tr>
   </table>
 </template>
@@ -29,9 +29,14 @@ export default {
     niceDate: function (time) {
       return dateFormat(new Date(time * 1000), 'yyyy-mm-dd HH:MM:ss')
     },
-    historyValue: function(value) {
+    historyValue: function(entry) {
+      let value = entry.value;
       if (typeof value === 'string' || value instanceof String) {
         return value;
+      }
+      let action = entry.action;
+      if (action === 'update' && value instanceof Array) {
+        return '<pre>' + value.join(',\n') + '</pre>'
       }
       return '<pre>' + JSON.stringify(value, null, 2) + '</pre>';
     }

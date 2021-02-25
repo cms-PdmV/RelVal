@@ -39,6 +39,9 @@
           <template v-slot:item.notes="{ item }">
             <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
           </template>
+          <template v-slot:item.fragment="{ item }">
+            <pre v-if="item.fragment.length" class="fragment">{{item.fragment}}</pre>
+          </template>
           <template v-slot:item.memory="{ item }">
             {{item.memory}} MB
           </template>
@@ -89,7 +92,8 @@
           </template>
           <template v-slot:item.campaign_timestamp="{ item }">
             <template v-if="item.campaign_timestamp">
-              <a :href="'relvals?cmssw_release=' + item.cmssw_release + '&batch_name=' + item.batch_name + '&campaign_timestamp=' + item.campaign_timestamp" :title="'Show RelVals in ' + item.cmssw_release + '__' + item.batch_name + ' campaign with ' + item.campaign_timestamp + ' timestamp'">{{item.campaign_timestamp}}</a> | {{niceDate(item.campaign_timestamp)}}
+              <a :href="'relvals?cmssw_release=' + item.cmssw_release + '&batch_name=' + item.batch_name + '&campaign_timestamp=' + item.campaign_timestamp" :title="'Show RelVals in ' + item.cmssw_release + '__' + item.batch_name + ' campaign with ' + item.campaign_timestamp + ' timestamp'">{{item.cmssw_release + '__' + item.batch_name + '-' + item.campaign_timestamp}}</a>
+              <small> ({{niceDate(item.campaign_timestamp)}})</small>
             </template>
             <template v-else>
               Not set
@@ -197,7 +201,8 @@ export default {
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1},
         {'dbName': 'notes', 'displayName': 'Notes', 'visible': 1},
         {'dbName': '_workflow', 'displayName': 'Workflow', 'visible': 1},
-        {'dbName': 'campaign_timestamp', 'displayName': 'Campaign Timestamp', 'visible': 0},
+        {'dbName': 'campaign_timestamp', 'displayName': 'Campaign', 'visible': 0},
+        {'dbName': 'fragment', 'displayName': 'Fragment', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
         {'dbName': 'output_datasets', 'displayName': 'Output Datasets', 'visible': 0},

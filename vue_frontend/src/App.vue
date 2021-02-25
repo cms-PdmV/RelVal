@@ -114,7 +114,7 @@ table {
   white-space: nowrap;
 }
 
-.notes {
+.notes, .fragment {
   font-size: 0.85em;
   font-style: monospace;
   margin: 4px;

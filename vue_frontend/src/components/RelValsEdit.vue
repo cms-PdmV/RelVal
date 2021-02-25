@@ -23,7 +23,7 @@
         <tr>
           <td>Custom Fragment</td>
           <td>
-            <pre style="font-size: 0.8em"><textarea style="white-space: nowrap" v-model="editableObject.fragment" :disabled="!editingInfo.fragment"></textarea></pre>
+            <pre style="font-size: 0.8em"><textarea style="white-space: pre" v-model="editableObject.fragment" :disabled="!editingInfo.fragment"></textarea></pre>
           </td>
         </tr>
         <tr>
@@ -189,7 +189,7 @@
                     <td>Extra</td><td><input type="text" v-model="step.driver.extra" placeholder="Any arguments that are not specified above" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>Type</td><td><input type="text" v-model="step.driver.type" placeholder="E.g. Configuration/Generator/<filename>.py" :disabled="!editingInfo.steps"></td>
+                    <td>Type (fragment name)</td><td><input type="text" v-model="step.driver.type" placeholder="E.g. Configuration/Generator/<filename>.py" :disabled="!editingInfo.steps"></td>
                   </tr>
                 </template>
               </table>
@@ -294,6 +294,7 @@ export default {
       let editableObject = this.makeCopy(this.editableObject);
       let component = this;
       editableObject.notes = editableObject.notes.trim();
+      editableObject.fragment = editableObject.fragment.trim();
       for (let step of editableObject.steps) {
         step.input.lumisection = JSON.parse(step.input.lumisection);
         step.driver.datatier = this.cleanSplit(step.driver.datatier);
