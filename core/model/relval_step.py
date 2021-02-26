@@ -43,7 +43,7 @@ class RelValStep(ModelBase):
             'process': '',
             'relval': '',
             'runUnscheduled': False,
-            'type': '',
+            'fragment_name': '',
             'scenario': '',
             'step': [],
         },
@@ -150,17 +150,17 @@ class RelValStep(ModelBase):
         Build a cmsDriver command from given arguments
         Add comment in front of the command
         """
-        cmsdriver_type = arguments['type']
-        if not cmsdriver_type:
-            cmsdriver_type = f'step{step_index + 1}'
+        fragment_name = arguments['fragment_name']
+        if not fragment_name:
+            fragment_name = f'step{step_index + 1}'
 
-        self.logger.info('Generating %s cmsDriver for step %s', cmsdriver_type, step_index)
+        self.logger.info('Generating %s cmsDriver for step %s', fragment_name, step_index)
         # Actual command
-        command = f'# Command for step {step_index + 1}:\ncmsDriver.py {cmsdriver_type}'
+        command = f'# Command for step {step_index + 1}:\ncmsDriver.py {fragment_name}'
         # Comment in front of the command for better readability
         comment = f'# Arguments for step {step_index + 1}:\n'
         for key in sorted(arguments.keys()):
-            if key in ('type', 'extra'):
+            if key in ('fragment_name', 'extra'):
                 continue
 
             if not arguments[key]:
@@ -229,7 +229,7 @@ class RelValStep(ModelBase):
 
         arguments_dict = deepcopy(self.get('driver'))
         if custom_fragment:
-            arguments_dict['type'] = custom_fragment
+            arguments_dict['fragment_name'] = custom_fragment
 
         # No execution
         arguments_dict['no_exec'] = True

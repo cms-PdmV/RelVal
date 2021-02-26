@@ -115,7 +115,7 @@ class RelVal(ModelBase):
             if index == 0 and fragment and step.get_step_type() == 'cms_driver':
                 # If this is the first step, is cmsDriver and fragment is present,
                 # then add the fragment and rebuild CMSSW
-                fragment_name = step.get('driver')['type']
+                fragment_name = step.get('driver')['fragment_name']
                 if not fragment_name:
                     fragment_name = f'{prepid}-{index}-fragment'
                 else:

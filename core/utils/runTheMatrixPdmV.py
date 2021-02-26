@@ -98,7 +98,7 @@ def build_cmsdriver(arguments, step_index):
     driver_step_name = 'step%s' % (step_index + 1)
     for arg_name in sorted(arguments.keys(), key=lambda x: x.replace('-', '', 2).lower()):
         arg_value = arguments[arg_name]
-        if arg_name.lower() == 'step_type':
+        if arg_name == 'fragment_name':
             driver_step_name = arg_value
             continue
 
@@ -231,7 +231,7 @@ def main():
                     workflow_step['--step'] = workflow_step.pop('-s')
 
                 if 'cfg' in workflow_step:
-                    workflow_step['type'] = workflow_step.pop('cfg')
+                    workflow_step['fragment_name'] = workflow_step.pop('cfg')
 
                 if '-n' in workflow_step:
                     workflow_step['--number'] = workflow_step.pop('-n')

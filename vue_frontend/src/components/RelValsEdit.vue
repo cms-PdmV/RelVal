@@ -189,7 +189,7 @@
                     <td>Extra</td><td><input type="text" v-model="step.driver.extra" placeholder="Any arguments that are not specified above" :disabled="!editingInfo.steps"></td>
                   </tr>
                   <tr>
-                    <td>Type (fragment name)</td><td><input type="text" v-model="step.driver.type" placeholder="E.g. Configuration/Generator/<filename>.py" :disabled="!editingInfo.steps"></td>
+                    <td>Fragment name</td><td><input type="text" v-model="step.driver.fragment_name" placeholder="E.g. Configuration/Generator/<filename>.py" :disabled="!editingInfo.steps"></td>
                   </tr>
                 </template>
               </table>

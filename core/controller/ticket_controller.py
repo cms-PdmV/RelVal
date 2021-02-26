@@ -127,7 +127,7 @@ class TicketController(ControllerBase):
         driver_keys = {f'--{key}' for key in driver_schema.keys()}
         extra = ''
         for key, value in arguments.items():
-            if key == 'type':
+            if key == 'fragment_name':
                 continue
 
             if key not in driver_keys:
