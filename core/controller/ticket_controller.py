@@ -58,6 +58,7 @@ class TicketController(ControllerBase):
         editing_info['matrix'] = not_done
         editing_info['memory'] = not_done
         editing_info['notes'] = True
+        editing_info['n_streams'] = not_done
         editing_info['recycle_gs'] = not_done
         editing_info['rewrite_gt_string'] = not_done
         editing_info['sample_tag'] = not_done
@@ -176,6 +177,7 @@ class TicketController(ControllerBase):
             label = ticket.get('label')
             sample_tag = ticket.get('sample_tag')
             cpu_cores = ticket.get('cpu_cores')
+            n_streams = ticket.get('n_streams')
             memory = ticket.get('memory')
             rewrite_gt_string = ticket.get('rewrite_gt_string')
             recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
@@ -239,6 +241,9 @@ class TicketController(ControllerBase):
                     for step_dict in workflow_dict['steps']:
                         new_step = self.make_relval_step_dict(step_dict)
                         new_step['cmssw_release'] = cmssw_release
+                        if n_streams > 0:
+                            new_step['driver']['nStreams'] = n_streams
+
                         self.rewrite_gt_string_if_needed(new_step, rewrite_gt_string)
                         workflow_json['steps'].append(new_step)
 

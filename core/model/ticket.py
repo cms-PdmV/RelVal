@@ -35,6 +35,8 @@ class Ticket(ModelBase):
         'memory': 2000,
         # User notes
         'notes': '',
+        # nStreams to be used in all steps, 0 defaults to nThreads
+        'n_streams': 0,
         # Whether to recycle first step
         'recycle_gs': False,
         # String to rewrite middle part of INPUT dataset(s) /.../THIS/...
@@ -56,6 +58,7 @@ class Ticket(ModelBase):
         'label': ModelBase.lambda_check('label'),
         'matrix': ModelBase.lambda_check('matrix'),
         'memory': ModelBase.lambda_check('memory'),
+        'n_streams': lambda streams: 0 <= streams <= 16,
         'rewrite_gt_string': lambda rgs: ModelBase.matches_regex(rgs, '[a-zA-Z0-9\\.\\-_]{0,199}'),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
         'status': lambda status: status in ('new', 'done'),

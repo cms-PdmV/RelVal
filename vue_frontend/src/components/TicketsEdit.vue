@@ -65,6 +65,14 @@
           <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run2, Run3, Phase2, HIN, GEN, ..." :disabled="!editingInfo.sample_tag"></td>
         </tr>
         <tr>
+          <td>Streams (--nStreams)</td>
+          <td>
+            <input type="number" v-model="editableObject.n_streams" min="0" max="16" step="1" :disabled="!editingInfo.n_streams">
+            <br>
+            <small style="opacity: 0.5">If number of streams is 0, default value will be used</small>
+          </td>
+        </tr>
+        <tr>
           <td>Workflow IDs ({{workflowListLength(editableObject.workflow_ids)}})</td>
           <td><textarea v-model="editableObject.workflow_ids" :placeholder="'Comma or newline separated workflow IDs, e.g. \n136.801,136.802 \n1302.181 \n10848'" :disabled="!editingInfo.workflow_ids"></textarea></td>
         </tr>

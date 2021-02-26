@@ -77,8 +77,8 @@
                 <tr v-if="index == 0">
                   <td>RelVal Step type</td>
                   <td>
-                    <input type="radio" class="mr-1" v-model="step.step_type" :name="'step' + index" :value="'input'">Input dataset
-                    <input type="radio" class="mr-1 ml-2" v-model="step.step_type" :name="'step' + index" :value="'driver'">cmsDriver
+                    <input type="radio" class="mr-1" v-model="step.step_type" :name="'step' + index" :value="'input'" :disabled="!editingInfo.steps">Input dataset
+                    <input type="radio" class="mr-1 ml-2" v-model="step.step_type" :name="'step' + index" :value="'driver'" :disabled="!editingInfo.steps">cmsDriver
                   </td>
                 </tr>
                 <template v-if="step.step_type == 'input'">

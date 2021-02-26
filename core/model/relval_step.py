@@ -88,7 +88,7 @@ class RelValStep(ModelBase):
                 json_input['driver'] = self.schema().get('driver')
             else:
                 json_input['driver'] = {k.lstrip('-'): v for k, v in json_input['driver'].items()}
-                json_input['input'] =  self.schema().get('input')
+                json_input['input'] = self.schema().get('input')
                 driver = json_input['driver']
                 if driver.get('data') and driver.get('mc'):
                     raise  Exception('Both --data and --mc are not allowed in the same step')

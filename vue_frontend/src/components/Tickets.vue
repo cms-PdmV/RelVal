@@ -168,6 +168,7 @@ export default {
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0},
         {'dbName': 'rewrite_gt_string', 'displayName': 'Rewrite GT String', 'visible': 0},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0},
+        {'dbName': 'n_streams', 'displayName': 'Streams', 'visible': 0},
       ],
       headers: [],
       dataItems: [],
