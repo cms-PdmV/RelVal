@@ -244,6 +244,11 @@ class RelValStep(ModelBase):
             customise_commands += f'cms.untracked.uint32({events_per_lumi})"'
             arguments_dict['customise_commands'] = customise_commands.lstrip(';')
 
+        # Add number of cpu cores of the RelVal
+        cpu_cores = self.parent().get('cpu_cores')
+        if cpu_cores > 1:
+            arguments_dict['nThreads'] = cpu_cores
+
         all_steps = self.parent().get('steps')
         if index > 0:
             previous = all_steps[index - 1]
