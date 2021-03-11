@@ -208,7 +208,7 @@ class RelValController(ControllerBase):
         # Set DbsUrl differently for dev and prod versions
         # "URL to the DBS instance where the input data is registered"
         if not Config.get('development'):
-            job_dict['DbsUrl'] = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
+            job_dict['DbsUrl'] = 'https://cmsweb-prod.cern.ch/dbs/prod/global/DBSReader'
         else:
             job_dict['DbsUrl'] = 'https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader'
 
@@ -510,7 +510,7 @@ class RelValController(ControllerBase):
 
         grid_cert = Config.get('grid_user_cert')
         grid_key = Config.get('grid_user_key')
-        dbs_conn = ConnectionWrapper(host='cmsweb.cern.ch',
+        dbs_conn = ConnectionWrapper(host='cmsweb-prod.cern.ch',
                                      cert_file=grid_cert,
                                      key_file=grid_key)
         self.logger.info('Will check datasets: %s', datasets_to_check)
