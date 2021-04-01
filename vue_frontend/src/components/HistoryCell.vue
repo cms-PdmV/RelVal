@@ -35,8 +35,11 @@ export default {
         return value;
       }
       let action = entry.action;
-      if (action === 'update' && value instanceof Array) {
-        return '<pre>' + value.join(',\n') + '</pre>'
+      if ((action === 'update' || action == 'created_relvals') && value instanceof Array) {
+        return '<pre>' + value.join(',\n') + '</pre>';
+      }
+      if (action === 'rename' && value instanceof Array) {
+        return value.join(' -> ');
       }
       return '<pre>' + JSON.stringify(value, null, 2) + '</pre>';
     }
