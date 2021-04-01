@@ -2,23 +2,24 @@
   <div>
     <h1 class="page-title">System Dashboard</h1>
     <v-card raised class="page-card">
-      <h3>Submission threads ({{Object.keys(submission_workers).length}})</h3>
+      <h3>Submission threads ({{Object.keys(submissionWorkers).length}})</h3>
       <ul>
-        <li v-for="(info, worker) in submission_workers" :key="worker">"{{worker}}" is
-          <template v-if="info.job_name">
-            working on <a :href="'relvals?prepid=' + info.job_name" title="Show this RelVal">{{info.job_name}}</a> for {{info.job_time}}s
-          </template>
-          <template v-else>
-            not busy
-          </template>
-        </li>
+        <li v-for="(info, worker) in submissionWorkers" :key="worker">Thread "{{worker}}" is {{info.job_name ? 'working on ' + info.job_name + ' for ' + info.job_time + 's' : 'not busy'}}</li>
       </ul>
-      <h3 class="mt-3">Submission queue ({{submission_queue.length}})</h3>
+      <h3>Submission queue ({{submissionQueue.length}})</h3>
       <ul>
-        <li v-for="name in submission_queue" :key="name"><a :href="'relvals?prepid=' + name" title="Show this RelVal">{{name}}</a> is waiting in queue</li>
+        <li v-for="name in submissionQueue" :key="name"><a :href="'relvals?prepid=' + name" title="Show this RelVal">{{name}}</a> is waiting in queue</li>
       </ul>
-      <h3 class="mt-3" v-if="role('manager')">Settings ({{Object.keys(settings).length}})</h3>
-      <small v-if="role('manager')">
+      <h3 v-if="role('administrator')">Build info</h3>
+      <ul v-if="role('administrator')">
+        <li>Build version: {{buildInfo}}</li>
+      </ul>
+      <h3 v-if="role('administrator')">System uptime</h3>
+      <ul v-if="role('administrator')">
+        <li>{{uptime.days}} days {{uptime.hours}} hours {{uptime.minutes}} minutes {{uptime.seconds}} seconds</li>
+      </ul>
+      <h3 v-if="role('administrator')">Settings ({{Object.keys(settings).length}})</h3>
+      <small v-if="role('administrator')">
         <ul>
           <li v-for="setting in settings" :key="setting._id">{{setting._id}}: <pre>{{JSON.stringify(setting.value, null, 2)}}</pre></li>
         </ul>
@@ -44,10 +45,13 @@ export default {
   mixins: [roleMixin],
   data () {
     return {
-      submission_workers: [],
-      submission_queue: [],
+      submissionWorkers: [],
+      submissionQueue: [],
       locks: [],
       settings: [],
+      uptime: {},
+      buildInfo: undefined,
+      refreshInterval: 60000
     }
   },
   watch: {
@@ -55,6 +59,8 @@ export default {
       handler: function () {
         this.fetchLocksInfo();
         this.fetchSettings();
+        this.fetchUptime();
+        this.fetchBuildInfo();
       },
       deep: true
     },
@@ -64,23 +70,27 @@ export default {
     this.fetchLocksInfo();
     this.fetchQueueInfo();
     this.fetchSettings();
-    setInterval(this.fetchWorkerInfo, 60000);
-    setInterval(this.fetchQueueInfo, 60000);
-    setInterval(this.fetchLocksInfo, 60000);
-    setInterval(this.fetchSettings, 60000);
+    this.fetchUptime();
+    this.fetchBuildInfo();
+    setInterval(this.fetchWorkerInfo, this.refreshInterval);
+    setInterval(this.fetchQueueInfo, this.refreshInterval);
+    setInterval(this.fetchLocksInfo, this.refreshInterval);
+    setInterval(this.fetchSettings, this.refreshInterval);
+    setInterval(this.fetchUptime, this.refreshInterval);
+    setInterval(this.fetchBuildInfo, this.refreshInterval);
   },
   methods: {
     fetchWorkerInfo () {
       let component = this;
       axios.get('api/system/workers').then(response => {
-        component.submission_workers = response.data.response;
+        component.submissionWorkers = response.data.response;
 
       });
     },
     fetchQueueInfo () {
       let component = this;
       axios.get('api/system/queue').then(response => {
-        component.submission_queue = response.data.response;
+        component.submissionQueue = response.data.response;
 
       });
     },
@@ -93,13 +103,29 @@ export default {
       }
     },
     fetchSettings () {
-      if (this.role('manager')) {
+      if (this.role('administrator')) {
         let component = this;
         axios.get('api/settings/get').then(response => {
           component.settings = response.data.response;
         });
       }
-    }
+    },
+    fetchUptime () {
+      if (this.role('administrator')) {
+        let component = this;
+        axios.get('api/system/uptime').then(response => {
+          component.uptime = response.data.response;
+        });
+      }
+    },
+    fetchBuildInfo () {
+      if (this.role('administrator')) {
+        let component = this;
+        axios.get('api/system/build_info').then(response => {
+          component.buildInfo = response.data.response;
+        });
+      }
+    },
   }
 }
 </script>

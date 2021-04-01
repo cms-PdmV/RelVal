@@ -18,7 +18,9 @@ from api.system_api import (LockerStatusAPI,
                             UserInfoAPI,
                             SubmissionWorkerStatusAPI,
                             SubmissionQueueAPI,
-                            ObjectsInfoAPI)
+                            ObjectsInfoAPI,
+                            BuildInfoAPI,
+                            UptimeInfoAPI)
 from api.search_api import SearchAPI, SuggestionsAPI, WildSearchAPI
 from api.ticket_api import (CreateTicketAPI,
                             DeleteTicketAPI,
@@ -113,6 +115,8 @@ api.add_resource(UserInfoAPI, '/api/system/user_info')
 api.add_resource(SubmissionWorkerStatusAPI, '/api/system/workers')
 api.add_resource(SubmissionQueueAPI, '/api/system/queue')
 api.add_resource(ObjectsInfoAPI, '/api/system/objects_info')
+api.add_resource(BuildInfoAPI, '/api/system/build_info')
+api.add_resource(UptimeInfoAPI, '/api/system/uptime')
 
 api.add_resource(SettingsAPI,
                  '/api/settings/get',

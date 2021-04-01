@@ -1,6 +1,8 @@
 """
 Module that contains all system APIs
 """
+import time
+import os.path
 from core_lib.api.api_base import APIBase
 from core_lib.utils.locker import Locker
 from core_lib.database.database import Database
@@ -151,5 +153,58 @@ class ObjectsInfoAPI(APIBase):
                                                            'by_batch': relvals_by_batch},
                                               'tickets' : {'by_status': tickets_by_status,
                                                            'by_batch': tickets_by_batch}},
+                                 'success': True,
+                                 'message': ''})
+
+
+class BuildInfoAPI(APIBase):
+    """
+    Endpoint for getting build information if it is available
+    """
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.exceptions_to_errors
+    def get(self):
+        """
+        Get build version if release_timestamp file exists
+        """
+        build_version = '<unavailable>'
+        if os.path.isfile('release_timestamp'):
+            with open('release_timestamp') as timestamp_file:
+                build_version = timestamp_file.read()
+
+        return self.output_text({'response': build_version, 'success': True, 'message': ''})
+
+
+class UptimeInfoAPI(APIBase):
+    """
+    Endpoint for getting uptime information
+    """
+
+    start_time = time.time()
+
+    def __init__(self):
+        APIBase.__init__(self)
+
+    @APIBase.exceptions_to_errors
+    def get(self):
+        """
+        Get number of seconds since start
+        """
+        uptime = int(time.time() - self.start_time)
+        seconds = uptime
+        days = int(seconds / 86400)
+        seconds -= days * 86400
+        hours = int(seconds / 3600)
+        seconds -= hours * 3600
+        minutes = int(seconds / 60)
+        seconds -= minutes * 60
+        return self.output_text({'response': {'uptime': uptime,
+                                              'days': days,
+                                              'hours': hours,
+                                              'minutes': minutes,
+                                              'seconds': seconds},
                                  'success': True,
                                  'message': ''})
