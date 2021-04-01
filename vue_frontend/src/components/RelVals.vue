@@ -22,6 +22,7 @@
           <template v-slot:item._actions="{ item }">
             <a :href="'relvals/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>&nbsp;
             <a style="text-decoration: underline;" @click="deleteRelVals([item])" v-if="item.status == 'new' && role('manager')">Delete</a>&nbsp;
+            <a :href="'relvals/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone RelVal">Clone</a>&nbsp;
             <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>&nbsp;
             <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>&nbsp;
             <a :href="'api/relvals/get_config_upload/' + item.prepid" v-if="role('administrator')" title="Show config upload script">Config upload</a>&nbsp;
