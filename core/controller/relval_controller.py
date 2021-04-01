@@ -41,8 +41,9 @@ class RelValController(ControllerBase):
         else:
             first_step = RelValStep(json_input=json_data.get('steps')[0])
             workflow_name = first_step.get_short_name()
+            json_data['workflow_name'] = workflow_name
 
-        prepid_part = f'{cmssw_release}__{batch_name}-{workflow_name}'
+        prepid_part = f'{cmssw_release}__{batch_name}-{workflow_name}'.strip('-_')
         json_data['prepid'] = f'{prepid_part}-00000'
         for step in json_data['steps']:
             if not step.get('cmssw_release'):
@@ -76,6 +77,39 @@ class RelValController(ControllerBase):
 
                 new_step.set('scram_arch', scram_arch)
 
+    def after_update(self, old_obj, new_obj, changed_values):
+        self.logger.info('Changed values: %s', changed_values)
+        if 'workflow_name' in changed_values:
+            new_relval = self.create(new_obj.get_json())
+            old_prepid = old_obj.get_prepid()
+            new_prepid = new_relval.get_prepid()
+            new_relval.set('history', old_obj.get('history'))
+            new_relval.add_history('rename', [old_prepid, new_prepid], None)
+            relvals_db = Database('relvals')
+            relvals_db.save(new_relval.get_json())
+            self.logger.info('Created %s as rename of %s', new_prepid, old_prepid)
+            new_obj.set('prepid', new_prepid)
+            # Update the ticket...
+            tickets_db = Database('tickets')
+            tickets = tickets_db.query(f'created_relvals={old_obj.get_prepid()}')
+            self.logger.debug(json.dumps(tickets, indent=2))
+            for ticket_json in tickets:
+                ticket_prepid = ticket_json['prepid']
+                with self.locker.get_lock(ticket_prepid):
+                    ticket_json = tickets_db.get(ticket_prepid)
+                    ticket = Ticket(json_input=ticket_json)
+                    created_relvals = ticket.get('created_relvals')
+                    if old_prepid in created_relvals:
+                        created_relvals.remove(old_prepid)
+
+                    created_relvals.append(new_prepid)
+                    ticket.set('created_relvals', created_relvals)
+                    ticket.add_history('rename', [old_prepid, new_prepid], None)
+                    tickets_db.save(ticket.get_json())
+
+            self.delete(old_obj.get_json())
+
+
     def get_editing_info(self, obj):
         editing_info = super().get_editing_info(obj)
         prepid = obj.get_prepid()
@@ -96,7 +130,7 @@ class RelValController(ControllerBase):
         editing_info['size_per_event'] = is_new
         editing_info['time_per_event'] = is_new
         editing_info['workflow_id'] = False
-        editing_info['workflow_name'] = creating_new
+        editing_info['workflow_name'] = is_new
         editing_info['steps'] = is_new
 
         return editing_info

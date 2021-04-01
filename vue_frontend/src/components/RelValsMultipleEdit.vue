@@ -171,12 +171,14 @@
             </div>
           </td>
         </tr>
-
         <tr>
           <td>Time per event</td>
           <td><input type="number" v-model="fakeEditableObject.time_per_event">s</td>
         </tr>
-
+        <tr>
+          <td>Workflow Name</td>
+          <td><input type="text" v-model="fakeEditableObject.workflow_name"></td>
+        </tr>
       </table>
       <!-- <pre>{{JSON.stringify(fakeEditableObject, undefined, 2)}}</pre> -->
       <h2>List of edits that will be done</h2>
@@ -361,9 +363,9 @@ export default {
       }
       this.loading = true;
       let httpRequest = axios.post('api/relvals/update', editableObjects)
-      httpRequest.then(() => {
+      httpRequest.then(response => {
         component.loading = false;
-        window.location = 'relvals?prepid=' + this.prepids.join(',');
+        window.location = 'relvals?prepid=' + response.data.response.map(x => x.prepid).join(',');
       }).catch(error => {
         component.loading = false;
         component.showError('Error saving RelVal', component.getError(error))
