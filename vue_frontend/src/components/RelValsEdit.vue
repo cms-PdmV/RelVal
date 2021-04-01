@@ -264,26 +264,49 @@ export default {
     }
   },
   created () {
-    this.loading = true;
     let query = Object.assign({}, this.$route.query);
-    this.prepid = query['prepid'];
-    this.creatingNew = this.prepid === undefined;
+    if (query.prepid && query.prepid.length) {
+      this.prepid = query.prepid;
+    } else {
+      this.prepid = '';
+    }
+    this.creatingNew = this.prepid.length == 0;
+    this.loading = true;
     let component = this;
-    axios.get('api/relvals/get_editable' + (this.creatingNew ? '' : ('/' + this.prepid))).then(response => {
-      for (let step of response.data.response.object.steps) {
-        if (step.input.dataset && step.input.dataset.length) {
-          step.step_type = 'input';
-        } else {
-          step.step_type = 'driver';
+    let prepareStep = function(step) {
+      step.step_type = step.input.dataset && step.input.dataset.length ? 'input' : 'driver';
+      step.input.lumisection = JSON.stringify(step.input.lumisection);
+      step.driver.datatier = step.driver.datatier.join(',');
+      step.driver.eventcontent = step.driver.eventcontent.join(',');
+      step.driver.step = step.driver.step.join(',');
+    }
+    axios.get('api/relvals/get_editable/' + this.prepid).then(response => {
+      if (query.clone && query.clone.length) {
+        axios.get('api/relvals/get_editable/' + query.clone).then(templateResponse => {
+          templateResponse.data.response.object.prepid = response.data.response.object.prepid;
+          templateResponse.data.response.object.history = response.data.response.object.history;
+          templateResponse.data.response.object.status = response.data.response.object.status;
+          templateResponse.data.response.object.workflows = response.data.response.object.workflows;
+          templateResponse.data.response.object.output_datasets = response.data.response.object.output_datasets;
+          for (let step of templateResponse.data.response.object.steps) {
+            prepareStep(step);
+          }
+          component.editableObject = templateResponse.data.response.object;
+          component.editingInfo = response.data.response.editing_info;
+          component.loading = false;
+        }).catch(error => {
+          component.loading = false;
+          component.showError('Error getting RelVal information', component.getError(error));
+        });
+      } else {
+        for (let step of response.data.response.object.steps) {
+          prepareStep(step);
         }
-        step.input.lumisection = JSON.stringify(step.input.lumisection);
-        step.driver.datatier = step.driver.datatier.join(',');
-        step.driver.eventcontent = step.driver.eventcontent.join(',');
-        step.driver.step = step.driver.step.join(',');
+        component.editableObject = response.data.response.object;
+        component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
+        component.editingInfo = response.data.response.editing_info;
+        component.loading = false;
       }
-      component.editableObject = response.data.response.object;
-      component.editingInfo = response.data.response.editing_info;
-      component.loading = false;
     }).catch(error => {
       component.loading = false;
       component.showError('Error getting RelVal information', component.getError(error));
