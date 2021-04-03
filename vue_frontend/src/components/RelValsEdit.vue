@@ -303,7 +303,6 @@ export default {
           prepareStep(step);
         }
         component.editableObject = response.data.response.object;
-        component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
         component.editingInfo = response.data.response.editing_info;
         component.loading = false;
       }
