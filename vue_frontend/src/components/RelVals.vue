@@ -18,7 +18,8 @@
                       class="elevation-1"
                       show-select
                       item-key="prepid"
-                      v-model="selectedItems">
+                      v-model="selectedItems"
+                      dense>
           <template v-slot:item._actions="{ item }">
             <a :href="'relvals/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>&nbsp;
             <a style="text-decoration: underline;" @click="deleteRelVals([item])" v-if="item.status == 'new' && role('manager')">Delete</a>&nbsp;

@@ -32,7 +32,7 @@
       return {
         pageSize: undefined,
         page: undefined,
-        limits: [20, 50, 100]
+        limits: [50, 100, 200]
       }
     },
     computed: {

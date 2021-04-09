@@ -15,7 +15,8 @@
                       :loading="loading"
                       disable-sort
                       hide-default-footer
-                      class="elevation-1">
+                      class="elevation-1"
+                      dense>
           <template v-slot:item._actions="{ item }">
             <a :href="'tickets/edit?prepid=' + item.prepid" v-if="role('manager')" title="Edit ticket">Edit</a>&nbsp;
             <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager') && (item.status == 'new' || (!item.created_relvals || item.created_relvals.length == 0))" title="Delete ticket">Delete</a>&nbsp;
