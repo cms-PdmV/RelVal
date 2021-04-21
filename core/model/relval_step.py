@@ -244,9 +244,9 @@ class RelValStep(ModelBase):
             customise_commands += f'cms.untracked.uint32({events_per_lumi})"'
             arguments_dict['customise_commands'] = customise_commands.lstrip(';')
 
-        # Add number of cpu cores of the RelVal
+        # Add number of cpu cores of the RelVal if it is >1 and this is not a harvesting step
         cpu_cores = self.parent().get('cpu_cores')
-        if cpu_cores > 1:
+        if cpu_cores > 1 and not self.has_step('HARVESTING') and not self.has_step('ALCAHARVEST'):
             arguments_dict['nThreads'] = cpu_cores
 
         all_steps = self.parent().get('steps')
