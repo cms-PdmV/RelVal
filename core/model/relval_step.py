@@ -205,7 +205,7 @@ class RelValStep(ModelBase):
         for run, run_info in runs.items():
             for lumi_range in run_info:
                 comment += f'#   run: {run}, range: {lumi_range[0]} - {lumi_range[1]}\n'
-                command += f'dasgoclient --limit 0 --format json '
+                command += 'dasgoclient --limit 0 --format json '
                 command += f'--query "lumi,file dataset={dataset} run={run}"'
                 command += f' | das-selected-lumis.py {lumi_range[0]},{lumi_range[1]}'
                 command += f' | sort -u >> {files_name}\n'

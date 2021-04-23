@@ -321,7 +321,7 @@ class TicketController(ControllerBase):
         command += f' -m {adjusted_memory}'
         command += f' -l {workflows}'
         if recycle_gs:
-            command += f' -i all'
+            command += ' -i all'
 
         if custom_command:
             command += f' --command="{custom_command}"'
