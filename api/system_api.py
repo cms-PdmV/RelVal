@@ -92,54 +92,67 @@ class ObjectsInfoAPI(APIBase):
         """
         Return summary of RelVals by status and submitted RelVals by CMSSW and batch name
         """
+        start_time = time.time()
         collection = Database('relvals').collection
-        by_status = collection.aggregate([{'$match': {'deleted': {'$ne': True}}},
-                                          {'$group': {'_id': '$status',
-                                                      'count': {'$sum': 1}}}])
+        status_query = [{'$match': {'deleted': {'$ne': True}}},
+                        {'$group': {'_id': '$status', 'count': {'$sum': 1}}}]
+        by_status = collection.aggregate(status_query)
 
-        by_batch = collection.aggregate([{'$match': {'deleted': {'$ne': True}}},
-                                         {'$match': {'status': 'submitted'}},
-                                         {'$group': {'_id': {'release': '$cmssw_release',
-                                                             'batch': '$batch_name'},
-                                                     'counts': {'$sum': 1}}},
-                                         {'$group': {"_id": "$_id.release",
-                                                     "batches": {"$push": {"batch_name": "$_id.batch",
-                                                                           "count": "$counts"}}}}])
+        batch_query = [{'$match': {'deleted': {'$ne': True}}},
+                       {'$match': {'status': 'submitted'}},
+                       {'$group': {'_id': {'release': '$cmssw_release', 'batch': '$batch_name'},
+                                   'counts': {'$sum': 1}}},
+                       {'$group': {"_id": "$_id.release",
+                                   "batches": {"$push": {"batch_name": "$_id.batch",
+                                                         "count": "$counts"}}}}]
+        by_batch = collection.aggregate(batch_query)
         by_status = list(by_status)
         by_batch = list(by_batch)
         by_batch = sorted(by_batch, key=lambda x: x['_id'], reverse=True)
         for release in by_batch:
-            release['batches'] = sorted(release['batches'], key=lambda x: (x['count'], x['batch_name'].lower()), reverse=True)
+            release['batches'] = sorted(release['batches'],
+                                        key=lambda x: (x['count'], x['batch_name'].lower()),
+                                        reverse=True)
 
         statuses = ['new', 'approved', 'submitting', 'submitted', 'done']
         by_status = sorted(by_status, key=lambda x: statuses.index(x['_id']))
+        end_time = time.time()
+        self.logger.debug('Getting objects info - RelVals, time taken %.2fs',
+                          end_time - start_time)
         return by_status, by_batch
 
     def get_tickets(self):
         """
         Return summary of tickets by status and new tickets by CMSSW and batch name
         """
+        start_time = time.time()
         collection = Database('tickets').collection
-        by_status = collection.aggregate([{'$match': {'deleted': {'$ne': True}}},
-                                          {'$group': {'_id': '$status',
-                                                      'count': {'$sum': 1}}}])
+        status_query = [{'$match': {'deleted': {'$ne': True}}},
+                        {'$group': {'_id': '$status', 'count': {'$sum': 1}}}]
+        by_status = collection.aggregate(status_query)
 
-        by_batch = collection.aggregate([{'$match': {'deleted': {'$ne': True}}},
-                                         {'$match': {'status': 'new'}},
-                                         {'$group': {'_id': {'release': '$cmssw_release',
-                                                             'batch': '$batch_name'},
-                                                     'counts': {'$sum': 1}}},
-                                         {'$group': {"_id": "$_id.release",
-                                                     "batches": {"$push": {"batch_name": "$_id.batch",
-                                                                           "count": "$counts"}}}}])
+        batch_query = [{'$match': {'deleted': {'$ne': True}}},
+                       {'$match': {'status': 'new'}},
+                       {'$group': {'_id': {'release': '$cmssw_release', 'batch': '$batch_name'},
+                                   'counts': {'$sum': 1}}},
+                       {'$group': {"_id": "$_id.release",
+                                   "batches": {"$push": {"batch_name": "$_id.batch",
+                                                         "count": "$counts"}}}}]
+
+        by_batch = collection.aggregate(batch_query)
         by_status = list(by_status)
         by_batch = list(by_batch)
         by_batch = sorted(by_batch, key=lambda x: x['_id'], reverse=True)
         for release in by_batch:
-            release['batches'] = sorted(release['batches'], key=lambda x: (x['count'], x['batch_name'].lower()), reverse=True)
+            release['batches'] = sorted(release['batches'],
+                                        key=lambda x: (x['count'], x['batch_name'].lower()),
+                                        reverse=True)
 
         statuses = ['new', 'done']
         by_status = sorted(by_status, key=lambda x: statuses.index(x['_id']))
+        end_time = time.time()
+        self.logger.debug('Getting objects info - Tickets, time taken %.2fs',
+                          end_time - start_time)
         return by_status, by_batch
 
     @APIBase.exceptions_to_errors

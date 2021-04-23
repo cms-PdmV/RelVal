@@ -2,11 +2,11 @@
 Main module that starts flask web server
 """
 import os
+import os.path
 import sys
 import logging
 import logging.handlers
 import argparse
-import os.path
 from flask_restful import Api
 from flask_cors import CORS
 from flask import Flask, render_template

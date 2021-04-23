@@ -152,7 +152,9 @@ class RelVal(ModelBase):
                    'scram b',
                    'cd $ORG_PWD']
 
-        return '\n'.join(command)
+        command = '\n'.join(command)
+        self.logger.debug('Fragment code for %s:\n%s', self.get_prepid(), command)
+        return command
 
     def get_relval_string_suffix(self):
         """
@@ -275,3 +277,15 @@ class RelVal(ModelBase):
         processing_string = f'{prefix}{resolved_globaltag}_{suffix}'
         processing_string = processing_string.strip('_')
         return processing_string
+
+    def get_campaign(self):
+        """
+        Get campaign name, include campaign timestamp if it is available
+        """
+        batch_name = self.get('batch_name')
+        cmssw_release = self.get('cmssw_release')
+        campaign_timestamp = self.get('campaign_timestamp')
+        if campaign_timestamp:
+            return f'{cmssw_release}__{batch_name}-{campaign_timestamp}'
+
+        return f'{cmssw_release}__{batch_name}'

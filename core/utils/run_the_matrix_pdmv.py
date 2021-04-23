@@ -8,8 +8,10 @@ import json
 import importlib
 import inspect
 import re
+#pylint: disable=wrong-import-position,import-error
 import Configuration.PyReleaseValidation.relval_steps as steps_module
 from Configuration.PyReleaseValidation.MatrixInjector import MatrixInjector
+#pylint: enable=wrong-import-position,import-error
 
 
 def get_wmsplit():
@@ -19,7 +21,7 @@ def get_wmsplit():
     try:
         src = MatrixInjector.get_wmsplit()
         return src
-    except:
+    except Exception:
         try:
             src = inspect.getsource(MatrixInjector.prepare)
             src = [x.strip() for x in src.split('\n') if 'wmsplit' in x]
@@ -90,26 +92,81 @@ def get_workflows_module(name):
     return workflows_module
 
 
-def build_cmsdriver(arguments, step_index):
+def get_workflow_name(matrix):
     """
-    Make a cmsDriver command string out of given arguments
+    Get workflow name if it is present
     """
-    built_arguments = ''
-    driver_step_name = 'step%s' % (step_index + 1)
-    for arg_name in sorted(arguments.keys(), key=lambda x: x.replace('-', '', 2).lower()):
-        arg_value = arguments[arg_name]
-        if arg_name == 'fragment_name':
-            driver_step_name = arg_value
-            continue
-
-        if isinstance(arg_value, bool):
-            if arg_value:
-                built_arguments += '%s ' % (arg_name)
+    workflow_name = matrix[0]
+    if isinstance(workflow_name, list):
+        if workflow_name:
+            workflow_name = workflow_name[0]
         else:
-            built_arguments += '%s %s ' % (arg_name, arg_value)
+            workflow_name = ''
 
-    return 'cmsDriver.py %s %s' % (driver_step_name, built_arguments.strip())
+    print('Workflow name: %s' % (workflow_name))
+    return workflow_name
 
+
+def merge_additional_command(workflow_step, command):
+    """
+    Merge workflow arguments with additional parameters provided by user
+    """
+    command_dict = split_command_to_dict(command)
+    if '--step' in command_dict:
+        command_dict['-s'] = command_dict.pop('--step')
+
+    if '--number' in command_dict:
+        command_dict['-n'] = command_dict.pop('--number')
+
+    print('Merging user commands %s' % (command_dict))
+    print('Merging to %s' % (workflow_step))
+    return steps_module.merge([command_dict, workflow_step])
+
+
+def make_relval_step(workflow_step, workflow_step_name, wmsplit):
+    """
+    Build one workflow step - either input dataset or cmsDriver
+    """
+    step = {'name': workflow_step_name}
+    if workflow_step_name in wmsplit:
+        step['lumis_per_job'] = wmsplit[workflow_step_name]
+    elif 'INPUT' in workflow_step:
+        step['lumis_per_job'] = workflow_step['INPUT'].split
+    else:
+        # Default to 10
+        step['lumis_per_job'] = 10
+
+    if 'INPUT' in workflow_step:
+        # This step has input dataset
+        step['input'] = {'dataset': workflow_step['INPUT'].dataSet,
+                         'lumisection': workflow_step['INPUT'].ls,
+                         'label': workflow_step['INPUT'].label,
+                         'events': workflow_step['INPUT'].events}
+    else:
+        # This is cmsDriver step
+        # Rename some arguments
+        if '-s' in workflow_step:
+            workflow_step['--step'] = workflow_step.pop('-s')
+
+        if 'cfg' in workflow_step:
+            workflow_step['fragment_name'] = workflow_step.pop('cfg')
+
+        if '-n' in workflow_step:
+            workflow_step['--number'] = workflow_step.pop('-n')
+
+        # Change "flags" value to True, e.g. --data, --mc, --fast
+        for arg_name, arg_value in workflow_step.items():
+            if arg_value == '':
+                workflow_step[arg_name] = True
+
+        events_per_lumi = extract_events_per_lumi(workflow_step)
+        if events_per_lumi:
+            step['events_per_lumi'] = events_per_lumi
+
+        step['arguments'] = workflow_step
+
+    print(step)
+    return step
 
 def main():
     """
@@ -120,7 +177,7 @@ def main():
                         dest='workflow_ids',
                         help='Comma separated list of workflow ids')
     parser.add_argument('-w', '--what',
-                        dest='workflows_file',
+                        dest='matrix_name',
                         help='RelVal workflows file: standard, upgrade, ...')
     parser.add_argument('-c', '--command',
                         dest='command',
@@ -137,13 +194,12 @@ def main():
 
     workflow_ids = sorted(list({float(x) for x in opt.workflow_ids.split(',')}))
     print('Given workflow ids (%s): %s' % (len(workflow_ids), workflow_ids))
-    print('Workflows file: %s' % (opt.workflows_file))
+    print('Workflows file: %s' % (opt.matrix_name))
     print('User given command: %s' % (opt.command))
     print('Output file: %s' % (opt.output_file))
     print('Recycle GS: %s' % (opt.recycle_gs))
 
-    workflows_module = get_workflows_module(opt.workflows_file)
-
+    workflows_module = get_workflows_module(opt.matrix_name)
     # wmsplit is a dictionary with LumisPerJob values
     wmsplit = get_wmsplit()
     workflows = {}
@@ -153,21 +209,12 @@ def main():
         # and second element is list of step names
         # if workflow name is not present, first step name is used
         if workflow_id not in workflows_module.workflows:
-            print('Could not find %s in %s module' % (workflow_id, opt.workflows_file),
-                  file=sys.stderr)
+            print('Can\'t find %s in %s matrix' % (workflow_id, opt.matrix_name), file=sys.stderr)
             sys.exit(1)
 
         workflow_matrix = workflows_module.workflows[workflow_id]
         print('Matrix: %s' % (workflow_matrix))
-        workflow_name = workflow_matrix[0]
-        if isinstance(workflow_name, list):
-            if workflow_name:
-                workflow_name = workflow_name[0]
-            else:
-                workflow_name = ''
-
-        print('Workflow name: %s' % (workflow_name))
-        workflows[workflow_id] = {'steps': [], 'workflow_name': workflow_name}
+        workflows[workflow_id] = {'steps': [], 'workflow_name': get_workflow_name(workflow_matrix)}
         if workflow_matrix.overrides:
             print('Overrides: %s' % (workflow_matrix.overrides))
 
@@ -195,58 +242,11 @@ def main():
             workflow_step = steps_module.merge([workflow_matrix.overrides,
                                                 workflow_step])
             if opt.command:
-                command_dict = split_command_to_dict(opt.command)
-                if '--step' in command_dict:
-                    command_dict['-s'] = command_dict.pop('--step')
+                workflow_step = merge_additional_command(workflow_step, opt.command)
 
-                if '--number' in command_dict:
-                    command_dict['-n'] = command_dict.pop('--number')
-
-                print('Merging user commands %s' % (command_dict))
-                print('Merging to %s' % (workflow_step))
-                workflow_step = steps_module.merge([command_dict, workflow_step])
-
-            step = {'name': workflow_step_name}
-            if workflow_step_name in wmsplit:
-                step['lumis_per_job'] = wmsplit[workflow_step_name]
-            elif 'INPUT' in workflow_step:
-                step['lumis_per_job'] = workflow_step['INPUT'].split
-            else:
-                # Default to 10
-                step['lumis_per_job'] = 10
-
-            workflows[workflow_id]['steps'].append(step)
-            if 'INPUT' in workflow_step:
-                # This step has input dataset
-                step['input'] = {'dataset': workflow_step['INPUT'].dataSet,
-                                 'lumisection': workflow_step['INPUT'].ls,
-                                 'label': workflow_step['INPUT'].label,
-                                 'events': workflow_step['INPUT'].events}
-
-                print(step)
-            else:
-                # This is cmsDriver step
-                # Rename some arguments
-                if '-s' in workflow_step:
-                    workflow_step['--step'] = workflow_step.pop('-s')
-
-                if 'cfg' in workflow_step:
-                    workflow_step['fragment_name'] = workflow_step.pop('cfg')
-
-                if '-n' in workflow_step:
-                    workflow_step['--number'] = workflow_step.pop('-n')
-
-                # Change "flags" value to True, e.g. --data, --mc, --fast
-                for arg_name, arg_value in workflow_step.items():
-                    if arg_value == '':
-                        workflow_step[arg_name] = True
-
-                events_per_lumi = extract_events_per_lumi(workflow_step)
-                if events_per_lumi:
-                    step['events_per_lumi'] = events_per_lumi
-
-                step['arguments'] = workflow_step
-                print(build_cmsdriver(step['arguments'], workflow_step_index))
+            workflows[workflow_id]['steps'].append(make_relval_step(workflow_step,
+                                                                    workflow_step_name,
+                                                                    wmsplit))
 
         # Additional newline inbetween each workflow
         print('\n')

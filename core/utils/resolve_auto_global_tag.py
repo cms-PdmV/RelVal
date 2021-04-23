@@ -2,7 +2,9 @@
 Script that resolves auto:... to global tag values
 """
 import sys
+#pylint: disable=wrong-import-position,import-error
 from Configuration.AlCa.autoCond import autoCond as auto_globaltag
+#pylint: enable=wrong-import-position,import-error
 
 
 def resolve_globaltag(tag):

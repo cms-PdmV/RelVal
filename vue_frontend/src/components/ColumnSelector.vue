@@ -2,7 +2,7 @@
   <v-card class="mb-2 pa-2">
     <h4>Columns</h4>
     <v-row style="margin: 2px;">
-      <v-col style="padding: 4px;"
+      <v-col style="padding: 2px;"
              cols=12
              sm=6
              md=3

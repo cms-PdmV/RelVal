@@ -106,7 +106,7 @@ class TicketController(ControllerBase):
     def make_relval_step_dict(self, step_dict):
         """
         Remove, split or move arguments in step dictionary
-        returned from runTheMatrixPdmV.py
+        returned from run_the_matrix_pdmv.py
         """
         # Deal with input file part
         input_dict = step_dict.get('input', {})
@@ -155,7 +155,63 @@ class TicketController(ControllerBase):
                     'driver': arguments,
                     'input': input_dict}
 
+        self.logger.debug('Step dict: %s', json.dumps(new_step, indent=2))
         return new_step
+
+    def generate_workflows(self, ticket, ssh_executor):
+        """
+        Remotely run workflow info extraction from CMSSW and return all workflows
+        """
+        ticket_prepid = ticket.get_prepid()
+        ticket_dir = f'ticket_{ticket_prepid}'
+        remote_directory = Config.get('remote_path').rstrip('/')
+        recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
+        cmssw_release = ticket.get('cmssw_release')
+        matrix = ticket.get('matrix')
+        additional_command = ticket.get('command').strip()
+        if additional_command:
+            additional_command = additional_command.replace('"', '\\"')
+            additional_command = f'-c="{additional_command}"'
+        else:
+            additional_command = ''
+
+        workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
+        self.logger.info('Creating RelVals %s for %s', workflow_ids, ticket_prepid)
+        # Prepare empty directory with run_the_matrix_pdmv.py
+        command = [f'rm -rf {remote_directory}/{ticket_dir}',
+                   f'mkdir -p {remote_directory}/{ticket_dir}']
+        _, err, code = ssh_executor.execute_command(command)
+        if code != 0:
+            raise Exception(f'Error code {code} preparing workspace: {err}')
+
+        ssh_executor.upload_file('core/utils/run_the_matrix_pdmv.py',
+                                 f'{remote_directory}/{ticket_dir}/run_the_matrix_pdmv.py')
+        # Create a random name for temporary file
+        random = Random()
+        file_name = f'{ticket_prepid}_{int(random.randint(1000, 9999))}.json'
+        # Execute run_the_matrix_pdmv.py
+        command = [f'cd {remote_directory}/{ticket_dir}']
+        command.extend(cmssw_setup(cmssw_release, reuse_cmssw=True).split('\n'))
+        command += ['python run_the_matrix_pdmv.py '
+                    f'-l={workflow_ids} '
+                    f'-w={matrix} '
+                    f'-o={file_name} '
+                    f'{additional_command} '
+                    f'{recycle_gs_flag}']
+        _, err, code = ssh_executor.execute_command(command)
+        if code != 0:
+            raise Exception(f'Error code {code} creating RelVals: {err}')
+
+        ssh_executor.download_file(f'{remote_directory}/{ticket_dir}/{file_name}',
+                                   f'/tmp/{file_name}')
+
+        # Cleanup remote directory
+        ssh_executor.execute_command(f'rm -rf {remote_directory}/{ticket_dir}')
+        with open(f'/tmp/{file_name}', 'r') as workflows_file:
+            workflows = json.load(workflows_file)
+
+        os.remove(f'/tmp/{file_name}')
+        return workflows
 
     def create_relvals_for_ticket(self, ticket):
         """
@@ -163,77 +219,25 @@ class TicketController(ControllerBase):
         """
         ticket_db = Database(self.database_name)
         ticket_prepid = ticket.get_prepid()
-        ticket_dir = f'ticket_{ticket_prepid}'
         credentials_path = Config.get('credentials_path')
-        remote_directory = Config.get('remote_path').rstrip('/')
         ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_path)
         relval_controller = RelValController()
         created_relvals = []
         with self.locker.get_lock(ticket_prepid):
             ticket = self.get(ticket_prepid)
             cmssw_release = ticket.get('cmssw_release')
-            batch_name = ticket.get('batch_name')
-            matrix = ticket.get('matrix')
-            label = ticket.get('label')
-            sample_tag = ticket.get('sample_tag')
-            cpu_cores = ticket.get('cpu_cores')
             n_streams = ticket.get('n_streams')
-            memory = ticket.get('memory')
-            rewrite_gt_string = ticket.get('rewrite_gt_string')
-            recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
-            additional_command = ticket.get('command').strip()
-            if additional_command:
-                additional_command = additional_command.replace('"', '\\"')
-                additional_command = f'-c="{additional_command}"'
-            else:
-                additional_command = ''
-
             try:
-                workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
-                self.logger.info('Creating RelVals %s for %s', workflow_ids, ticket_prepid)
-                # Prepare empty directory with runTheMatrixPdmV.py
-                command = [f'rm -rf {remote_directory}/{ticket_dir}',
-                           f'mkdir -p {remote_directory}/{ticket_dir}']
-                _, err, code = ssh_executor.execute_command(command)
-                if code != 0:
-                    raise Exception(f'Error code {code} preparing workspace: {err}')
-
-                ssh_executor.upload_file('core/utils/runTheMatrixPdmV.py',
-                                         f'{remote_directory}/{ticket_dir}/runTheMatrixPdmV.py')
-                # Create a random name for temporary file
-                random = Random()
-                file_name = f'{ticket_prepid}_{int(random.randint(1000, 9999))}.json'
-                # Execute runTheMatrixPdmV.py
-                command = [f'cd {remote_directory}/{ticket_dir}']
-                command.extend(cmssw_setup(cmssw_release, reuse_cmssw=True).split('\n'))
-                command += ['python runTheMatrixPdmV.py '
-                            f'-l={workflow_ids} '
-                            f'-w={matrix} '
-                            f'-o={file_name} '
-                            f'{additional_command} '
-                            f'{recycle_gs_flag}']
-                _, err, code = ssh_executor.execute_command(command)
-                if code != 0:
-                    raise Exception(f'Error code {code} creating RelVals: {err}')
-
-                ssh_executor.download_file(f'{remote_directory}/{ticket_dir}/{file_name}',
-                                           f'/tmp/{file_name}')
-
-                # Cleanup remote directory
-                ssh_executor.execute_command(f'rm -rf {remote_directory}/{ticket_dir}')
-                with open(f'/tmp/{file_name}', 'r') as workflows_file:
-                    workflows = json.load(workflows_file)
-
-                os.remove(f'/tmp/{file_name}')
+                workflows = self.generate_workflows(ticket, ssh_executor)
                 # Iterate through workflows and create RelVals
                 for workflow_id, workflow_dict in workflows.items():
-                    workflow_json = {'batch_name': batch_name,
+                    workflow_json = {'batch_name': ticket.get('batch_name'),
                                      'cmssw_release': cmssw_release,
-                                     'cpu_cores': cpu_cores,
-                                     'label': label,
-                                     'memory': memory,
-                                     'matrix': matrix,
-                                     'sample_tag': sample_tag,
+                                     'cpu_cores': ticket.get('cpu_cores'),
+                                     'label': ticket.get('label'),
+                                     'memory': ticket.get('memory'),
+                                     'matrix': ticket.get('matrix'),
+                                     'sample_tag': ticket.get('sample_tag'),
                                      'steps': [],
                                      'workflow_id': workflow_id,
                                      'workflow_name': workflow_dict['workflow_name']}
@@ -244,7 +248,7 @@ class TicketController(ControllerBase):
                         if n_streams > 0:
                             new_step['driver']['nStreams'] = n_streams
 
-                        self.rewrite_gt_string_if_needed(new_step, rewrite_gt_string)
+                        self.rewrite_gt_string_if_needed(new_step, ticket.get('rewrite_gt_string'))
                         workflow_json['steps'].append(new_step)
 
                     self.logger.debug('Will create %s', workflow_json)
@@ -290,6 +294,7 @@ class TicketController(ControllerBase):
         if not workflows:
             workflows.append('# No workflow names')
 
+        self.logger.debug('Workflow names for %s:\n%s', ticket.get_prepid(), '\n'.join(workflows))
         return workflows
 
     def get_run_the_matrix(self, ticket):
@@ -322,4 +327,5 @@ class TicketController(ControllerBase):
             command += f' --command="{custom_command}"'
 
         command += ' --noCaf --wm force'
+        self.logger.debug('runTheMatrix.py for %s:\n%s', ticket.get_prepid(), command)
         return command

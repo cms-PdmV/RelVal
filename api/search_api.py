@@ -174,7 +174,7 @@ class WildSearchAPI(APIBase):
                 typed_query = database.build_query_with_types(f'{attr}={wrapped_query}',
                                                               self.classes[db_name])
                 query_results = database.query(typed_query, 0, 5, ignore_case=True)
-            except ValueError as ve:
+            except ValueError:
                 # In case text input was casted to a number
                 continue
 

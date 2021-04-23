@@ -205,31 +205,91 @@ class RelValController(ControllerBase):
 
         return command.strip()
 
+    def get_task_dict(self, relval, step, step_index):
+        """
+        Return a dictionary for single task of ReqMgr2 dictionary
+        """
+        self.logger.debug('Getting step %s dict for %s', step_index, relval.get_prepid())
+        task_dict = {}
+        # If it's firtst step and not input file - it is generator
+        # set Seeding to AutomaticSeeding, RequestNumEvets, EventsPerJob and EventsPerLumi
+        # It expects --relval attribute
+        if step_index == 0:
+            task_dict['Seeding'] = 'AutomaticSeeding'
+            task_dict['PrimaryDataset'] = relval.get_primary_dataset()
+            requested_events, events_per_job = step.get_relval_events()
+            events_per_lumi = step.get('events_per_lumi')
+            task_dict['RequestNumEvents'] = requested_events
+            task_dict['SplittingAlgo'] = 'EventBased'
+            task_dict['EventsPerJob'] = events_per_job
+            if events_per_lumi:
+                # EventsPerLumi has to be <= EventsPerJob
+                task_dict['EventsPerLumi'] = min(int(events_per_lumi), int(events_per_job))
+            else:
+                task_dict['EventsPerLumi'] = int(events_per_job)
+        else:
+            input_step = relval.get('steps')[step.get_input_step_index()]
+            if input_step.get_step_type() == 'input_file':
+                input_dict = input_step.get('input')
+                # Input file step is not a task
+                # Use this as input in next step
+                task_dict['InputDataset'] = input_dict['dataset']
+                if input_dict['lumisection']:
+                    task_dict['LumiList'] = input_dict['lumisection']
+            else:
+                task_dict['InputTask'] = input_step.get_short_name()
+                _, input_module = step.get_input_eventcontent(input_step)
+                task_dict['InputFromOutputModule'] = f'{input_module}output'
+
+            if step.get('lumis_per_job') != '':
+                task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
+
+            task_dict['SplittingAlgo'] = 'LumiBased'
+
+        task_dict['TaskName'] = step.get_short_name()
+        task_dict['ConfigCacheID'] = step.get('config_id')
+        task_dict['KeepOutput'] = True
+        task_dict['ScramArch'] = step.get('scram_arch')
+        resolved_globaltag = step.get('resolved_globaltag')
+        if resolved_globaltag:
+            task_dict['GlobalTag'] = resolved_globaltag
+
+        processing_string = relval.get_processing_string(step_index)
+        if processing_string:
+            task_dict['ProcessingString'] = processing_string
+
+        task_dict['CMSSWVersion'] = step.get('cmssw_release')
+        task_dict['AcquisitionEra'] = task_dict['CMSSWVersion']
+        task_dict['Memory'] = relval.get('memory')
+        task_dict['Multicore'] = relval.get('cpu_cores')
+        task_dict['Campaign'] = relval.get_campaign()
+        driver = step.get('driver')
+        if driver.get('nStreams'):
+            task_dict['EventStreams'] = int(driver['nStreams'])
+
+        if driver.get('pileup_input'):
+            task_dict['MCPileup'] = driver['pileup_input']
+            while task_dict['MCPileup'][0] != '/':
+                task_dict['MCPileup'] = task_dict['MCPileup'][1:]
+
+        return task_dict
+
     def get_job_dict(self, relval):
         """
         Return a dictionary for ReqMgr2
         """
         prepid = relval.get_prepid()
         self.logger.debug('Getting job dict for %s', prepid)
-        steps = relval.get('steps')
-        batch_name = relval.get('batch_name')
-        cmssw_release = relval.get('cmssw_release')
-        campaign_timestamp = relval.get('campaign_timestamp')
-        if campaign_timestamp:
-            campaign = f'{cmssw_release}__{batch_name}-{campaign_timestamp}'
-        else:
-            campaign = f'{cmssw_release}__{batch_name}'
-
         job_dict = {}
         job_dict['Group'] = 'PPD'
         job_dict['Requestor'] = 'pdmvserv'
         job_dict['CouchURL'] = Config.get('cmsweb_url') + '/couchdb'
         job_dict['ConfigCacheUrl'] = job_dict['CouchURL']
-        job_dict['PrepID'] = relval.get_prepid()
+        job_dict['PrepID'] = prepid
         job_dict['RequestType'] = 'TaskChain'
         job_dict['SubRequestType'] = 'RelVal'
         job_dict['RequestString'] = relval.get_request_string()
-        job_dict['Campaign'] = campaign
+        job_dict['Campaign'] = relval.get_campaign()
         job_dict['RequestPriority'] = 500000
         job_dict['TimePerEvent'] = relval.get('time_per_event')
         job_dict['SizePerEvent'] = relval.get('size_per_event')
@@ -247,7 +307,7 @@ class RelValController(ControllerBase):
             job_dict['DbsUrl'] = 'https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader'
 
         task_number = 0
-        for step_index, step in enumerate(steps):
+        for step_index, step in enumerate(relval.get('steps')):
             # If it's input file, it's not a task
             if step.get_step_type() == 'input_file':
                 continue
@@ -263,75 +323,13 @@ class RelValController(ControllerBase):
                     job_dict['DQMUploadUrl'] = 'https://cmsweb.cern.ch/dqm/relval'
                 else:
                     # Upload to some dev DQM GUI
-                    job_dict['DQMUploadUrl'] = 'https://cmsweb.cern.ch/dqm/dev'
+                    job_dict['DQMUploadUrl'] = 'https://cmsweb-testbed.cern.ch/dqm/dev'
 
                 continue
 
-            task_dict = {}
-            # If it's firtst step and not input file - it is generator
-            # set Seeding to AutomaticSeeding, RequestNumEvets, EventsPerJob and EventsPerLumi
-            # It expects --relval attribute
-            if step_index == 0:
-                task_dict['Seeding'] = 'AutomaticSeeding'
-                task_dict['PrimaryDataset'] = relval.get_primary_dataset()
-                requested_events, events_per_job = step.get_relval_events()
-                events_per_lumi = step.get('events_per_lumi')
-                task_dict['RequestNumEvents'] = requested_events
-                task_dict['SplittingAlgo'] = 'EventBased'
-                task_dict['EventsPerJob'] = events_per_job
-                if events_per_lumi:
-                    # EventsPerLumi has to be <= EventsPerJob
-                    task_dict['EventsPerLumi'] = min(int(events_per_lumi), int(events_per_job))
-                else:
-                    task_dict['EventsPerLumi'] = int(events_per_job)
-            else:
-                input_step = steps[step.get_input_step_index()]
-                if input_step.get_step_type() == 'input_file':
-                    input_dict = input_step.get('input')
-                    # Input file step is not a task
-                    # Use this as input in next step
-                    task_dict['InputDataset'] = input_dict['dataset']
-                    if input_dict['lumisection']:
-                        task_dict['LumiList'] = input_dict['lumisection']
-                else:
-                    task_dict['InputTask'] = input_step.get_short_name()
-                    _, input_module = step.get_input_eventcontent(input_step)
-                    task_dict['InputFromOutputModule'] = f'{input_module}output'
-
-                if step.get('lumis_per_job') != '':
-                    task_dict['LumisPerJob'] = int(step.get('lumis_per_job'))
-
-                task_dict['SplittingAlgo'] = 'LumiBased'
-
-            task_dict['TaskName'] = step.get_short_name()
-            task_dict['ConfigCacheID'] = step.get('config_id')
-            task_dict['KeepOutput'] = True
-            task_dict['ScramArch'] = step.get('scram_arch')
-            resolved_globaltag = step.get('resolved_globaltag')
-            if resolved_globaltag:
-                task_dict['GlobalTag'] = resolved_globaltag
-
-            processing_string = relval.get_processing_string(step_index)
-            if processing_string:
-                task_dict['ProcessingString'] = processing_string
-
-            task_dict['CMSSWVersion'] = step.get('cmssw_release')
-            task_dict['AcquisitionEra'] = task_dict['CMSSWVersion']
-            task_dict['Memory'] = relval.get('memory')
-            task_dict['Multicore'] = relval.get('cpu_cores')
-            task_dict['Campaign'] = campaign
-            driver = step.get('driver')
-            if driver.get('nStreams'):
-                task_dict['EventStreams'] = int(driver['nStreams'])
-
-            if driver.get('pileup_input'):
-                task_dict['MCPileup'] = driver['pileup_input']
-                while task_dict['MCPileup'][0] != '/':
-                    task_dict['MCPileup'] = task_dict['MCPileup'][1:]
-
             # Add task to main dict
             task_number += 1
-            job_dict[f'Task{task_number}'] = task_dict
+            job_dict[f'Task{task_number}'] = self.get_task_dict(relval, step, step_index)
 
         job_dict['TaskChain'] = task_number
         # Set main scram arch to first task scram arch
@@ -367,13 +365,13 @@ class RelValController(ControllerBase):
             # Setup CMSSW environment
             # No need to explicitly reuse CMSSW as this happens in relval_submission directory
             command.extend(cmssw_setup(cmssw_version).split('\n'))
-            conditions_string = ','.join(list(conditions.keys()))
-            command += [f'python resolveAutoGlobalTag.py "{cmssw_version}" "{conditions_string}"']
+            conditions_str = ','.join(list(conditions.keys()))
+            command += [f'python resolve_auto_global_tag.py "{cmssw_version}" "{conditions_str}"']
 
         with SSHExecutor('lxplus.cern.ch', credentials_file) as ssh_executor:
             # Upload python script to resolve auto globaltag by upload script
-            ssh_executor.upload_file('./core/utils/resolveAutoGlobalTag.py',
-                                     f'{remote_directory}/resolveAutoGlobalTag.py')
+            ssh_executor.upload_file('./core/utils/resolve_auto_global_tag.py',
+                                     f'{remote_directory}/resolve_auto_global_tag.py')
             stdout, stderr, exit_code = ssh_executor.execute_command(command)
 
         if exit_code != 0:
