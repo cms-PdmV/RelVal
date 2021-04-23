@@ -10,26 +10,26 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
-    "core-js": "^3.8.3",
+    "core-js": "^3.11.0",
     "dateformat": "^3.0.3",
-    "qs": "^6.9.6",
-    "sanitize-html": "^2.3.2",
+    "qs": "^6.10.1",
+    "sanitize-html": "^2.3.3",
     "vue": "^2.6.12",
     "vue-linkify": "^1.0.1",
     "vue-router": "^3.5.1",
-    "vuetify": "^2.4.3"
+    "vuetify": "^2.4.11"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^4.5.11",
-    "@vue/cli-plugin-eslint": "^4.5.11",
-    "@vue/cli-service": "^4.5.11",
+    "@vue/cli-plugin-babel": "^4.5.12",
+    "@vue/cli-plugin-eslint": "^4.5.12",
+    "@vue/cli-service": "^4.5.12",
     "babel-eslint": "^10.1.0",
     "eslint": "^5.16.0",
     "eslint-plugin-vue": "^5.0.0",
-    "sass": "^1.32.6",
+    "sass": "^1.32.11",
     "sass-loader": "^8.0.2",
-    "vue-cli-plugin-vuetify": "^2.1.0",
+    "vue-cli-plugin-vuetify": "^2.3.1",
     "vue-template-compiler": "^2.6.12",
-    "vuetify-loader": "^1.7.1"
+    "vuetify-loader": "^1.7.2"
   }
 }
