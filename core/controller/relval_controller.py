@@ -9,7 +9,6 @@ from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.global_config import Config
-from core_lib.utils.cache import TimeoutCache
 from core_lib.utils.common_utils import (clean_split,
                                          cmssw_setup,
                                          get_scram_arch,
@@ -29,8 +28,6 @@ class RelValController(ControllerBase):
         ControllerBase.__init__(self)
         self.database_name = 'relvals'
         self.model_class = RelVal
-        if not hasattr(self.__class__, 'scram_arch_cache'):
-            self.__class__.scram_arch_cache = TimeoutCache(3600)
 
     def create(self, json_data):
         cmssw_release = json_data.get('cmssw_release')
@@ -108,7 +105,6 @@ class RelValController(ControllerBase):
                     tickets_db.save(ticket.get_json())
 
             self.delete(old_obj.get_json())
-
 
     def get_editing_info(self, obj):
         editing_info = super().get_editing_info(obj)
