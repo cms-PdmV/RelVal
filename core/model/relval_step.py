@@ -457,3 +457,35 @@ class RelValStep(ModelBase):
                 'cuda_runtime_version': 'CUDARuntimeVersion'}
         params = {key: gpu_info[attr] for attr, key in keys.items() if gpu_info.get(attr)}
         return params
+
+    def get_task_dict(self):
+        """
+        Return a Task dictionary for ReqMgr2 with
+        as much info as step has about itself
+        """
+        task_dict = {}
+        task_dict['TaskName'] = self.get_short_name()
+        task_dict['ConfigCacheID'] = self.get('config_id')
+        task_dict['KeepOutput'] = True
+        task_dict['ScramArch'] = self.get('scram_arch')
+        resolved_globaltag = self.get('resolved_globaltag')
+        if resolved_globaltag:
+            task_dict['GlobalTag'] = resolved_globaltag
+
+        if self.get_gpu_requires() != 'forbidden':
+            task_dict['GPUParams'] = self.get_gpu_dict()
+            task_dict['RequiresGPU'] = self.get_gpu_requires()
+
+        task_dict['CMSSWVersion'] = self.get('cmssw_release')
+        task_dict['AcquisitionEra'] = task_dict['CMSSWVersion']
+
+        driver = self.get('driver')
+        if driver.get('nStreams'):
+            task_dict['EventStreams'] = int(driver['nStreams'])
+
+        if driver.get('pileup_input'):
+            task_dict['MCPileup'] = driver['pileup_input']
+            while task_dict['MCPileup'][0] != '/':
+                task_dict['MCPileup'] = task_dict['MCPileup'][1:]
+
+        return task_dict

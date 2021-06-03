@@ -192,7 +192,7 @@ class RelValController(ControllerBase):
         Return a dictionary for single task of ReqMgr2 dictionary
         """
         self.logger.debug('Getting step %s dict for %s', step_index, relval.get_prepid())
-        task_dict = {}
+        task_dict = step.get_task_dict()
         # If it's firtst step and not input file - it is generator
         # set Seeding to AutomaticSeeding, RequestNumEvets, EventsPerJob and EventsPerLumi
         # It expects --relval attribute
@@ -240,23 +240,9 @@ class RelValController(ControllerBase):
         if processing_string:
             task_dict['ProcessingString'] = processing_string
 
-        if step.get_gpu_requires() != 'forbidden':
-            task_dict['GPUParams'] = step.get_gpu_dict()
-            task_dict['RequiresGPU'] = step.get_gpu_requires()
-
-        task_dict['CMSSWVersion'] = step.get('cmssw_release')
-        task_dict['AcquisitionEra'] = task_dict['CMSSWVersion']
         task_dict['Memory'] = relval.get('memory')
         task_dict['Multicore'] = relval.get('cpu_cores')
         task_dict['Campaign'] = relval.get_campaign()
-        driver = step.get('driver')
-        if driver.get('nStreams'):
-            task_dict['EventStreams'] = int(driver['nStreams'])
-
-        if driver.get('pileup_input'):
-            task_dict['MCPileup'] = driver['pileup_input']
-            while task_dict['MCPileup'][0] != '/':
-                task_dict['MCPileup'] = task_dict['MCPileup'][1:]
 
         return task_dict
 
