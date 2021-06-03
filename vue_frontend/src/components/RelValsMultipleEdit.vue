@@ -126,7 +126,6 @@
                       <option>nocoll</option>
                       <option>HeavyIons</option>
                     </select>
-                    {{step.scenario}}
                   </td>
                 </tr>
                 <tr>
@@ -163,6 +162,36 @@
                 <tr>
                   <td>Extra</td><td><input type="text" v-model="step.driver.extra" placeholder="Any arguments that are not specified above"></td>
                 </tr>
+                <tr v-if="step.gpu">
+                  <td>GPU</td>
+                  <td>
+                    <select v-model="step.gpu.requires">
+                      <option value="forbidden">Forbidden</option>
+                      <option value="optional">Optional</option>
+                      <option value="required">Required</option>
+                    </select>
+                  </td>
+                </tr>
+                <template v-if="step.gpu.requires && step.gpu.requires != 'forbidden'">
+                  <tr>
+                    <td>GPU Name</td><td><input type="text" v-model="step.gpu.gpu_name"></td>
+                  </tr>
+                  <tr>
+                    <td>GPU Memory</td><td><input type="text" v-model="step.gpu.gpu_memory"></td>
+                  </tr>
+                  <tr>
+                    <td>CUDA Capabilities</td><td><input type="text" v-model="step.gpu.cuda_capabilities"></td>
+                  </tr>
+                  <tr>
+                    <td>CUDA Runtime</td><td><input type="text" v-model="step.gpu.cuda_runtime"></td>
+                  </tr>
+                  <tr>
+                    <td>CUDA Driver Version</td><td><input type="text" v-model="step.gpu.cuda_driver_version"></td>
+                  </tr>
+                  <tr>
+                    <td>CUDA Runtime Version</td><td><input type="text" v-model="step.gpu.cuda_runtime_version"></td>
+                  </tr>
+                </template>
               </table>
               <v-btn v-if="!step.deleted" small class="mr-1 mb-1" color="error" @click="deleteStep(index)">Delete step {{index + 1}}</v-btn>
               <span v-if="step.deleted">
@@ -290,8 +319,14 @@ export default {
       if (component.prepids.length == 1) {
         objects = [objects];
       }
+<<<<<<< HEAD
       for (let obj of objects) {
         this.prepareObjectForEditing(obj);
+=======
+      let steps = [];
+      for (let i = 0; i < maxSteps; i++) {
+        steps.push({'input': {}, 'driver': {}, 'deleted': false, 'gpu': {}});
+>>>>>>> Add GPU options to RelVal steps
       }
       component.objects = objects;
       let editingObject = component.makeEditingObject(objects);

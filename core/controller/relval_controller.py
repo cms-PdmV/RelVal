@@ -240,6 +240,10 @@ class RelValController(ControllerBase):
         if processing_string:
             task_dict['ProcessingString'] = processing_string
 
+        if step.get_gpu_requires() != 'forbidden':
+            task_dict['GPUParams'] = step.get_gpu_dict()
+            task_dict['RequiresGPU'] = step.get_gpu_requires()
+
         task_dict['CMSSWVersion'] = step.get('cmssw_release')
         task_dict['AcquisitionEra'] = task_dict['CMSSWVersion']
         task_dict['Memory'] = relval.get('memory')

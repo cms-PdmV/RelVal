@@ -162,7 +162,6 @@
                         <option>nocoll</option>
                         <option>HeavyIons</option>
                       </select>
-                      {{step.scenario}}
                     </td>
                   </tr>
                   <tr>
@@ -197,6 +196,36 @@
                   <tr>
                     <td>Fragment name</td><td><input type="text" v-model="step.driver.fragment_name" placeholder="E.g. Configuration/Generator/<filename>.py" :disabled="!editingInfo.steps"></td>
                   </tr>
+                  <tr v-if="step.gpu">
+                    <td>GPU</td>
+                    <td>
+                      <select v-model="step.gpu.requires" :disabled="!editingInfo.steps">
+                        <option value="forbidden">Forbidden</option>
+                        <option value="optional">Optional</option>
+                        <option value="required">Required</option>
+                      </select>
+                    </td>
+                  </tr>
+                  <template v-if="step.gpu && step.gpu.requires != 'forbidden'">
+                    <tr>
+                      <td>GPU Name</td><td><input type="text" v-model="step.gpu.gpu_name" placeholder="" :disabled="!editingInfo.steps"></td>
+                    </tr>
+                    <tr>
+                      <td>GPU Memory</td><td><input type="text" v-model="step.gpu.gpu_memory" placeholder="" :disabled="!editingInfo.steps"></td>
+                    </tr>
+                    <tr>
+                      <td>CUDA Capabilities</td><td><input type="text" v-model="step.gpu.cuda_capabilities" placeholder="" :disabled="!editingInfo.steps"></td>
+                    </tr>
+                    <tr>
+                      <td>CUDA Runtime</td><td><input type="text" v-model="step.gpu.cuda_runtime" placeholder="" :disabled="!editingInfo.steps"></td>
+                    </tr>
+                    <tr>
+                      <td>CUDA Driver Version</td><td><input type="text" v-model="step.gpu.cuda_driver_version" placeholder="" :disabled="!editingInfo.steps"></td>
+                    </tr>
+                    <tr>
+                      <td>CUDA Runtime Version</td><td><input type="text" v-model="step.gpu.cuda_runtime_version" placeholder="" :disabled="!editingInfo.steps"></td>
+                    </tr>
+                  </template>
                 </template>
               </table>
               <v-btn small class="mr-1 mb-1" color="error" @click="deleteStep(index)">Delete step {{index + 1}}</v-btn>
@@ -285,6 +314,7 @@ export default {
       step.driver.datatier = step.driver.datatier.join(',');
       step.driver.eventcontent = step.driver.eventcontent.join(',');
       step.driver.step = step.driver.step.join(',');
+      step.gpu.cuda_capabilities = step.gpu.cuda_capabilities.join(',');
     }
     axios.get('api/relvals/get_editable/' + this.prepid).then(response => {
       if (query.clone && query.clone.length) {
@@ -328,6 +358,7 @@ export default {
         step.driver.datatier = this.cleanSplit(step.driver.datatier);
         step.driver.eventcontent = this.cleanSplit(step.driver.eventcontent);
         step.driver.step = this.cleanSplit(step.driver.step);
+        step.gpu.cuda_capabilities = this.cleanSplit(step.gpu.cuda_capabilities);
       }
       let httpRequest;
       this.loading = true;
@@ -379,6 +410,7 @@ export default {
         newStep.driver.datatier = newStep.driver.datatier.join(',');
         newStep.driver.eventcontent = newStep.driver.eventcontent.join(',');
         newStep.driver.step = newStep.driver.step.join(',');
+        newStep.gpu.cuda_capabilities = step.gpu.cuda_capabilities.join(',');
         steps.push(newStep);
         component.loading = false;
       }).catch(error => {
