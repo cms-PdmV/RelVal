@@ -55,6 +55,8 @@ class RelValStep(ModelBase):
             'lumisection': {},
             'label': '',
         },
+        # Keeping output of this task
+        'keep_output': True,
         # Lumis per job - applicable to non-first steps
         'lumis_per_job': '',
         # Actual globaltag, resolved from auto:... conditions

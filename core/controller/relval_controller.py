@@ -244,7 +244,7 @@ class RelValController(ControllerBase):
 
         task_dict['TaskName'] = step.get_short_name()
         task_dict['ConfigCacheID'] = step.get('config_id')
-        task_dict['KeepOutput'] = True
+        task_dict['KeepOutput'] = step.get('keep_output')
         task_dict['ScramArch'] = step.get('scram_arch')
         resolved_globaltag = step.get('resolved_globaltag')
         if resolved_globaltag:
