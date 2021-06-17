@@ -48,6 +48,9 @@
                 <tr v-if="index == 0 && step.step_type != 'input'">
                   <td>Events per lumi</td><td><input type="text" v-model="step.events_per_lumi"></td>
                 </tr>
+                <tr v-if="step.step_type != 'input'">
+                  <td>Keep output</td><td><input type="checkbox" v-model="step.keep_output"></td>
+                </tr>
                 <tr v-if="index != 0">
                   <td>Lumis per job</td><td><input type="text" v-model="step.lumis_per_job"></td>
                 </tr>
