@@ -29,8 +29,8 @@
             <a :href="'api/relvals/get_config_upload/' + item.prepid" v-if="role('administrator')" title="Show config upload script">Config upload</a>&nbsp;
             <a style="text-decoration: underline;" @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>&nbsp;
             <a style="text-decoration: underline;" @click="nextStatus([item])" v-if="role('manager') && item.status != 'done'" title="Move to next status">Next</a>&nbsp;
-            <a style="text-decoration: underline;" @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted'" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
-            <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done'" title="Show workflows of this RelVal in Stats2">Stats2</a>         
+            <a style="text-decoration: underline;" @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted' && !isDev" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
+            <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done' && !isDev" title="Show workflows of this RelVal in Stats2">Stats2</a>
           </template>
           <template v-slot:item.prepid="{ item }">
             <a :href="'relvals?prepid=' + item.prepid" title="Show only this RelVal">{{item.prepid}}</a>
@@ -56,8 +56,9 @@
           <template v-slot:item.workflows="{ item }">
             <ol>
               <li v-for="(workflow, index) in item.workflows" :key="workflow.name">
-                <a target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
-                <a target="_blank" title="Open workflow in Stats2" :href="'https://cms-pdmv.cern.ch/stats?workflow_name=' + workflow.name">Stats2</a>&nbsp;
+                <a v-if="!isDev" target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
+                <a v-if="isDev" target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb-testbed.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
+                <a v-if="!isDev" target="_blank" title="Open workflow in Stats2" :href="'https://cms-pdmv.cern.ch/stats?workflow_name=' + workflow.name">Stats2</a>&nbsp;
                 <span v-if="workflow.status_history && workflow.status_history.length > 0">
                   <small>type:</small> {{workflow.type}}
                   <small>status:</small> {{workflow.status_history[workflow.status_history.length - 1].status}}
@@ -231,11 +232,13 @@ export default {
         visible: false,
         title: '',
         description: ''
-      }
+      },
+      isDev: false,
     }
   },
   created () {
     this.clearDialog();
+    this.isDev = document.location.origin.includes('dev');
   },
   methods: {
     fetchObjects () {
