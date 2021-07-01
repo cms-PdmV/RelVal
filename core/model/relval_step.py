@@ -329,7 +329,16 @@ class RelValStep(ModelBase):
 
             return step_index
 
-        raise Exception('No input step could be found')
+        name = self.get('name')
+        if this_is_harvesting:
+            raise Exception('No step with --eventcontent DQM could be found'
+                            f'as input for {name} (Harvesting step)')
+
+        if this_is_alca:
+            raise Exception('No step with --step RECO could be found '
+                            f'as input for {name} (AlCa)')
+
+        raise Exception(f'No input step for {name} could be found')
 
     def get_input_eventcontent(self, input_step=None):
         """
