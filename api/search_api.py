@@ -44,13 +44,12 @@ class SearchAPI(APIBase):
             prepid_query = args.pop('prepid', '')
             args['prepid'] = ('%s,%s' % (prepid_query, created_relvals)).strip(',')
 
-        # Special sorting for tickets
-        if db_name == 'tickets':
-            if sort is None:
-                sort = 'created_on'
+        # Sorting logic: by default sort dsc by cration time
+        if sort is None:
+            sort = 'created_on'
 
-            if sort == 'created_on' and sort_asc is None:
-                sort_asc = False
+        if sort == 'created_on' and sort_asc is None:
+            sort_asc = False
 
         if sort_asc is None:
             sort_asc = True
