@@ -64,7 +64,7 @@
         this.headers = [];
         this.columnsLocal.forEach(entry => {
           if (entry.visible || entry.dbName === 'prepid') {
-            this.headers.push({text: entry.displayName, value: entry.dbName});
+            this.headers.push({text: entry.displayName, value: entry.dbName, sortable: !!entry.sortable});
           }
         });
         this.$emit('updateColumns', this.columnsLocal, this.headers);
