@@ -101,16 +101,21 @@ class RelVal(ModelBase):
         """
         built_command = ''
         previous_step_cmssw = None
+        previous_scram_arch = None
         fragment = self.get('fragment')
         prepid = self.get_prepid()
         for index, step in enumerate(self.get('steps')):
-            step_cmssw = step.get('cmssw_release')
-            if step_cmssw != previous_step_cmssw:
+            step_cmssw = step.get_release()
+            step_scram_arch = step.get_scram_arch()
+            if step_cmssw != previous_step_cmssw or step_scram_arch != previous_scram_arch:
                 reuse_cmssw = for_submission and (index != 0 or not fragment)
-                built_command += cmssw_setup(step_cmssw, reuse_cmssw=reuse_cmssw)
+                built_command += cmssw_setup(step_cmssw,
+                                             reuse=reuse_cmssw,
+                                             scram_arch=step_scram_arch)
                 built_command += '\n\n'
 
             previous_step_cmssw = step_cmssw
+            previous_scram_arch = step_scram_arch
             custom_fragment_name = None
             if index == 0 and fragment and step.get_step_type() == 'cms_driver':
                 # If this is the first step, is cmsDriver and fragment is present,

@@ -191,7 +191,7 @@ class TicketController(ControllerBase):
         file_name = f'{ticket_prepid}_{int(random.randint(1000, 9999))}.json'
         # Execute run_the_matrix_pdmv.py
         command = [f'cd {remote_directory}/{ticket_dir}']
-        command.extend(cmssw_setup(cmssw_release, reuse_cmssw=True).split('\n'))
+        command.extend(cmssw_setup(cmssw_release, reuse=True).split('\n'))
         command += ['python run_the_matrix_pdmv.py '
                     f'-l={workflow_ids} '
                     f'-w={matrix} '

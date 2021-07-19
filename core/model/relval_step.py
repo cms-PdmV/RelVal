@@ -5,6 +5,7 @@ import weakref
 import json
 from copy import deepcopy
 from core.model.model_base import ModelBase
+from core_lib.utils.common_utils import get_scram_arch
 
 
 class RelValStep(ModelBase):
@@ -61,7 +62,7 @@ class RelValStep(ModelBase):
         'lumis_per_job': '',
         # Actual globaltag, resolved from auto:... conditions
         'resolved_globaltag': '',
-        # CMSSW scram arch
+        # Overwrite default CMSSW scram arch
         'scram_arch': '',
     }
 
@@ -79,7 +80,7 @@ class RelValStep(ModelBase):
         },
         'lumis_per_job': lambda l: l == '' or int(l) > 0,
         'name': lambda n: ModelBase.matches_regex(n, '[a-zA-Z0-9_\\-]{1,150}'),
-        'scram_arch': ModelBase.lambda_check('scram_arch'),
+        'scram_arch': lambda s: not s or ModelBase.lambda_check('scram_arch')(s),
     }
 
     def __init__(self, json_input=None, parent=None, check_attributes=True):
@@ -395,3 +396,21 @@ class RelValStep(ModelBase):
         requested_events = int(relval[0])
         events_per = int(relval[1])
         return requested_events, events_per
+
+    def get_release(self):
+        """
+        Return CMSSW release of the step
+        """
+        return self.get('cmssw_release')
+
+    def get_scram_arch(self):
+        """
+        Return the scram arch of the step
+        If scram arch is not specified in the step,
+        return scram arch of the release
+        """
+        scram_arch = self.get('scram_arch')
+        if scram_arch:
+            return scram_arch
+
+        return get_scram_arch(self.get_release())

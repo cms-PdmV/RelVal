@@ -3,7 +3,6 @@ Module that contains RelValController class
 """
 import json
 import time
-import itertools
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
@@ -11,7 +10,6 @@ from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.global_config import Config
 from core_lib.utils.common_utils import (clean_split,
                                          cmssw_setup,
-                                         get_scram_arch,
                                          config_cache_lite_setup)
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
@@ -46,8 +44,6 @@ class RelValController(ControllerBase):
             if not step.get('cmssw_release'):
                 step['cmssw_release'] = cmssw_release
 
-            step['scram_arch'] = get_scram_arch(step['cmssw_release'])
-
         relval_db = Database('relvals')
         with self.locker.get_lock(f'generate-relval-prepid-{prepid_part}'):
             # Get a new serial number
@@ -60,19 +56,6 @@ class RelValController(ControllerBase):
             relval = super().create(json_data)
 
         return relval
-
-    def before_update(self, old_obj, new_obj, changed_values):
-        new_steps = new_obj.get('steps')
-        old_steps = old_obj.get('steps')
-        for old_step, new_step in itertools.zip_longest(old_steps, new_steps):
-            old_cmssw_release = old_step.get('cmssw_release') if old_step else None
-            new_cmssw_release = new_step.get('cmssw_release') if new_step else None
-            if new_step and old_cmssw_release != new_cmssw_release:
-                scram_arch = get_scram_arch(new_cmssw_release)
-                if not scram_arch:
-                    raise Exception(f'Could not find scram arch for {new_cmssw_release}')
-
-                new_step.set('scram_arch', scram_arch)
 
     def after_update(self, old_obj, new_obj, changed_values):
         self.logger.info('Changed values: %s', changed_values)
@@ -193,7 +176,7 @@ class RelValController(ControllerBase):
                 step_cmssw = step.get('cmssw_release')
                 if step_cmssw != previous_step_cmssw:
                     command += '\n\n'
-                    command += cmssw_setup(step_cmssw, reuse_cmssw=for_submission)
+                    command += cmssw_setup(step_cmssw, reuse=for_submission)
                     command += '\n'
 
                 command += common_upload_part % (config_name, config_name)
@@ -245,7 +228,7 @@ class RelValController(ControllerBase):
         task_dict['TaskName'] = step.get_short_name()
         task_dict['ConfigCacheID'] = step.get('config_id')
         task_dict['KeepOutput'] = step.get('keep_output')
-        task_dict['ScramArch'] = step.get('scram_arch')
+        task_dict['ScramArch'] = step.get_scram_arch()
         resolved_globaltag = step.get('resolved_globaltag')
         if resolved_globaltag:
             task_dict['GlobalTag'] = resolved_globaltag
