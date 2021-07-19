@@ -4,7 +4,8 @@
       <li v-for="(step, index) in internalData" :key="index">
         {{step.name}}:
         <ul class="monospace">
-          <li>CMSSW Release: {{step.cmssw_release}} ({{step.scram_arch}})</li>
+          <li>CMSSW Release: {{step.cmssw_release}}</li>
+          <li v-if="step.scram_arch">SCRAM Arch: {{step.scram_arch}}</li>
           <template v-if="isDriver(step)">
             <li v-if="step.events_per_lumi && step.events_per_lumi.length">Events per Lumi: {{step.events_per_lumi}}</li>
             <li v-if="step.fragment_name && step.fragment_name.length">Fragment: {{step.fragment_name}}</li>

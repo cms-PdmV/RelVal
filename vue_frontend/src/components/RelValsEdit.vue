@@ -68,6 +68,9 @@
                 <tr>
                   <td>CMSSW Release</td><td><input type="text" v-model="step.cmssw_release" :disabled="!editingInfo.steps"></td>
                 </tr>
+                <tr>
+                  <td>SCRAM Arch</td><td><input type="text" v-model="step.scram_arch" placeholder="If empty, uses default value of the release" :disabled="!editingInfo.steps"></td>
+                </tr>
                 <tr v-if="index == 0 && step.step_type != 'input'">
                   <td>Events per lumi</td><td><input type="text" v-model="step.events_per_lumi" :disabled="!editingInfo.steps"></td>
                 </tr>
