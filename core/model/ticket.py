@@ -43,6 +43,8 @@ class Ticket(ModelBase):
         'rewrite_gt_string': '',
         # Tag to group workflow ids
         'sample_tag': '',
+        # Overwrite default scram arch
+        'scram_arch': '',
         # Status is either new or done
         'status': 'new',
         # Workflow ids
@@ -62,6 +64,7 @@ class Ticket(ModelBase):
         'rewrite_gt_string': lambda rgs: ModelBase.matches_regex(rgs, '[a-zA-Z0-9\\.\\-_]{0,199}'),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
         'status': lambda status: status in ('new', 'done'),
+        'scram_arch': lambda s: not s or ModelBase.lambda_check('scram_arch')(s),
         'workflow_ids': lambda wf: len(wf) > 0,
         '__workflow_ids': lambda wf: wf > 0,
 
