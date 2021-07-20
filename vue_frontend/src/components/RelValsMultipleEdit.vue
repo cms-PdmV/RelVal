@@ -7,36 +7,35 @@
         <li v-for="prepid in prepids" :key="prepid"><a :href="'relvals?prepid=' + prepid" title="Open RelVal in new tab" target="_blank">{{prepid}}</a></li>
       </ul>
       <h2>Values to be updated in {{prepids.length}} RelVals</h2>
-      <table v-if="editableObjects">
+      <table v-if="editingObject">
         <tr>
           <td>CPU Cores (-t)</td>
-          <td><input type="number" v-model="fakeEditableObject.cpu_cores" min="1" max="8"></td>
+          <td><input type="number" v-model="editingObject.cpu_cores" min="1" max="8"></td>
         </tr>
         <tr>
           <td>Label (--label)</td>
-          <td><input type="text" v-model="fakeEditableObject.label" placeholder="E.g. gcc8 or rsb or pmx"></td>
+          <td><input type="text" v-model="editingObject.label" placeholder="E.g. gcc8 or rsb or pmx"></td>
         </tr>
         <tr>
           <td>Memory</td>
-          <td><input type="number" v-model="fakeEditableObject.memory" min="0" max="32000" step="1000">MB</td>
+          <td><input type="number" v-model="editingObject.memory" min="0" max="32000" step="1000">MB</td>
         </tr>
         <tr>
           <td>Notes</td>
-          <td><textarea v-model="fakeEditableObject.notes" placeholder="E.g. Goals, comments, links to TWiki and HN"></textarea></td>
+          <td><textarea v-model="editingObject.notes" placeholder="E.g. Goals, comments, links to TWiki and HN"></textarea></td>
         </tr>
         <tr>
           <td>Sample Tag</td>
-          <td><input type="text" v-model="fakeEditableObject.sample_tag" placeholder="E.g. Run2, Run3, Phase2, HIN, GEN, ..."></td>
+          <td><input type="text" v-model="editingObject.sample_tag" placeholder="E.g. Run2, Run3, Phase2, HIN, GEN, ..."></td>
         </tr>
         <tr>
           <td>Size per event</td>
-          <td><input type="number" v-model="fakeEditableObject.size_per_event">kB</td>
+          <td><input type="number" v-model="editingObject.size_per_event">kB</td>
         </tr>
-
-        <tr v-if="fakeEditableObject.steps">
-          <td>Steps ({{listLength(fakeEditableObject.steps)}})</td>
+        <tr v-if="editingObject.steps">
+          <td>Steps ({{listLength(editingObject.steps)}})</td>
           <td>
-            <div v-for="(step, index) in fakeEditableObject.steps" :key="index">
+            <div v-for="(step, index) in editingObject.steps" :key="index">
               <h3>Step {{index + 1}}</h3>
               <table v-if="!step.deleted">
                 <tr>
@@ -44,6 +43,9 @@
                 </tr>
                 <tr>
                   <td>CMSSW Release</td><td><input type="text" v-model="step.cmssw_release"></td>
+                </tr>
+                <tr>
+                  <td>SCRAM Arch</td><td><input type="text" v-model="step.scram_arch" placeholder="If empty, uses default value of the release"></td>
                 </tr>
                 <tr v-if="index == 0 && step.step_type != 'input'">
                   <td>Events per lumi</td><td><input type="text" v-model="step.events_per_lumi"></td>
@@ -63,11 +65,7 @@
                   </tr>
                   <tr>
                     <td>Lumisection ranges</td>
-                    <td>
-                      <input type="text" style="width: 75%;font-family: monospace;" v-model="step.input.lumisection" v-on:input="checkLumisectionJSON(step.input.lumisection)">
-                      <span v-if="lumisectionJSONValid" class="ml-2" style="color: #27ae60">Valid JSON</span>
-                      <span v-else class="ml-2" style="color: #e74c3c">Invalid JSON</span>
-                    </td>
+                    <td><JSONField v-model="step.input.lumisection"/></td>
                   </tr>
                 </template>
                 <tr>
@@ -141,23 +139,23 @@
                             class="mr-1"
                             :checked="step.driver['data']"
                             :name="'step' + index + '_data_fast_mc'"
-                            @click="setValue(step.driver, 'data', !Boolean(step.driver.data));
-                                    setValue(step.driver, 'mc', false);
-                                    setValue(step.driver, 'fast', false);"
+                            @click="step.driver.data = !Boolean(step.driver.data);
+                                    step.driver.mc =  false;
+                                    step.driver.fast = false;"
                           >--data
                     <input type="radio"
                             class="mr-1 ml-2"
                             :checked="step.driver['mc']"
                             :name="'step' + index + '_data_fast_mc'"
-                            @click="setValue(step.driver, 'data', false);
-                                    setValue(step.driver, 'mc', !Boolean(step.driver.mc));
-                                    deleteAttribute(step.driver, 'fast');"
+                            @click="step.driver.data = false;
+                                    step.driver.mc = !Boolean(step.driver.mc);
+                                    step.driver.fast = false;"
                           >--mc
                     <span v-if="!Boolean(step.driver.data)">
                       <input type="checkbox"
                             class="mr-1 ml-2"
                             :checked="step.driver['fast']"
-                            @click="setValue(step.driver, 'fast', !Boolean(step.driver.fast));"
+                            @click="step.driver.fast = !Boolean(step.driver.fast);"
                             />--fast
                     </span>
                   </td>
@@ -176,58 +174,56 @@
         </tr>
         <tr>
           <td>Time per event</td>
-          <td><input type="number" v-model="fakeEditableObject.time_per_event">s</td>
+          <td><input type="number" v-model="editingObject.time_per_event">s</td>
         </tr>
         <tr>
           <td>Workflow Name</td>
-          <td><input type="text" v-model="fakeEditableObject.workflow_name"></td>
+          <td><input type="text" v-model="editingObject.workflow_name"></td>
         </tr>
       </table>
-      <!-- <pre>{{JSON.stringify(fakeEditableObject, undefined, 2)}}</pre> -->
+      <!-- <pre style="font-size: 0.6em">{{JSON.stringify(editingObject, undefined, 2)}}</pre> -->
       <h2>List of edits that will be done</h2>
       <ul>
-        <div v-for="(value, key) in fakeEditableObject" :key="key">
+        <div v-for="(value, key) in differences" :key="key">
           <template v-if="key != 'steps'">
             <li>
               <b>{{key}}</b> will be set to <b>{{value}}</b> 
-              <v-btn small class="ml-1 mb-1" style="height: 22px" color="error" @click="deleteAttribute(fakeEditableObject, key)">Remove</v-btn>
+              <v-btn small
+                     class="ml-1 mb-1"
+                     color="error"
+                     @click="editingObject[key] = originalEditingObject[key]">Remove edit</v-btn>
             </li>
           </template>
-        </div>
-        <div v-for="(step, index) in fakeEditableObject.steps" :key="index">
-          <li v-if="(Object.keys(step).length > 3 || Object.keys(step.input).length || Object.keys(step.driver).length) && !step.deleted">
-            Step {{index + 1}}:
-            <ul>
-              <div v-for="(value, key) in step" :key="key">
-                <template v-if="key != 'driver' && key != 'input' && key != 'deleted'">
-                  <li>
-                    <b>{{key}}</b> in <b>Step {{index + 1}}</b> will be set to <b>{{niceBoolean(value)}}</b>
-                    <v-btn small class="ml-1 mb-1" style="height: 22px" color="error" @click="deleteAttribute(step, key)">Remove</v-btn>
-                  </li>
-                </template>
-              </div>
-              <template v-if="index == 0">
-                <div v-for="(value, key) in step.input" :key="key">
-                  <li>
-                    <b>{{key}}</b> in <b>Step {{index + 1}}</b> will be set to <b>{{niceBoolean(value)}}</b>
-                    <v-btn small class="ml-1 mb-1" style="height: 22px" color="error" @click="deleteAttribute(step.input, key)">Remove</v-btn>
-                  </li>
+          <template v-if="key == 'steps'">
+            <div v-for="(step, index) in value" :key="index">
+              <template v-if="!step.deleted">
+                <div v-for="(stepValue, stepKey) in step" :key="stepKey">
+                  <template v-if="['driver', 'input'].includes(stepKey)">
+                    <li v-for="(driverValue, driverKey) in stepValue" :key="driverKey">
+                      <b>{{driverKey}}</b> in <b>Step {{index + 1}}</b> will be set to <b>{{driverValue}}</b>
+                      <v-btn small
+                             class="ml-1 mb-1"
+                             color="error"
+                             @click="editingObject.steps[index][stepKey][driverKey] = originalEditingObject.steps[index][stepKey][driverKey]">Remove edit</v-btn>
+                    </li>
+                  </template>
+                  <template v-if="!['deleted', 'driver', 'input'].includes(stepKey)">
+                    <li>
+                      <b>{{stepKey}}</b> in <b>Step {{index + 1}}</b> will be set to <b>{{stepValue}}</b>
+                      <v-btn small
+                             class="ml-1 mb-1"
+                             color="error"
+                             @click="editingObject.steps[index][stepKey] = originalEditingObject.steps[index][stepKey]">Remove edit</v-btn>
+                    </li>
+                  </template>
                 </div>
               </template>
-              <div v-for="(value, key) in step.driver" :key="key">
-                <li>
-                  <b>{{key}}</b> in <b>Step {{index + 1}}</b> will be set to <b>{{niceBoolean(value)}}</b>
-                  <v-btn small class="ml-1 mb-1" style="height: 22px" color="error" @click="deleteAttribute(step.driver, key)">Remove</v-btn>
-                </li>
-              </div>
-            </ul>
-          </li>
-          <li v-if="step.deleted">
-            Step {{index + 1}}:
-            <br>
-            Will be <b>deleted in all {{prepids.length}}</b> RelVals
-            <v-btn small class="ml-1 mb-1" style="height: 22px" color="error" @click="undeleteStep(index)">Bring back step {{index + 1}}</v-btn>
-          </li>
+              <li v-if="step.deleted">
+                Step {{index + 1}} will be <b>deleted in all {{prepids.length}}</b> RelVals
+                <v-btn small class="ml-1 mb-1" color="error" @click="editingObject.steps[index].deleted = false">Remove edit</v-btn>
+              </li>
+            </div>
+          </template>
         </div>
       </ul>
       <v-btn small class="mr-1 mt-1" color="primary" @click="save()">Save</v-btn>
@@ -259,10 +255,12 @@
 import axios from 'axios'
 import { utilsMixin } from '../mixins/UtilsMixin.js'
 import LoadingOverlay from './LoadingOverlay.vue'
+import JSONField from './JSONField.vue'
 
 export default {
   components: {
     LoadingOverlay,
+    JSONField
   },
   mixins: [
     utilsMixin
@@ -270,10 +268,11 @@ export default {
   data () {
     return {
       prepids: [],
-      editableObjects: [],
-      fakeEditableObject: {},
+      objects: [],
+      editingObject: {},
+      originalEditingObject: {},
+      differences: {},
       loading: true,
-      lumisectionJSONValid: true,
       errorDialog: {
         visible: false,
         title: '',
@@ -287,91 +286,159 @@ export default {
     this.prepids = this.cleanSplit(query['prepid']);
     let component = this;
     axios.get('api/relvals/get_editable/' + this.prepids.join(',')).then(response => {
-      let relvals = response.data.response.object;
+      let objects = response.data.response.object;
       if (component.prepids.length == 1) {
-        relvals = [relvals];
+        objects = [objects];
       }
-      let maxSteps = 0;
-      for (let relval of relvals) {
-        maxSteps = Math.max(maxSteps, relval.steps.length);
+      for (let obj of objects) {
+        this.prepareObjectForEditing(obj);
       }
-      let steps = [];
-      for (let i = 0; i < maxSteps; i++) {
-        steps.push({'input': {}, 'driver': {}, 'deleted': false});
-      }
-      this.$set(this.fakeEditableObject, 'steps', steps);
-      component.editableObjects = response.data.response.object;
+      component.objects = objects;
+      let editingObject = component.makeEditingObject(objects);
+      component.$set(component, 'editingObject', component.makeCopy(editingObject));
+      component.$set(component, 'originalEditingObject', component.makeCopy(editingObject))
       component.loading = false;
     }).catch(error => {
       component.loading = false;
       component.showError('Error getting RelVal information', component.getError(error));
     });
   },
-  methods: {
-    save: function() {
-      let editableObjects = this.makeCopy(this.editableObjects);
-      let component = this;
-      // First - update RelVal attributes
-      for (let key in this.fakeEditableObject) {
-        if (key == 'steps') {
-          continue;
-        }
-        const value = this.fakeEditableObject[key];
-        for (let relval of editableObjects) {
-          relval[key] = value;
-        }
-      }
-      // Then - update RelVal steps attributes
-      for (let stepIndex in this.fakeEditableObject.steps) {
-        const step = this.fakeEditableObject.steps[stepIndex];
-        for (let relval of editableObjects) {
-          const relvalSteps = relval.steps;
-          if (stepIndex >= relvalSteps.length) {
-            continue;
-          }
-          let relvalStep = relvalSteps[stepIndex];
-          if (step.deleted) {
-            // Removal from list will happen later
-            relvalSteps[stepIndex] = undefined;
+  watch: {
+    editingObject: {
+      deep: true,
+      handler() {
+        let differences = {};
+        let ref = this.originalEditingObject;
+        let tar = this.editingObject;
+        for (let key of Object.keys(ref)) {
+          if (key == 'steps') {
             continue
           }
-          // Main RelVal step attributes
-          for (let key in step) {
-            if (key == 'driver' || key == 'input' || key == 'deleted') {
-              // driver and input will be handled later
-              continue
-            }
-            relvalStep[key] = step[key];
+          if (ref[key] != tar[key]) {
+            differences[key] = tar[key]
           }
-          // RelVal step input attributes
-          for (let key in step.input) {
-            if (key == 'lumisection') {
-              relvalStep.input[key] = JSON.parse(step.input[key]);
-            } else {
-              relvalStep.input[key] = step.input[key];
-            }
-          }
-          // RelVal driver attributes
-          for (let key in step.driver) {
-            if (key == 'datatier' || key == 'eventcontent' || key == 'step') {
-              relvalStep.driver[key] = this.cleanSplit(step.driver[key]);
-            } else {
-              relvalStep.driver[key] = step.driver[key];
+        }
+        // Steps diffs
+        let stepsDiffs = [];
+        for (let i = 0; i < ref.steps.length; i++) {
+          let refStep = ref.steps[i];
+          let tarStep = tar.steps[i];
+          let stepDiff = {'deleted': tarStep.deleted, 'driver': {}, 'input': {}};
+          stepsDiffs.push(stepDiff);
+          for (let key of Object.keys(refStep)) {
+            if (['driver', 'input'].includes(key)) {
+              for (let driverKey of Object.keys(refStep[key])) {
+                if (refStep[key][driverKey] != tarStep[key][driverKey]) {
+                  stepDiff[key][driverKey] = tarStep[key][driverKey];
+                }
+              }
+            } else if (refStep[key] != tarStep[key]) {
+              stepDiff[key] = tarStep[key];
             }
           }
         }
+        if (stepsDiffs.some(s => s.deleted || Object.keys(s).length > 1)) {
+          differences['steps'] = stepsDiffs;
+        }
+        this.$set(this, 'differences', differences);
       }
-      for (let relval of editableObjects) {
-        relval.steps = relval.steps.filter(s => s !== undefined);
+    }
+  },
+  methods: {
+    prepareObjectForEditing: function(obj) {
+      for (let step of obj.steps) {
+        step.input.lumisection = this.stringifyLumis(step.input.lumisection);
+        step.driver.datatier = step.driver.datatier.join(',');
+        step.driver.eventcontent = step.driver.eventcontent.join(',');
+        step.driver.step = step.driver.step.join(',');
+      }
+    },
+    prepareObjectForSaving: function(obj) {
+      obj.notes = obj.notes.trim();
+      for (let step of obj.steps) {
+        step.input.lumisection = step.input.lumisection ? JSON.parse(step.input.lumisection) : {};
+        step.driver.datatier = this.cleanSplit(step.driver.datatier);
+        step.driver.eventcontent = this.cleanSplit(step.driver.eventcontent);
+        step.driver.step = this.cleanSplit(step.driver.step);
+      }
+    },
+    jsonDiff: function(obj1, obj2) {
+      return JSON.stringify(obj1) != JSON.stringify(obj2);
+    },
+    getCommonValue: function(objects, callback) {
+      for (let i = 0; i < objects.length - 1; i++) {
+        if (this.jsonDiff(callback(objects[i]), callback(objects[i + 1]))) {
+          return null;
+        }
+      }
+      return callback(objects[0]);
+    },
+    makeEditingObject: function(relvals) {
+      let editingObject = {};
+      // Primitive attributes
+      for (let key of ['cpu_cores', 'label', 'memory', 'notes', 'sample_tag', 'size_per_event', 'time_per_event', 'workflow_name']) {
+        editingObject[key] = this.getCommonValue(relvals, (r) => r[key]);
+      }
+      // Steps
+      editingObject.steps = Array(Math.min(...relvals.map(x => x.steps.length)));
+      for (let i = 0; i < editingObject.steps.length; i++) {
+        editingObject.steps[i] = {'deleted': false, 'driver': {}, 'input': {}};
+      }
+      // Step attributes
+      for (let key of Object.keys(relvals[0].steps[0])) {
+        if (['driver', 'input'].includes(key)) {
+          for (let i = 0; i < editingObject.steps.length; i++) {
+            for (let driverKey of Object.keys(relvals[0].steps[i][key])) {
+              editingObject.steps[i][key][driverKey] = this.getCommonValue(relvals, (r) => r.steps[i][key][driverKey]);
+            }
+          }
+        } else {
+          for (let i = 0; i < editingObject.steps.length; i++) {
+            editingObject.steps[i][key] = this.getCommonValue(relvals, (r) => r.steps[i][key]);
+          }
+        }
+      }
+      return editingObject;
+    },
+    save: function() {
+      let objects = this.makeCopy(this.objects);
+      let component = this;
+      for (let obj of objects) {
+        for (let key of Object.keys(this.differences)) {
+          let difference = this.differences[key];
+          if (key == 'steps') {
+            for (let stepIndex = 0; stepIndex < difference.length; stepIndex++) {
+              let diffStep = difference[stepIndex];
+              if (diffStep.deleted) {
+                obj.steps[stepIndex] = undefined;
+              } else {
+                let objStep = obj.steps[stepIndex];
+                for (let stepKey of Object.keys(diffStep)) {
+                  if (['driver', 'input'].includes(stepKey)) {
+                    for (let driverKey of Object.keys(diffStep[stepKey])) {
+                      objStep[stepKey][driverKey] = diffStep[stepKey][driverKey];
+                    }
+                  } else if (stepKey != 'deleted') {
+                    objStep[stepKey] = diffStep[stepKey];
+                  }
+                }
+              }
+            }
+            obj.steps = obj.steps.filter(s => s !== undefined);
+          } else {
+            obj[key] = difference;
+          }
+        }
+        this.prepareObjectForSaving(obj);
       }
       this.loading = true;
-      let httpRequest = axios.post('api/relvals/update', editableObjects)
+      let httpRequest = axios.post('api/relvals/update', objects)
       httpRequest.then(response => {
         component.loading = false;
         window.location = 'relvals?prepid=' + response.data.response.map(x => x.prepid).join(',');
       }).catch(error => {
         component.loading = false;
-        component.showError('Error saving RelVal', component.getError(error))
+        component.showError('Error saving relvals', component.getError(error))
       });
     },
     cancel: function() {
@@ -387,23 +454,6 @@ export default {
       this.errorDialog.title = title;
       this.errorDialog.description = description;
       this.errorDialog.visible = true;
-    },
-    niceBoolean: function(b) {
-      // Convert boolean to Yes or No or return original value
-      return b === false ? 'No' : b === true ? 'Yes' : b;
-    },
-    setValue: function(obj, key, value) {
-      this.$set(obj, key, value);
-    },
-    deleteAttribute: function(obj, name) {
-      obj[name] = undefined;
-      delete obj[name];
-    },
-    deleteStep: function(stepIndex) {
-      this.fakeEditableObject.steps[stepIndex].deleted = true;
-    },
-    undeleteStep: function(stepIndex) {
-      this.fakeEditableObject.steps[stepIndex].deleted = false;
     }
   }
 }
