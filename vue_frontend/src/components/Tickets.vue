@@ -56,6 +56,10 @@
           </template>
           <template v-slot:item.cmssw_release="{ item }">
             <a :href="'tickets?cmssw_release=' + item.cmssw_release" :title="'Show all tickets with ' + item.cmssw_release">{{item.cmssw_release}}</a>
+            <small v-if="item.scram_arch.length">
+              <br>
+              <a :href="'tickets?scram_arch=' + item.scram_arch" :title="'Show all tickets with ' + item.scram_arch">({{item.scram_arch}})</a>
+            </small>
           </template>
           <template v-slot:item.batch_name="{ item }">
             <a :href="'tickets?batch_name=' + item.batch_name" :title="'Show all tickets with ' + item.batch_name">{{item.batch_name}}</a>

@@ -65,6 +65,10 @@
           <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run2, Run3, Phase2, HIN, GEN, ..." :disabled="!editingInfo.sample_tag"></td>
         </tr>
         <tr>
+          <td>SCRAM Arch</td>
+          <td><input type="text" v-model="editableObject.scram_arch" placeholder="If empty, uses default value of the release" :disabled="!editingInfo.scram_arch"></td>
+        </tr>
+        <tr>
           <td>Streams (--nStreams)</td>
           <td>
             <input type="number" v-model="editableObject.n_streams" min="0" max="16" step="1" :disabled="!editingInfo.n_streams">

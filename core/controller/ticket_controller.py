@@ -62,6 +62,7 @@ class TicketController(ControllerBase):
         editing_info['recycle_gs'] = not_done
         editing_info['rewrite_gt_string'] = not_done
         editing_info['sample_tag'] = not_done
+        editing_info['scram_arch'] = not_done
         editing_info['workflow_ids'] = not_done
 
         return editing_info
@@ -167,6 +168,7 @@ class TicketController(ControllerBase):
         remote_directory = Config.get('remote_path').rstrip('/')
         recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
         cmssw_release = ticket.get('cmssw_release')
+        scram_arch = ticket.get('scram_arch')
         matrix = ticket.get('matrix')
         additional_command = ticket.get('command').strip()
         if additional_command:
@@ -191,7 +193,9 @@ class TicketController(ControllerBase):
         file_name = f'{ticket_prepid}_{int(random.randint(1000, 9999))}.json'
         # Execute run_the_matrix_pdmv.py
         command = [f'cd {remote_directory}/{ticket_dir}']
-        command.extend(cmssw_setup(cmssw_release, reuse=True).split('\n'))
+        command.extend(cmssw_setup(cmssw_release,
+                                   reuse=True,
+                                   scram_arch=scram_arch if scram_arch else None).split('\n'))
         command += ['python run_the_matrix_pdmv.py '
                     f'-l={workflow_ids} '
                     f'-w={matrix} '
@@ -226,6 +230,7 @@ class TicketController(ControllerBase):
         with self.locker.get_lock(ticket_prepid):
             ticket = self.get(ticket_prepid)
             cmssw_release = ticket.get('cmssw_release')
+            scram_arch = ticket.get('scram_arch')
             n_streams = ticket.get('n_streams')
             try:
                 workflows = self.generate_workflows(ticket, ssh_executor)
@@ -245,6 +250,7 @@ class TicketController(ControllerBase):
                     for step_dict in workflow_dict['steps']:
                         new_step = self.make_relval_step_dict(step_dict)
                         new_step['cmssw_release'] = cmssw_release
+                        new_step['scram_arch'] = scram_arch
                         if n_streams > 0:
                             new_step['driver']['nStreams'] = n_streams
 
