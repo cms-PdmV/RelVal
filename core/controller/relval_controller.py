@@ -166,7 +166,7 @@ class RelValController(ControllerBase):
         command += '\n\n'
         command += config_cache_lite_setup(reuse_files=for_submission)
         # Upload command will be identical for all configs
-        common_upload_part = ('\npython config_uploader.py --file $(pwd)/%s.py --label %s '
+        common_upload_part = ('\npython3 config_uploader.py --file $(pwd)/%s.py --label %s '
                               f'--group ppd --user $(echo $USER) --db {database_url} || exit $?')
         previous_step_cmssw = None
         for step in relval.get('steps'):
@@ -345,7 +345,7 @@ class RelValController(ControllerBase):
             # No need to explicitly reuse CMSSW as this happens in relval_submission directory
             command.extend(cmssw_setup(cmssw_version).split('\n'))
             conditions_str = ','.join(list(conditions.keys()))
-            command += [f'python resolve_auto_global_tag.py "{cmssw_version}" "{conditions_str}"']
+            command += [f'python3 resolve_auto_global_tag.py "{cmssw_version}" "{conditions_str}"']
 
         with SSHExecutor('lxplus.cern.ch', credentials_file) as ssh_executor:
             # Upload python script to resolve auto globaltag by upload script

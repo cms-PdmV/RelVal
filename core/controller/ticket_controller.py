@@ -196,7 +196,7 @@ class TicketController(ControllerBase):
         command.extend(cmssw_setup(cmssw_release,
                                    reuse=True,
                                    scram_arch=scram_arch if scram_arch else None).split('\n'))
-        command += ['python run_the_matrix_pdmv.py '
+        command += ['python3 run_the_matrix_pdmv.py '
                     f'-l={workflow_ids} '
                     f'-w={matrix} '
                     f'-o={file_name} '
