@@ -23,7 +23,7 @@ def move_to_done(database_auth, port):
     connection = http.client.HTTPConnection('localhost', port=port, timeout=300)
     headers = {'Content-Type': 'application/json',
                'Adfs-Login': 'pdmvserv',
-               'Adfs-Group': 'cms-service-pdmv-admins'}
+               'Adfs-Group': 'cms-pdmv-serv'}
     relval_db = Database('relvals')
     relvals = [{}]
     page = 0
