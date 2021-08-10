@@ -7,7 +7,7 @@ from random import Random
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
-from core_lib.utils.common_utils import clean_split, cmssw_setup
+from core_lib.utils.common_utils import clean_split, cmssw_setup, get_scram_arch
 from core_lib.utils.global_config import Config
 from core.model.ticket import Ticket
 from core.model.relval_step import RelValStep
@@ -169,6 +169,10 @@ class TicketController(ControllerBase):
         recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
         cmssw_release = ticket.get('cmssw_release')
         scram_arch = ticket.get('scram_arch')
+        scram_arch = scram_arch if scram_arch else get_scram_arch(cmssw_release)
+        if not scram_arch:
+            raise Exception(f'Could not find SCRAM arch of {cmssw_release}')
+
         matrix = ticket.get('matrix')
         additional_command = ticket.get('command').strip()
         if additional_command:
@@ -193,9 +197,7 @@ class TicketController(ControllerBase):
         file_name = f'{ticket_prepid}_{int(random.randint(1000, 9999))}.json'
         # Execute run_the_matrix_pdmv.py
         command = [f'cd {remote_directory}/{ticket_dir}']
-        command.extend(cmssw_setup(cmssw_release,
-                                   reuse=True,
-                                   scram_arch=scram_arch if scram_arch else None).split('\n'))
+        command.extend(cmssw_setup(cmssw_release, reuse=True, scram_arch=scram_arch).split('\n'))
         command += ['python3 run_the_matrix_pdmv.py '
                     f'-l={workflow_ids} '
                     f'-w={matrix} '
