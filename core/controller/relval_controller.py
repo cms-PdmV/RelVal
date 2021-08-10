@@ -169,18 +169,21 @@ class RelValController(ControllerBase):
         common_upload_part = ('\npython3 config_uploader.py --file $(pwd)/%s.py --label %s '
                               f'--group ppd --user $(echo $USER) --db {database_url} || exit $?')
         previous_step_cmssw = None
+        previous_step_scram = None
         for step in relval.get('steps'):
             # Run config uploader
             config_name = step.get_config_file_name()
             if config_name:
-                step_cmssw = step.get('cmssw_release')
-                if step_cmssw != previous_step_cmssw:
+                step_cmssw = step.get_release()
+                step_scram = step.get_scram_arch()
+                if step_cmssw != previous_step_cmssw or step_scram != previous_step_scram:
                     command += '\n\n'
-                    command += cmssw_setup(step_cmssw, reuse=for_submission)
+                    command += cmssw_setup(step_cmssw, reuse=for_submission, scram_arch=step_scram)
                     command += '\n'
 
                 command += common_upload_part % (config_name, config_name)
                 previous_step_cmssw = step_cmssw
+                previous_step_scram = step_scram
 
         return command.strip()
 
@@ -337,16 +340,20 @@ class RelValController(ControllerBase):
             }
         }
         """
+        self.logger.debug('Resolve auto conditions of:\n%s', json.dumps(conditions_tree, indent=2))
         credentials_file = Config.get('credentials_path')
         remote_directory = Config.get('remote_path').rstrip('/')
         command = [f'cd {remote_directory}']
-        for cmssw_version, conditions in conditions_tree.items():
-            # Setup CMSSW environment
-            # No need to explicitly reuse CMSSW as this happens in relval_submission directory
-            command.extend(cmssw_setup(cmssw_version).split('\n'))
-            conditions_str = ','.join(list(conditions.keys()))
-            command += [f'python3 resolve_auto_global_tag.py "{cmssw_version}" "{conditions_str}"']
+        for cmssw_version, scram_tree in conditions_tree.items():
+            for scram_arch, conditions in scram_tree.items():
+                # Setup CMSSW environment
+                # No need to explicitly reuse CMSSW as this happens in relval_submission directory
+                command.extend(cmssw_setup(cmssw_version, scram_arch=scram_arch).split('\n'))
+                conditions_str = ','.join(list(conditions.keys()))
+                command += [('python3 resolve_auto_global_tag.py ' +
+                             f'"{cmssw_version}" "{scram_arch}" "{conditions_str}" || exit $?')]
 
+        self.logger.debug('Resolve auto conditions command:\n%s', '\n'.join(command))
         with SSHExecutor('lxplus.cern.ch', credentials_file) as ssh_executor:
             # Upload python script to resolve auto globaltag by upload script
             ssh_executor.upload_file('./core/utils/resolve_auto_global_tag.py',
@@ -363,13 +370,15 @@ class RelValController(ControllerBase):
         for resolved_tag in tags:
             split_resolved_tag = clean_split(resolved_tag, ' ')
             cmssw_version = split_resolved_tag[1]
-            conditions = split_resolved_tag[2]
-            resolved = split_resolved_tag[3]
-            self.logger.debug('Resolved %s to %s in %s',
+            scram_arch = split_resolved_tag[2]
+            conditions = split_resolved_tag[3]
+            resolved = split_resolved_tag[4]
+            self.logger.debug('Resolved %s to %s in %s (%s)',
                               conditions,
                               resolved,
-                              cmssw_version)
-            conditions_tree[cmssw_version][conditions] = resolved
+                              cmssw_version,
+                              scram_arch)
+            conditions_tree[cmssw_version][scram_arch][conditions] = resolved
 
     def get_default_step(self):
         """
@@ -458,11 +467,9 @@ class RelValController(ControllerBase):
                     # Collect only auto: ... conditions
                     continue
 
-                cmssw_version = step.get('cmssw_release')
-                if cmssw_version not in conditions_tree:
-                    conditions_tree[cmssw_version] = {}
-
-                conditions_tree[cmssw_version][conditions] = None
+                cmssw = step.get_release()
+                scram = step.get_scram_arch()
+                conditions_tree.setdefault(cmssw, {}).setdefault(scram, {})[conditions] = None
 
         # Resolve auto:conditions to actual globaltags
         self.resolve_auto_conditions(conditions_tree)
@@ -485,8 +492,9 @@ class RelValController(ControllerBase):
 
                     conditions = step.get('driver')['conditions']
                     if conditions.startswith('auto:'):
-                        cmssw_version = step.get('cmssw_release')
-                        resolved_conditions = conditions_tree[cmssw_version][conditions]
+                        cmssw = step.get_release()
+                        scram = step.get_scram_arch()
+                        resolved_conditions = conditions_tree[cmssw][scram][conditions]
                         step.set('resolved_globaltag', resolved_conditions)
                     else:
                         step.set('resolved_globaltag', conditions)

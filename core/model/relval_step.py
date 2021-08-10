@@ -413,4 +413,9 @@ class RelValStep(ModelBase):
         if scram_arch:
             return scram_arch
 
-        return get_scram_arch(self.get_release())
+        cmssw_release = self.get_release()
+        scram_arch = get_scram_arch(cmssw_release)
+        if scram_arch:
+            return scram_arch
+
+        raise Exception(f'Could not find SCRAM arch of {cmssw_release}')
