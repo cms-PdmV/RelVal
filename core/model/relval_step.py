@@ -5,7 +5,7 @@ import weakref
 import json
 from copy import deepcopy
 from core.model.model_base import ModelBase
-from core_lib.utils.common_utils import cmssw_setup, get_scram_arch
+from core_lib.utils.common_utils import get_scram_arch
 
 
 class RelValStep(ModelBase):
