@@ -168,6 +168,7 @@ export default {
         {'dbName': 'recycle_gs', 'displayName': 'Recycle GS', 'visible': 1, 'sortable': true},
         {'dbName': 'workflow_ids', 'displayName': 'Workflows', 'visible': 1},
         {'dbName': 'command', 'displayName': 'Command', 'visible': 0},
+        {'dbName': 'command_steps', 'displayName': 'Command Steps', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
         {'dbName': '_created', 'displayName': 'Creation', 'visible': 0, 'sortable': true},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0, 'sortable': true},
