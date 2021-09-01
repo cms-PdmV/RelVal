@@ -21,6 +21,8 @@ class Ticket(ModelBase):
         'cmssw_release': '',
         # Additional command to add to all cmsDrivers
         'command': '',
+        # List of steps that additional command should be applied to
+        'command_steps': [],
         # CPU cores
         'cpu_cores': 1,
         # List of prepids of relvals that were created from this ticket

@@ -14,6 +14,13 @@ from Configuration.PyReleaseValidation.MatrixInjector import MatrixInjector
 #pylint: enable=wrong-import-position,import-error
 
 
+def clean_split(string, separator=','):
+    """
+    Split a string by separator and collect only non-empty values
+    """
+    return [x.strip() for x in string.split(separator) if x.strip()]
+
+
 def get_wmsplit():
     """
     Get wmsplit dictionary from MatrixInjector prepare() method
@@ -107,6 +114,30 @@ def get_workflow_name(matrix):
     return workflow_name
 
 
+def should_apply_additional_command(workflow_step, command_steps):
+    """
+    Return whether workflow step includes steps specified in "command_steps"
+    and should have additional command applied to it
+    """
+    if not command_steps:
+        return True
+
+    if '-s' in workflow_step:
+        steps = workflow_step['-s']
+    elif '--step' in workflow_step:
+        steps = workflow_step['--step']
+    else:
+        return True
+
+    steps = set(clean_split(steps))
+    should_apply = len(command_steps & steps) > 0
+    print('Workflow step steps: %s, command_steps: %s, should apply: %s',
+          steps,
+          command_steps,
+          should_apply)
+    return should_apply
+
+
 def merge_additional_command(workflow_step, command):
     """
     Merge workflow arguments with additional parameters provided by user
@@ -182,6 +213,10 @@ def main():
     parser.add_argument('-c', '--command',
                         dest='command',
                         help='Additional command to add to each cmsDriver')
+    parser.add_argument('-cs', '--command_steps',
+                        dest='command_steps',
+                        help='Specify which RelVal steps should have additional command applied',
+                        default='')
     parser.add_argument('-o', '--output',
                         dest='output_file',
                         help='Output file name')
@@ -195,11 +230,12 @@ def main():
     workflow_ids = sorted(list({float(x) for x in opt.workflow_ids.split(',')}))
     print('Given workflow ids (%s): %s' % (len(workflow_ids), workflow_ids))
     print('Workflows file: %s' % (opt.matrix_name))
-    print('User given command: %s' % (opt.command))
+    print('User given command: %s (%s)' % (opt.command, opt.command_steps))
     print('Output file: %s' % (opt.output_file))
     print('Recycle GS: %s' % (opt.recycle_gs))
 
     workflows_module = get_workflows_module(opt.matrix_name)
+    command_steps = set(clean_split(opt.command_steps))
     # wmsplit is a dictionary with LumisPerJob values
     wmsplit = get_wmsplit()
     workflows = {}
@@ -241,7 +277,7 @@ def main():
             print('Step: %s' % (workflow_step))
             workflow_step = steps_module.merge([workflow_matrix.overrides,
                                                 workflow_step])
-            if opt.command:
+            if opt.command and should_apply_additional_command(workflow_step, command_steps):
                 workflow_step = merge_additional_command(workflow_step, opt.command)
 
             workflows[workflow_id]['steps'].append(make_relval_step(workflow_step,

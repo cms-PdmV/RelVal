@@ -21,6 +21,10 @@
           <td><input type="text" v-model="editableObject.command" placeholder="Argument that will be added to all cmsDrivers" :disabled="!editingInfo.command"></td>
         </tr>
         <tr>
+          <td>Command Steps</td>
+          <td><input type="text" v-model="editableObject.command_steps" placeholder="E.g. GEN,SIM,DIGI" :disabled="!editingInfo.command_steps"></td>
+        </tr>
+        <tr>
           <td>CPU Cores (-t)</td>
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="8"></td>
         </tr>
@@ -152,6 +156,7 @@ export default {
           templateResponse.data.response.object.created_relvals = response.data.response.object.created_relvals;
           component.editableObject = templateResponse.data.response.object;
           component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
+          component.editableObject.command_steps = component.editableObject.command_steps.filter(Boolean).join(',');
           component.editingInfo = response.data.response.editing_info;
           component.loading = false;
         }).catch(error => {
@@ -161,6 +166,7 @@ export default {
       } else {
         component.editableObject = response.data.response.object;
         component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
+          component.editableObject.command_steps = component.editableObject.command_steps.filter(Boolean).join(',');
         component.editingInfo = response.data.response.editing_info;
         component.loading = false;
       }
@@ -175,6 +181,7 @@ export default {
       let editableObject = this.makeCopy(this.editableObject);
       editableObject.notes = editableObject.notes.trim();
       editableObject.workflow_ids = this.cleanSplit(editableObject.workflow_ids);
+      editableObject.command_steps = this.cleanSplit(editableObject.command_steps);
       let httpRequest;
       if (this.creatingNew) {
         httpRequest = axios.put('api/tickets/create', editableObject);

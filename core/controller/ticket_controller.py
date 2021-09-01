@@ -53,6 +53,7 @@ class TicketController(ControllerBase):
         editing_info['batch_name'] = creating_new
         editing_info['cmssw_release'] = creating_new
         editing_info['command'] = not_done
+        editing_info['command_steps'] = not_done
         editing_info['cpu_cores'] = not_done
         editing_info['label'] = not_done
         editing_info['matrix'] = not_done
@@ -175,9 +176,13 @@ class TicketController(ControllerBase):
 
         matrix = ticket.get('matrix')
         additional_command = ticket.get('command').strip()
+        command_steps = ticket.get('command_steps')
         if additional_command:
             additional_command = additional_command.replace('"', '\\"')
             additional_command = f'-c="{additional_command}"'
+            if command_steps:
+                command_steps = ','.join(command_steps)
+                additional_command += f' -cs={command_steps}'
         else:
             additional_command = ''
 
