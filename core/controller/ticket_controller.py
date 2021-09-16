@@ -1,6 +1,7 @@
 """
 Module that contains TicketController class
 """
+from copy import deepcopy
 import json
 import os
 from random import Random
@@ -55,6 +56,8 @@ class TicketController(ControllerBase):
         editing_info['command'] = not_done
         editing_info['command_steps'] = not_done
         editing_info['cpu_cores'] = not_done
+        editing_info['gpu'] = not_done
+        editing_info['gpu_steps'] = not_done
         editing_info['label'] = not_done
         editing_info['matrix'] = not_done
         editing_info['memory'] = not_done
@@ -239,6 +242,8 @@ class TicketController(ControllerBase):
             cmssw_release = ticket.get('cmssw_release')
             scram_arch = ticket.get('scram_arch')
             n_streams = ticket.get('n_streams')
+            gpu_dict = ticket.get('gpu')
+            gpu_steps = ticket.get('gpu_steps')
             try:
                 workflows = self.generate_workflows(ticket, ssh_executor)
                 # Iterate through workflows and create RelVals
@@ -260,6 +265,10 @@ class TicketController(ControllerBase):
                         new_step['scram_arch'] = scram_arch
                         if n_streams > 0:
                             new_step['driver']['nStreams'] = n_streams
+
+                        step_steps = [x.split(':')[0] for x in new_step['driver']['step']]
+                        if gpu_steps and (set(gpu_steps) & set(step_steps)):
+                            new_step['gpu'] = deepcopy(gpu_dict)
 
                         self.rewrite_gt_string_if_needed(new_step, ticket.get('rewrite_gt_string'))
                         workflow_json['steps'].append(new_step)

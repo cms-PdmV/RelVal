@@ -50,6 +50,16 @@ class RelValStep(ModelBase):
         },
         # Events per lumi - if empty, events per job will be used
         'events_per_lumi': '',
+        # GPU parameters
+        'gpu': {
+            'requires': 'forbidden',
+            'gpu_memory': '',
+            'cuda_capabilities': [],
+            'cuda_runtime': '',
+            'gpu_name': '',
+            'cuda_driver_version': '',
+            'cuda_runtime_version': ''
+        },
         # Input file info
         'input': {
             'dataset': '',
@@ -74,6 +84,11 @@ class RelValStep(ModelBase):
             'era': lambda e: not e or ModelBase.matches_regex(e, '[a-zA-Z0-9_\\,]{0,50}'),
             'scenario': lambda s: not s or s in {'pp', 'cosmics', 'nocoll', 'HeavyIons'},
         },
+        '_gpu': {
+            'requires': lambda r: r in ('forbidden', 'optional', 'required'),
+            'cuda_capabilities': lambda l: isinstance(l, list),
+            'gpu_memory': lambda m: m == '' or int(m) > 0,
+        },
         '_input': {
             'dataset': lambda ds: not ds or ModelBase.lambda_check('dataset')(ds),
             'label': lambda l: not l or ModelBase.lambda_check('label')(l)
@@ -89,9 +104,16 @@ class RelValStep(ModelBase):
             # Remove -- from argument names
             if json_input.get('input', {}).get('dataset'):
                 json_input['driver'] = self.schema().get('driver')
+                json_input['gpu'] = self.schema().get('gpu')
+                json_input['gpu']['requires'] = 'forbidden'
             else:
                 json_input['driver'] = {k.lstrip('-'): v for k, v in json_input['driver'].items()}
                 json_input['input'] = self.schema().get('input')
+                if json_input.get('gpu', {}).get('requires') not in ('optional', 'required'):
+                    json_input['gpu'] = self.schema().get('gpu')
+                    json_input['gpu']['requires'] = 'forbidden'
+                    json_input['gpu_steps'] = []
+
                 driver = json_input['driver']
                 if driver.get('data') and driver.get('mc'):
                     raise  Exception('Both --data and --mc are not allowed in the same step')
@@ -419,3 +441,25 @@ class RelValStep(ModelBase):
             return scram_arch
 
         raise Exception(f'Could not find SCRAM arch of {cmssw_release}')
+
+    def get_gpu_requires(self):
+        """
+        Return whether GPU is required, optional of forbidden
+        """
+        return self.get('gpu')['requires']
+
+    def get_gpu_dict(self):
+        """
+        Return a dictionary with GPU parameters for ReqMgr2
+        """
+        gpu_info = self.get('gpu')
+        keys = {'cuda_capabilities': 'CUDACapabilities',
+                'cuda_runtime': 'CUDARuntime',
+                'gpu_name': 'GPUName',
+                'cuda_driver_version': 'CUDADriverVersion',
+                'cuda_runtime_version': 'CUDARuntimeVersion'}
+        params = {key: gpu_info[attr] for attr, key in keys.items() if gpu_info.get(attr)}
+        if gpu_info.get('gpu_memory'):
+            params['GPUMemoryMB'] = gpu_info['gpu_memory']
+
+        return params

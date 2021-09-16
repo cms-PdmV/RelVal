@@ -197,6 +197,47 @@
                   <tr>
                     <td>Fragment name</td><td><input type="text" v-model="step.driver.fragment_name" placeholder="E.g. Configuration/Generator/<filename>.py" :disabled="!editingInfo.steps"></td>
                   </tr>
+                  <tr>
+                    <td>GPU</td>
+                    <td>
+                      <select v-model="step.gpu.requires" :disabled="!editingInfo.steps">
+                        <option>forbidden</option>
+                        <option>optional</option>
+                        <option>required</option>
+                      </select>
+                    </td>
+                  </tr>
+                  <tr v-if="step.gpu.requires != 'forbidden'">
+                    <td>GPU Parameters</td>
+                    <td>
+                      <table>
+                        <tr>
+                          <td>GPU Memory</td>
+                          <td><input type="number" v-model="step.gpu.gpu_memory" :disabled="!editingInfo.steps" min="0" max="32000" step="1000">MB</td>
+                        </tr>
+                        <tr>
+                          <td>CUDA Capabilities</td>
+                          <td><input type="text" v-model="step.gpu.cuda_capabilities" placeholder="E.g. 6.0,6.1,6.2" :disabled="!editingInfo.steps"></td>
+                        </tr>
+                        <tr>
+                          <td>CUDA Runtime</td>
+                          <td><input type="text" v-model="step.gpu.cuda_runtime" :disabled="!editingInfo.steps"></td>
+                        </tr>
+                        <tr>
+                          <td>GPU Name</td>
+                          <td><input type="text" v-model="step.gpu.gpu_name" :disabled="!editingInfo.steps"></td>
+                        </tr>
+                        <tr>
+                          <td>CUDA Driver Version</td>
+                          <td><input type="text" v-model="step.gpu.cuda_driver_version" :disabled="!editingInfo.steps"></td>
+                        </tr>
+                        <tr>
+                          <td>CUDA Runtime Version</td>
+                          <td><input type="text" v-model="step.gpu.cuda_runtime_version" :disabled="!editingInfo.steps"></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
                 </template>
               </table>
               <v-btn small class="mr-1 mb-1" color="error" @click="deleteStep(index)">Delete step {{index + 1}}</v-btn>

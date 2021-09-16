@@ -115,6 +115,20 @@
           <template v-slot:item.label="{ item }">
             <a :href="'relvals?label=' + item.label" :title="'Show all RelVals with ' + item.label + ' label'">{{item.label}}</a>
           </template>
+          <template v-slot:item._gpu="{ item }">
+            <ul style="padding-left: 0; list-style: none;">
+              <li v-for="(step, index) in item.steps" :key="index">{{stepSteps(step)}}: {{step.gpu.requires}}
+              <ul v-if="step.gpu.requires != 'forbidden'">
+                <li v-if="step.gpu.gpu_memory">GPUMemory: {{step.gpu.gpu_memory}} MB</li>
+                <li v-if="step.gpu.cuda_capabilities.length">CUDACapabilities: {{step.gpu.cuda_capabilities.join(',')}}</li>
+                <li v-if="step.gpu.cuda_runtime">CUDARuntime: {{step.gpu.cuda_runtime}}</li>
+                <li v-if="step.gpu.gpu_name">GPUName: {{step.gpu.gpu_name}}</li>
+                <li v-if="step.gpu.cuda_driver_version">CUDADriverVersion: {{step.gpu.cuda_driver_version}}</li>
+                <li v-if="step.gpu.cuda_runtime_version">CUDARuntimeVersion: {{step.gpu.cuda_runtime_version}}</li>
+              </ul>
+              </li>
+            </ul>
+          </template>
         </v-data-table>
       </div>
     </div>
@@ -207,6 +221,7 @@ export default {
         {'dbName': '_workflow', 'displayName': 'Workflow', 'visible': 1, 'sortable': true},
         {'dbName': 'campaign_timestamp', 'displayName': 'Campaign', 'visible': 0, 'sortable': true},
         {'dbName': 'fragment', 'displayName': 'Fragment', 'visible': 0},
+        {'dbName': '_gpu', 'displayName': 'GPU', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0, 'sortable': true},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0, 'sortable': true},
         {'dbName': 'output_datasets', 'displayName': 'Output Datasets', 'visible': 0},
@@ -472,6 +487,9 @@ export default {
       let prepids = relvals.map(x => x['prepid']);
       let url = 'https://cms-pdmv.cern.ch/pmp/historical?r=' + prepids.join(',');
       window.open(url, '_blank');
+    },
+    stepSteps: function(step) {
+      return step.driver.step.map(x => x.split(':')[0]).join(',')
     }
   }
 }

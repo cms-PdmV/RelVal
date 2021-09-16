@@ -29,6 +29,51 @@
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="8"></td>
         </tr>
         <tr>
+          <td>GPU</td>
+          <td>
+            <select v-model="editableObject.gpu.requires" :disabled="!editingInfo.gpu">
+              <option>forbidden</option>
+              <option>optional</option>
+              <option>required</option>
+            </select>
+          </td>
+        </tr>
+        <tr v-if="editableObject.gpu.requires != 'forbidden'">
+          <td>GPU Parameters</td>
+          <td>
+            <table>
+              <tr>
+                <td>GPU Memory</td>
+                <td><input type="number" v-model="editableObject.gpu.gpu_memory" :disabled="!editingInfo.gpu" min="0" max="32000" step="1000">MB</td>
+              </tr>
+              <tr>
+                <td>CUDA Capabilities</td>
+                <td><input type="text" v-model="editableObject.gpu.cuda_capabilities" placeholder="E.g. 6.0,6.1,6.2" :disabled="!editingInfo.gpu"></td>
+              </tr>
+              <tr>
+                <td>CUDA Runtime</td>
+                <td><input type="text" v-model="editableObject.gpu.cuda_runtime" :disabled="!editingInfo.gpu"></td>
+              </tr>
+              <tr>
+                <td>GPU Name</td>
+                <td><input type="text" v-model="editableObject.gpu.gpu_name" :disabled="!editingInfo.gpu"></td>
+              </tr>
+              <tr>
+                <td>CUDA Driver Version</td>
+                <td><input type="text" v-model="editableObject.gpu.cuda_driver_version" :disabled="!editingInfo.gpu"></td>
+              </tr>
+              <tr>
+                <td>CUDA Runtime Version</td>
+                <td><input type="text" v-model="editableObject.gpu.cuda_runtime_version" :disabled="!editingInfo.gpu"></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr v-if="editableObject.gpu.requires != 'forbidden'">
+          <td>GPU Steps</td>
+          <td><input type="text" v-model="editableObject.gpu_steps" placeholder="E.g. DIGI,HLT" :disabled="!editingInfo.gpu_steps"></td>
+        </tr>
+        <tr>
           <td>Label (--label)</td>
           <td><input type="text" v-model="editableObject.label" placeholder="E.g. gcc8 or rsb or pmx" :disabled="!editingInfo.label"></td>
         </tr>
@@ -126,7 +171,7 @@ export default {
   data () {
     return {
       prepid: undefined,
-      editableObject: {},
+      editableObject: undefined,
       editingInfo: {},
       loading: true,
       creatingNew: true,
@@ -157,6 +202,7 @@ export default {
           component.editableObject = templateResponse.data.response.object;
           component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
           component.editableObject.command_steps = component.editableObject.command_steps.filter(Boolean).join(',');
+          component.editableObject.gpu.cuda_capabilities = component.editableObject.gpu.cuda_capabilities.filter(Boolean).join(',');
           component.editingInfo = response.data.response.editing_info;
           component.loading = false;
         }).catch(error => {
@@ -166,7 +212,8 @@ export default {
       } else {
         component.editableObject = response.data.response.object;
         component.editableObject.workflow_ids = component.editableObject.workflow_ids.filter(Boolean).join('\n');
-          component.editableObject.command_steps = component.editableObject.command_steps.filter(Boolean).join(',');
+        component.editableObject.command_steps = component.editableObject.command_steps.filter(Boolean).join(',');
+        component.editableObject.gpu.cuda_capabilities = component.editableObject.gpu.cuda_capabilities.filter(Boolean).join(',');
         component.editingInfo = response.data.response.editing_info;
         component.loading = false;
       }
@@ -182,6 +229,7 @@ export default {
       editableObject.notes = editableObject.notes.trim();
       editableObject.workflow_ids = this.cleanSplit(editableObject.workflow_ids);
       editableObject.command_steps = this.cleanSplit(editableObject.command_steps);
+      editableObject.gpu.cuda_capabilities = this.cleanSplit(editableObject.gpu.cuda_capabilities);
       let httpRequest;
       if (this.creatingNew) {
         httpRequest = axios.put('api/tickets/create', editableObject);

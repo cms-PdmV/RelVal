@@ -27,6 +27,16 @@ class Ticket(ModelBase):
         'cpu_cores': 1,
         # List of prepids of relvals that were created from this ticket
         'created_relvals': [],
+        # GPU parameters that will be added to selected steps
+        'gpu': {'requires': 'forbidden',
+                'gpu_memory': '',
+                'cuda_capabilities': [],
+                'cuda_runtime': '',
+                'gpu_name': '',
+                'cuda_driver_version': '',
+                'cuda_runtime_version': ''},
+        # List of steps that GPU parameters should be applied to
+        'gpu_steps': [],
         # Action history
         'history': [],
         # Label to be used in runTheMatrix
@@ -59,6 +69,11 @@ class Ticket(ModelBase):
         'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         '__created_relvals': ModelBase.lambda_check('relval'),
+        '_gpu': {
+            'requires': lambda r: r in ('forbidden', 'optional', 'required'),
+            'cuda_capabilities': lambda l: isinstance(l, list),
+            'gpu_memory': lambda m: m == '' or int(m) > 0,
+         },
         'label': ModelBase.lambda_check('label'),
         'matrix': ModelBase.lambda_check('matrix'),
         'memory': ModelBase.lambda_check('memory'),
@@ -77,5 +92,9 @@ class Ticket(ModelBase):
             json_input = deepcopy(json_input)
             json_input['workflow_ids'] = [float(wid) for wid in json_input['workflow_ids']]
             json_input['recycle_gs'] = bool(json_input.get('recycle_gs', False))
+            if json_input.get('gpu', {}).get('requires') not in ('optional', 'required'):
+                json_input['gpu'] = self.schema().get('gpu')
+                json_input['gpu']['requires'] = 'forbidden'
+                json_input['gpu_steps'] = []
 
         ModelBase.__init__(self, json_input, check_attributes)
