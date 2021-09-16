@@ -443,23 +443,23 @@ class RelValStep(ModelBase):
         raise Exception(f'Could not find SCRAM arch of {cmssw_release}')
 
     def get_gpu_requires(self):
-         """
-         Return whether GPU is required, optional of forbidden
-         """
-         return self.get('gpu')['requires']
+        """
+        Return whether GPU is required, optional of forbidden
+        """
+        return self.get('gpu')['requires']
 
     def get_gpu_dict(self):
-         """
-         Return a dictionary with GPU parameters for ReqMgr2
-         """
-         gpu_info = self.get('gpu')
-         keys = {'cuda_capabilities': 'CUDACapabilities',
-                 'cuda_runtime': 'CUDARuntime',
-                 'gpu_name': 'GPUName',
-                 'cuda_driver_version': 'CUDADriverVersion',
-                 'cuda_runtime_version': 'CUDARuntimeVersion'}
-         params = {key: gpu_info[attr] for attr, key in keys.items() if gpu_info.get(attr)}
-         if gpu_info.get('gpu_memory'):
-             params['GPUMemoryMB'] = gpu_info['gpu_memory']
+        """
+        Return a dictionary with GPU parameters for ReqMgr2
+        """
+        gpu_info = self.get('gpu')
+        keys = {'cuda_capabilities': 'CUDACapabilities',
+                'cuda_runtime': 'CUDARuntime',
+                'gpu_name': 'GPUName',
+                'cuda_driver_version': 'CUDADriverVersion',
+                'cuda_runtime_version': 'CUDARuntimeVersion'}
+        params = {key: gpu_info[attr] for attr, key in keys.items() if gpu_info.get(attr)}
+        if gpu_info.get('gpu_memory'):
+            params['GPUMemoryMB'] = gpu_info['gpu_memory']
 
-         return params
+        return params

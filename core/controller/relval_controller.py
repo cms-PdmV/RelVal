@@ -188,6 +188,7 @@ class RelValController(ControllerBase):
         return command.strip()
 
     def get_task_dict(self, relval, step, step_index):
+        #pylint: disable=too-many-statements
         """
         Return a dictionary for single task of ReqMgr2 dictionary
         """
