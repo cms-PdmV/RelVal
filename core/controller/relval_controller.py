@@ -254,6 +254,10 @@ class RelValController(ControllerBase):
             while task_dict['MCPileup'][0] != '/':
                 task_dict['MCPileup'] = task_dict['MCPileup'][1:]
 
+        if step.get_gpu_requires() != 'forbidden':
+            task_dict['GPUParams'] = json.dumps(step.get_gpu_dict(), sort_keys=True)
+            task_dict['RequiresGPU'] = step.get_gpu_requires()
+
         return task_dict
 
     def get_job_dict(self, relval):
@@ -479,6 +483,21 @@ class RelValController(ControllerBase):
         """
         Try to move RelVals to approved status
         """
+        # Check if all necessary GPU parameters are set
+        for relval in relvals:
+            prepid = relval.get_prepid()
+            for index, step in enumerate(relval.get('steps')):
+                if step.get_gpu_requires() != 'forbidden':
+                    gpu_dict = step.get('gpu')
+                    if not gpu_dict.get('gpu_memory'):
+                        raise Exception(f'GPU Memory not set in {prepid} step {index + 1}')
+
+                    if not gpu_dict.get('cuda_capabilities'):
+                        raise Exception(f'CUDA Capabilities not set in {prepid} step {index + 1}')
+
+                    if not gpu_dict.get('cuda_runtime'):
+                        raise Exception(f'GPU Runtime not set in {prepid} step {index + 1}')
+
         conditions_tree = self.get_resolved_conditions(relvals)
         results = []
         # Go through relvals and set resolved globaltags from the updated dict

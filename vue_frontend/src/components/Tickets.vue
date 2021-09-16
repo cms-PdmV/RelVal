@@ -81,6 +81,17 @@
           <template v-slot:item._created="{ item }">
             Created by <a :href="'tickets?created_by=' + item.history[0].user" :title="'Show all tickets created by ' + item.history[0].user">{{item.history[0].user}}</a> on {{niceDate(item.history[0].time)}}
           </template>
+          <template v-slot:item.gpu="{ item }">
+            <span style="text-transform: capitalize">{{item.gpu.requires}}</span>
+            <ul v-if="item.gpu.requires != 'forbidden'">
+              <li v-if="item.gpu.gpu_memory">GPUMemory: {{item.gpu.gpu_memory}}</li>
+              <li v-if="item.gpu.cuda_capabilities">CUDACapabilities: {{item.gpu.cuda_capabilities}}</li>
+              <li v-if="item.gpu.cuda_runtime">CUDARuntime: {{item.gpu.cuda_runtime}}</li>
+              <li v-if="item.gpu.gpu_name">GPUName: {{item.gpu.gpu_name}}</li>
+              <li v-if="item.gpu.cuda_driver_version">CUDADriverVersion: {{item.gpu.cuda_driver_version}}</li>
+              <li v-if="item.gpu.cuda_runtime_version">CUDARuntimeVersion: {{item.gpu.cuda_runtime_version}}</li>
+            </ul>
+          </template>
         </v-data-table>
       </div>
     </div>
@@ -171,6 +182,7 @@ export default {
         {'dbName': 'command_steps', 'displayName': 'Command Steps', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
         {'dbName': '_created', 'displayName': 'Creation', 'visible': 0, 'sortable': true},
+        {'dbName': 'gpu', 'displayName': 'GPU', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0, 'sortable': true},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0, 'sortable': true},
         {'dbName': 'rewrite_gt_string', 'displayName': 'Rewrite GT String', 'visible': 0, 'sortable': true},

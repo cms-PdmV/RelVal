@@ -163,6 +163,48 @@
                 <tr>
                   <td>Extra</td><td><input type="text" v-model="step.driver.extra" placeholder="Any arguments that are not specified above"></td>
                 </tr>
+
+                <tr>
+                  <td>GPU</td>
+                  <td>
+                    <select v-model="step.gpu.requires">
+                      <option>forbidden</option>
+                      <option>optional</option>
+                      <option>required</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr v-if="step.gpu.requires != 'forbidden'">
+                  <td>GPU Parameters</td>
+                  <td>
+                    <table>
+                      <tr>
+                        <td>GPU Memory</td>
+                        <td><input type="number" v-model="step.gpu.gpu_memory" min="0" max="32000" step="1000">MB</td>
+                      </tr>
+                      <tr>
+                        <td>CUDA Capabilities</td>
+                        <td><input type="text" v-model="step.gpu.cuda_capabilities" placeholder="E.g. 6.0,6.1,6.2"></td>
+                      </tr>
+                      <tr>
+                        <td>CUDA Runtime</td>
+                        <td><input type="text" v-model="step.gpu.cuda_runtime"></td>
+                      </tr>
+                      <tr>
+                        <td>GPU Name</td>
+                        <td><input type="text" v-model="step.gpu.gpu_name"></td>
+                      </tr>
+                      <tr>
+                        <td>CUDA Driver Version</td>
+                        <td><input type="text" v-model="step.gpu.cuda_driver_version"></td>
+                      </tr>
+                      <tr>
+                        <td>CUDA Runtime Version</td>
+                        <td><input type="text" v-model="step.gpu.cuda_runtime_version"></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
               </table>
               <v-btn v-if="!step.deleted" small class="mr-1 mb-1" color="error" @click="deleteStep(index)">Delete step {{index + 1}}</v-btn>
               <span v-if="step.deleted">
@@ -198,7 +240,7 @@
             <div v-for="(step, index) in value" :key="index">
               <template v-if="!step.deleted">
                 <div v-for="(stepValue, stepKey) in step" :key="stepKey">
-                  <template v-if="['driver', 'input'].includes(stepKey)">
+                  <template v-if="['driver', 'input', 'gpu'].includes(stepKey)">
                     <li v-for="(driverValue, driverKey) in stepValue" :key="driverKey">
                       <b>{{driverKey}}</b> in <b>Step {{index + 1}}</b> will be set to <b>{{driverValue}}</b>
                       <v-btn small
@@ -207,7 +249,7 @@
                              @click="editingObject.steps[index][stepKey][driverKey] = originalEditingObject.steps[index][stepKey][driverKey]">Remove edit</v-btn>
                     </li>
                   </template>
-                  <template v-if="!['deleted', 'driver', 'input'].includes(stepKey)">
+                  <template v-if="!['deleted', 'driver', 'input', 'gpu'].includes(stepKey)">
                     <li>
                       <b>{{stepKey}}</b> in <b>Step {{index + 1}}</b> will be set to <b>{{stepValue}}</b>
                       <v-btn small
@@ -269,7 +311,7 @@ export default {
     return {
       prepids: [],
       objects: [],
-      editingObject: {},
+      editingObject: undefined,
       originalEditingObject: {},
       differences: {},
       loading: true,
@@ -323,10 +365,10 @@ export default {
         for (let i = 0; i < ref.steps.length; i++) {
           let refStep = ref.steps[i];
           let tarStep = tar.steps[i];
-          let stepDiff = {'deleted': tarStep.deleted, 'driver': {}, 'input': {}};
+          let stepDiff = {'deleted': tarStep.deleted, 'driver': {}, 'input': {}, 'gpu': {}};
           stepsDiffs.push(stepDiff);
           for (let key of Object.keys(refStep)) {
-            if (['driver', 'input'].includes(key)) {
+            if (['driver', 'input', 'gpu'].includes(key)) {
               for (let driverKey of Object.keys(refStep[key])) {
                 if (refStep[key][driverKey] != tarStep[key][driverKey]) {
                   stepDiff[key][driverKey] = tarStep[key][driverKey];
@@ -351,6 +393,7 @@ export default {
         step.driver.datatier = step.driver.datatier.join(',');
         step.driver.eventcontent = step.driver.eventcontent.join(',');
         step.driver.step = step.driver.step.join(',');
+        step.gpu.cuda_capabilities = step.gpu.cuda_capabilities.join(',');
       }
     },
     prepareObjectForSaving: function(obj) {
@@ -360,6 +403,7 @@ export default {
         step.driver.datatier = this.cleanSplit(step.driver.datatier);
         step.driver.eventcontent = this.cleanSplit(step.driver.eventcontent);
         step.driver.step = this.cleanSplit(step.driver.step);
+        step.gpu.cuda_capabilities = this.cleanSplit(step.gpu.cuda_capabilities);
       }
     },
     jsonDiff: function(obj1, obj2) {
@@ -382,11 +426,11 @@ export default {
       // Steps
       editingObject.steps = Array(Math.min(...relvals.map(x => x.steps.length)));
       for (let i = 0; i < editingObject.steps.length; i++) {
-        editingObject.steps[i] = {'deleted': false, 'driver': {}, 'input': {}};
+        editingObject.steps[i] = {'deleted': false, 'driver': {}, 'input': {}, 'gpu': {}};
       }
       // Step attributes
       for (let key of Object.keys(relvals[0].steps[0])) {
-        if (['driver', 'input'].includes(key)) {
+        if (['driver', 'input', 'gpu'].includes(key)) {
           for (let i = 0; i < editingObject.steps.length; i++) {
             for (let driverKey of Object.keys(relvals[0].steps[i][key])) {
               editingObject.steps[i][key][driverKey] = this.getCommonValue(relvals, (r) => r.steps[i][key][driverKey]);
@@ -414,7 +458,7 @@ export default {
               } else {
                 let objStep = obj.steps[stepIndex];
                 for (let stepKey of Object.keys(diffStep)) {
-                  if (['driver', 'input'].includes(stepKey)) {
+                  if (['driver', 'input', 'gpu'].includes(stepKey)) {
                     for (let driverKey of Object.keys(diffStep[stepKey])) {
                       objStep[stepKey][driverKey] = diffStep[stepKey][driverKey];
                     }
