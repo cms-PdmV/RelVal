@@ -103,6 +103,10 @@
           <td><input type="checkbox" v-model="editableObject.recycle_gs" :disabled="!editingInfo.recycle_gs"/></td>
         </tr>
         <tr>
+          <td>Recycle input for step</td>
+          <td><input type="text" v-model="editableObject.recycle_step_input" placeholder="E.g. DIGI or RECO" :disabled="!editingInfo.recycle_step_input"></td>
+        </tr>
+        <tr>
           <td>Rewrite GT String</td>
           <td>
             <input type="text" v-model="editableObject.rewrite_gt_string" placeholder="E.g. CMSSW_10_3_0_pre5-103X_upgrade2018_realistic_v7-v1" :disabled="!editingInfo.rewrite_gt_string">

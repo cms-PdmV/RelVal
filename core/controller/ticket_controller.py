@@ -64,6 +64,7 @@ class TicketController(ControllerBase):
         editing_info['notes'] = True
         editing_info['n_streams'] = not_done
         editing_info['recycle_gs'] = not_done
+        editing_info['recycle_step_input'] = not_done
         editing_info['rewrite_gt_string'] = not_done
         editing_info['sample_tag'] = not_done
         editing_info['scram_arch'] = not_done
@@ -107,6 +108,30 @@ class TicketController(ControllerBase):
             pileup_input_split[2] = gt_rewrite
             pileup_input = '/'.join(pileup_input_split)
             driver_dict['pileup_input'] = pileup_input
+
+    def modify_relval_for_recycling(self, relval, gt_rewrite, recycle_step_input):
+        self.logger.debug('Try to do automagic recycling up to %s', recycle_step_input)
+        relval_steps = relval.get('steps')
+        recycle_index = -1
+        for index, step in enumerate(relval_steps):
+            if step.has_step(recycle_step_input):
+                recycle_index = index
+
+        if recycle_index < 1:
+            return False
+
+        relval_name = relval.get_name()
+        recycled_step = relval_steps[recycle_index - 1]
+        # recycling_step = relval_steps[recycle_index]
+        datatier = recycled_step.get('driver')['datatier'][-1]
+        input_dataset = f'/RelVal{relval_name}/{gt_rewrite}/{datatier}'
+        self.logger.debug('Recycled input dataset %s', input_dataset)
+        input_step_json = recycled_step.get_json()
+        input_step_json['driver'] = {}
+        input_step_json['input'] = {'dataset': input_dataset, 'lumisection': {}, 'label': ''}
+        input_step = RelValStep(input_step_json, relval, False)
+        relval.set('steps', [input_step] + relval_steps[recycle_index:])
+        return True
 
     def make_relval_step_dict(self, step_dict):
         """
@@ -232,6 +257,7 @@ class TicketController(ControllerBase):
         Create RelVals from given ticket. Return list of relval prepids
         """
         ticket_db = Database(self.database_name)
+        relval_db = Database('relvals')
         ticket_prepid = ticket.get_prepid()
         credentials_path = Config.get('credentials_path')
         ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_path)
@@ -244,6 +270,8 @@ class TicketController(ControllerBase):
             n_streams = ticket.get('n_streams')
             gpu_dict = ticket.get('gpu')
             gpu_steps = ticket.get('gpu_steps')
+            recycle_step_input = ticket.get('recycle_step_input')
+            rewrite_gt_string = ticket.get('rewrite_gt_string')
             try:
                 workflows = self.generate_workflows(ticket, ssh_executor)
                 # Iterate through workflows and create RelVals
@@ -270,11 +298,15 @@ class TicketController(ControllerBase):
                         if gpu_steps and (set(gpu_steps) & set(step_steps)):
                             new_step['gpu'] = deepcopy(gpu_dict)
 
-                        self.rewrite_gt_string_if_needed(new_step, ticket.get('rewrite_gt_string'))
+                        self.rewrite_gt_string_if_needed(new_step, rewrite_gt_string)
                         workflow_json['steps'].append(new_step)
 
                     self.logger.debug('Will create %s', workflow_json)
                     relval = relval_controller.create(workflow_json)
+                    if recycle_step_input and rewrite_gt_string:
+                        if self.modify_relval_for_recycling(relval, rewrite_gt_string, recycle_step_input):
+                            relval_db.save(relval.get_json())
+
                     created_relvals.append(relval)
                     self.logger.info('Created %s', relval.get_prepid())
 
