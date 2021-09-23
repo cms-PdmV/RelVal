@@ -273,7 +273,8 @@ class RelVal(ModelBase):
         # --procModifiers=premix_stage2
         if pileup_input and 'premix_stage2' in driver.get('extra'):
             prefix = 'PUpmx_'
-        elif pileup:
+        elif pileup and 'nopu' not in pileup.lower():
+            # Prevent adding PU_ to no-PU steps with e.g. --pileup HiMixNoPU
             prefix = 'PU_'
         else:
             prefix = ''
