@@ -341,7 +341,9 @@ class RelValController(ControllerBase):
         Conditions tree example:
         {
             "CMSSW_11_2_0_pre9": {
-                "auto:phase1_2021_realistic": None
+                "slc7_a_b_c": {
+                    "auto:phase1_2021_realistic": None
+                }
             }
         }
         """

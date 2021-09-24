@@ -2,6 +2,7 @@
 Module that contains TicketController class
 """
 from copy import deepcopy
+from http.client import responses
 import json
 import os
 from random import Random
@@ -10,7 +11,9 @@ from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.common_utils import clean_split, cmssw_setup, get_scram_arch
 from core_lib.utils.global_config import Config
+from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core.model.ticket import Ticket
+from core.model.relval import RelVal
 from core.model.relval_step import RelValStep
 from core.controller.relval_controller import RelValController
 
@@ -109,31 +112,114 @@ class TicketController(ControllerBase):
             pileup_input = '/'.join(pileup_input_split)
             driver_dict['pileup_input'] = pileup_input
 
-    def modify_relval_for_recycling(self, relval, gt_rewrite, recycle_step_input):
-        self.logger.debug('Try to do automagic recycling up to %s', recycle_step_input)
-        relval_steps = relval.get('steps')
-        recycle_index = -1
-        for index, step in enumerate(relval_steps):
-            if step.has_step(recycle_step_input):
-                recycle_index = index
+    def recycle_input_with_gt_rewrite(self, relvals, gt_rewrite, recycle_step_input):
+        """
+        Try to recycle input (based on --step) for certain steps by replacing
+        steps by an input dataset when Rewrite GT string is provided
+        """
+        self.logger.debug('Recycling with GT string input for %s', recycle_step_input)
+        for relval in relvals:
+            relval_steps = relval.get('steps')
+            recycled_step = None
+            recycle_index = 0
+            for index, step in enumerate(relval_steps):
+                if step.has_step(recycle_step_input):
+                    recycled_step = relval_steps[index - 1]
+                    recycle_index = index
+                    break
+            else:
+                continue
 
-        if recycle_index < 1:
-            return False
+            relval_name = relval.get_name()
+            datatier = recycled_step.get('driver')['datatier'][-1]
+            dataset = f'/RelVal{relval_name}/{gt_rewrite}/{datatier}'
+            self.logger.debug('Recycled input dataset %s', dataset)
+            input_step_json = recycled_step.get_json()
+            input_step_json['driver'] = {}
+            input_step_json['input'] = {'dataset': dataset, 'lumisection': {}, 'label': ''}
+            input_step = RelValStep(input_step_json, relval, False)
+            relval.set('steps', [input_step] + relval_steps[recycle_index:])
 
-        relval_name = relval.get_name()
-        recycled_step = relval_steps[recycle_index - 1]
-        # recycling_step = relval_steps[recycle_index]
-        datatier = recycled_step.get('driver')['datatier'][-1]
-        input_dataset = f'/RelVal{relval_name}/{gt_rewrite}/{datatier}'
-        self.logger.debug('Recycled input dataset %s', input_dataset)
-        input_step_json = recycled_step.get_json()
-        input_step_json['driver'] = {}
-        input_step_json['input'] = {'dataset': input_dataset, 'lumisection': {}, 'label': ''}
-        input_step = RelValStep(input_step_json, relval, False)
-        relval.set('steps', [input_step] + relval_steps[recycle_index:])
-        return True
+    def recycle_input(self, relvals, relval_controller, recycle_step_input, label):
+        """
+        Try to recycle input (based on --step) for certain steps by replacing
+        steps by an input dataset when there is no Rewrite GT string available
+        """
+        self.logger.debug('Automagic recycling input for %s', recycle_step_input)
+        conditions_tree = {}
+        for relval in relvals:
+            relval_steps = relval.get('steps')
+            recycled_step = None
+            for index, step in enumerate(relval_steps):
+                if step.has_step(recycle_step_input):
+                    recycled_step = relval_steps[index - 1]
+                    break
+            else:
+                continue
 
-    def make_relval_step_dict(self, step_dict):
+            conditions = recycled_step.get('driver')['conditions']
+            if not conditions.startswith('auto:'):
+                # Collect only auto: ... conditions
+                continue
+
+            cmssw = step.get_release()
+            scram = step.get_scram_arch()
+            conditions_tree.setdefault(cmssw, {}).setdefault(scram, {})[conditions] = None
+
+        # Resolve auto:conditions to actual globaltags
+        self.logger.debug('Conditions:\n%s', json.dumps(conditions_tree, indent=2))
+        relval_controller.resolve_auto_conditions(conditions_tree)
+        self.logger.debug('Resolved conditions:\n%s', json.dumps(conditions_tree, indent=2))
+
+        grid_cert = Config.get('grid_user_cert')
+        grid_key = Config.get('grid_user_key')
+        dbs_conn = ConnectionWrapper(host='cmsweb-prod.cern.ch',
+                                     cert_file=grid_cert,
+                                     key_file=grid_key)
+        for relval in relvals:
+            relval_steps = relval.get('steps')
+            recycled_step = None
+            recycle_index = 0
+            for index, step in enumerate(relval_steps):
+                if step.has_step(recycle_step_input):
+                    recycled_step = relval_steps[index - 1]
+                    recycle_index = index
+                    break
+            else:
+                continue
+
+            conditions = step.get('driver')['conditions']
+            cmssw = step.get_release()
+            if conditions.startswith('auto:'):
+                scram = step.get_scram_arch()
+                conditions = conditions_tree[cmssw][scram][conditions]
+
+            relval_name = relval.get_name()
+            datatier = recycled_step.get('driver')['datatier'][-1]
+            dataset = f'/RelVal{relval_name}/{cmssw}-{conditions}_{label}-v*/{datatier}'
+            self.logger.debug('Recycled input dataset template %s', dataset)
+
+            self.logger.info('Will check datasets: %s', dataset)
+            dbs_response = dbs_conn.api('POST',
+                                        '/dbs/prod/global/DBSReader/datasetlist',
+                                        {'dataset': dataset,
+                                         'detail': 1})
+            dbs_response = json.loads(dbs_response.decode('utf-8'))
+            if not dbs_response:
+                relval_id = relval.get('workflow_id')
+                raise Exception(f'Could not find a recyclable input for {relval_name} '
+                                f'({relval_id}), query: {dataset}, step: {recycle_step_input}')
+
+            dataset = sorted([x['dataset'] for x in dbs_response])[-1]
+            input_step_json = recycled_step.get_json()
+            input_step_json['driver'] = {}
+            input_step_json['input'] = {'dataset': dataset, 'lumisection': {}, 'label': ''}
+            input_step_json['name'] += '_Recycled'
+            input_step = RelValStep(input_step_json, relval, False)
+            relval.set('steps', [input_step] + relval_steps[recycle_index:])
+            self.logger.debug(relval)
+
+    def make_relval_step(self, step_dict):
         """
         Remove, split or move arguments in step dictionary
         returned from run_the_matrix_pdmv.py
@@ -252,61 +338,82 @@ class TicketController(ControllerBase):
         os.remove(f'/tmp/{file_name}')
         return workflows
 
+    def create_relval_from_workflow(self, ticket, workflow_id, workflow_dict):
+        """
+        Create a RelVal from given workflow
+        """
+        cmssw_release = ticket.get('cmssw_release')
+        scram_arch = ticket.get('scram_arch')
+        n_streams = ticket.get('n_streams')
+        gpu_dict = ticket.get('gpu')
+        gpu_steps = ticket.get('gpu_steps')
+        rewrite_gt_string = ticket.get('rewrite_gt_string')
+        relval_json = {'prepid': 'TempRelValObject-00000',
+                       'batch_name': ticket.get('batch_name'),
+                       'cmssw_release': cmssw_release,
+                       'cpu_cores': ticket.get('cpu_cores'),
+                       'label': ticket.get('label'),
+                       'memory': ticket.get('memory'),
+                       'matrix': ticket.get('matrix'),
+                       'sample_tag': ticket.get('sample_tag'),
+                       'steps': [],
+                       'workflow_id': workflow_id,
+                       'workflow_name': workflow_dict['workflow_name']}
+
+        for step_dict in workflow_dict['steps']:
+            new_step = self.make_relval_step(step_dict)
+            new_step['cmssw_release'] = cmssw_release
+            new_step['scram_arch'] = scram_arch
+            if n_streams > 0:
+                new_step['driver']['nStreams'] = n_streams
+
+            step_steps = [x.split(':')[0] for x in new_step['driver']['step']]
+            if gpu_steps and (set(gpu_steps) & set(step_steps)):
+                new_step['gpu'] = deepcopy(gpu_dict)
+
+            self.rewrite_gt_string_if_needed(new_step, rewrite_gt_string)
+            relval_json['steps'].append(new_step)
+
+        return RelVal(relval_json, False)
+
     def create_relvals_for_ticket(self, ticket):
         """
         Create RelVals from given ticket. Return list of relval prepids
         """
-        ticket_db = Database(self.database_name)
+        ticket_db = Database('tickets')
         relval_db = Database('relvals')
         ticket_prepid = ticket.get_prepid()
-        credentials_path = Config.get('credentials_path')
-        ssh_executor = SSHExecutor('lxplus.cern.ch', credentials_path)
+        ssh_executor = SSHExecutor('lxplus.cern.ch', Config.get('credentials_path'))
         relval_controller = RelValController()
         created_relvals = []
         with self.locker.get_lock(ticket_prepid):
             ticket = self.get(ticket_prepid)
-            cmssw_release = ticket.get('cmssw_release')
-            scram_arch = ticket.get('scram_arch')
-            n_streams = ticket.get('n_streams')
-            gpu_dict = ticket.get('gpu')
-            gpu_steps = ticket.get('gpu_steps')
-            recycle_step_input = ticket.get('recycle_step_input')
             rewrite_gt_string = ticket.get('rewrite_gt_string')
+            recycle_step_input = ticket.get('recycle_step_input')
+            label = ticket.get('label')
             try:
                 workflows = self.generate_workflows(ticket, ssh_executor)
-                # Iterate through workflows and create RelVals
+                # Iterate through workflows and create RelVal objects
+                relvals = []
                 for workflow_id, workflow_dict in workflows.items():
-                    workflow_json = {'batch_name': ticket.get('batch_name'),
-                                     'cmssw_release': cmssw_release,
-                                     'cpu_cores': ticket.get('cpu_cores'),
-                                     'label': ticket.get('label'),
-                                     'memory': ticket.get('memory'),
-                                     'matrix': ticket.get('matrix'),
-                                     'sample_tag': ticket.get('sample_tag'),
-                                     'steps': [],
-                                     'workflow_id': workflow_id,
-                                     'workflow_name': workflow_dict['workflow_name']}
+                    relvals.append(self.create_relval_from_workflow(ticket,
+                                                                    workflow_id,
+                                                                    workflow_dict))
 
-                    for step_dict in workflow_dict['steps']:
-                        new_step = self.make_relval_step_dict(step_dict)
-                        new_step['cmssw_release'] = cmssw_release
-                        new_step['scram_arch'] = scram_arch
-                        if n_streams > 0:
-                            new_step['driver']['nStreams'] = n_streams
+                # Handle recycling if needed
+                if recycle_step_input:
+                    if rewrite_gt_string:
+                        self.recycle_input_with_gt_rewrite(relvals,
+                                                           rewrite_gt_string,
+                                                           recycle_step_input)
+                    else:
+                        self.recycle_input(relvals,
+                                           relval_controller,
+                                           recycle_step_input,
+                                           label)
 
-                        step_steps = [x.split(':')[0] for x in new_step['driver']['step']]
-                        if gpu_steps and (set(gpu_steps) & set(step_steps)):
-                            new_step['gpu'] = deepcopy(gpu_dict)
-
-                        self.rewrite_gt_string_if_needed(new_step, rewrite_gt_string)
-                        workflow_json['steps'].append(new_step)
-
-                    self.logger.debug('Will create %s', workflow_json)
-                    relval = relval_controller.create(workflow_json)
-                    if recycle_step_input and rewrite_gt_string:
-                        if self.modify_relval_for_recycling(relval, rewrite_gt_string, recycle_step_input):
-                            relval_db.save(relval.get_json())
-
+                for relval in relvals:
+                    relval = relval_controller.create(relval.get_json())
                     created_relvals.append(relval)
                     self.logger.info('Created %s', relval.get_prepid())
 
