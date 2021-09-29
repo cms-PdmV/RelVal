@@ -151,7 +151,7 @@ class RelVal(ModelBase):
                    f'mkdir -p $(dirname {fragment_file})',
                    '',
                    '# Write fragment to file',
-                   f'printf "{fragment}" > {fragment_file}',
+                   f'printf \'%b\\n\' "{fragment}" > {fragment_file}',
                    '',
                    '# Rebuild the CMSSW with new fragment:',
                    'scram b',
