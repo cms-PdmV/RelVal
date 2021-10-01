@@ -87,6 +87,7 @@
               <option>pileup</option>
               <option>premix</option>
               <option>extendedgen</option>
+              <option>gpu</option>
             </select>
           </td>
         </tr>
