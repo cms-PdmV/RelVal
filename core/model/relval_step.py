@@ -460,6 +460,6 @@ class RelValStep(ModelBase):
                 'cuda_runtime_version': 'CUDARuntimeVersion'}
         params = {key: gpu_info[attr] for attr, key in keys.items() if gpu_info.get(attr)}
         if gpu_info.get('gpu_memory'):
-            params['GPUMemoryMB'] = gpu_info['gpu_memory']
+            params['GPUMemoryMB'] = int(gpu_info['gpu_memory'])
 
         return params
