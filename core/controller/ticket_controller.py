@@ -9,7 +9,7 @@ from random import Random
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
-from core_lib.utils.common_utils import clean_split, cmssw_setup, get_scram_arch
+from core_lib.utils.common_utils import clean_split, cmssw_setup, get_scram_arch, dbs_datasetlist
 from core_lib.utils.global_config import Config
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core.model.ticket import Ticket
@@ -84,7 +84,7 @@ class TicketController(ControllerBase):
 
         return True
 
-    def rewrite_gt_string_if_needed(self, step, gt_rewrite):
+    def rewrite_gt_string_if_needed(self, workflow_id, step, gt_rewrite):
         """
         Perform base dataset rewrite if needed:
           - rewrite middle part of input dataset name for input steps
@@ -102,6 +102,12 @@ class TicketController(ControllerBase):
             input_dataset_split = input_dataset.split('/')
             input_dataset_split[2] = gt_rewrite
             input_dataset = '/'.join(input_dataset_split)
+            dataset_list = dbs_datasetlist(input_dataset.replace('das:', '', 1))
+            if not dataset_list:
+                raise Exception(f'Could not find {input_dataset.replace("das:", "", 1)} '
+                                f'dataset for {workflow_id}')
+
+            input_dataset = sorted([x['dataset'] for x in dataset_list])[-1]
             input_dict['dataset'] = input_dataset
         elif driver_dict.get('pileup_input'):
             # Driver step
@@ -110,6 +116,12 @@ class TicketController(ControllerBase):
             pileup_input_split = pileup_input.split('/')
             pileup_input_split[2] = gt_rewrite
             pileup_input = '/'.join(pileup_input_split)
+            dataset_list = dbs_datasetlist(pileup_input.replace('das:', '', 1))
+            if not dataset_list:
+                raise Exception(f'Could not find {pileup_input.replace("das:", "", 1)} '
+                                f'PU dataset for {workflow_id}')
+
+            pileup_input = sorted([x['dataset'] for x in dataset_list])[-1]
             driver_dict['pileup_input'] = pileup_input
 
     def recycle_input_with_gt_rewrite(self, relvals, gt_rewrite, recycle_step_input):
@@ -170,12 +182,6 @@ class TicketController(ControllerBase):
         self.logger.debug('Conditions:\n%s', json.dumps(conditions_tree, indent=2))
         relval_controller.resolve_auto_conditions(conditions_tree)
         self.logger.debug('Resolved conditions:\n%s', json.dumps(conditions_tree, indent=2))
-
-        grid_cert = Config.get('grid_user_cert')
-        grid_key = Config.get('grid_user_key')
-        dbs_conn = ConnectionWrapper(host='cmsweb-prod.cern.ch',
-                                     cert_file=grid_cert,
-                                     key_file=grid_key)
         for relval in relvals:
             relval_steps = relval.get('steps')
             recycled_step = None
@@ -196,21 +202,19 @@ class TicketController(ControllerBase):
 
             relval_name = relval.get_name()
             datatier = recycled_step.get('driver')['datatier'][-1]
-            dataset = f'/RelVal{relval_name}/{cmssw}-{conditions}_{label}-v*/{datatier}'
-            self.logger.debug('Recycled input dataset template %s', dataset)
+            if label:
+                dataset = f'/RelVal{relval_name}/{cmssw}-{conditions}_{label}-v*/{datatier}'
+            else:
+                dataset = f'/RelVal{relval_name}/{cmssw}-{conditions}-v*/{datatier}'
 
-            self.logger.info('Will check datasets: %s', dataset)
-            dbs_response = dbs_conn.api('POST',
-                                        '/dbs/prod/global/DBSReader/datasetlist',
-                                        {'dataset': dataset,
-                                         'detail': 1})
-            dbs_response = json.loads(dbs_response.decode('utf-8'))
-            if not dbs_response:
+            self.logger.debug('Recycled input dataset template %s', dataset)
+            dataset_list = dbs_datasetlist(dataset)
+            if not dataset_list:
                 relval_id = relval.get('workflow_id')
                 raise Exception(f'Could not find a recyclable input for {relval_name} '
                                 f'({relval_id}), query: {dataset}, step: {recycle_step_input}')
 
-            dataset = sorted([x['dataset'] for x in dbs_response])[-1]
+            dataset = sorted([x['dataset'] for x in dataset_list])[-1]
             input_step_json = recycled_step.get_json()
             input_step_json['driver'] = {}
             input_step_json['input'] = {'dataset': dataset, 'lumisection': {}, 'label': ''}
@@ -281,7 +285,11 @@ class TicketController(ControllerBase):
         ticket_prepid = ticket.get_prepid()
         ticket_dir = f'ticket_{ticket_prepid}'
         remote_directory = Config.get('remote_path').rstrip('/')
-        recycle_gs_flag = '-r ' if ticket.get('recycle_gs') else ''
+        if ticket.get('recycle_gs') and not ticket.get('recycle_step_input'):
+            recycle_gs_flag = '-r '
+        else:
+            recycle_gs_flag = ''
+
         cmssw_release = ticket.get('cmssw_release')
         scram_arch = ticket.get('scram_arch')
         scram_arch = scram_arch if scram_arch else get_scram_arch(cmssw_release)
@@ -371,7 +379,7 @@ class TicketController(ControllerBase):
             if gpu_steps and (set(gpu_steps) & set(step_steps)):
                 new_step['gpu'] = deepcopy(gpu_dict)
 
-            self.rewrite_gt_string_if_needed(new_step, rewrite_gt_string)
+            self.rewrite_gt_string_if_needed(workflow_id, new_step, rewrite_gt_string)
             relval_json['steps'].append(new_step)
 
         return RelVal(relval_json, False)
