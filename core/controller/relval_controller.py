@@ -262,6 +262,7 @@ class RelValController(ControllerBase):
         return task_dict
 
     def get_job_dict(self, relval):
+        #pylint: disable=too-many-statements
         """
         Return a dictionary for ReqMgr2
         """
