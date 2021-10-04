@@ -273,7 +273,6 @@ class RelValController(ControllerBase):
         job_dict['CouchURL'] = Config.get('cmsweb_url') + '/couchdb'
         job_dict['ConfigCacheUrl'] = job_dict['CouchURL']
         job_dict['PrepID'] = prepid
-        job_dict['RequestType'] = 'TaskChain'
         job_dict['SubRequestType'] = 'RelVal'
         job_dict['RequestString'] = relval.get_request_string()
         job_dict['Campaign'] = relval.get_campaign()
@@ -294,10 +293,16 @@ class RelValController(ControllerBase):
             job_dict['DbsUrl'] = 'https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader'
 
         task_number = 0
+        input_step = None
+        global_dict_step = None
         for step_index, step in enumerate(relval.get('steps')):
             # If it's input file, it's not a task
             if step.get_step_type() == 'input_file':
+                input_step = step
                 continue
+
+            if not global_dict_step:
+                global_dict_step = step
 
             # Handle harvesting step quickly
             if step.has_step('HARVESTING'):
@@ -318,20 +323,33 @@ class RelValController(ControllerBase):
             task_number += 1
             job_dict[f'Task{task_number}'] = self.get_task_dict(relval, step, step_index)
 
-        job_dict['TaskChain'] = task_number
-        # Set main scram arch to first task scram arch
-        job_dict['ScramArch'] = job_dict['Task1']['ScramArch']
-        # Set main globaltag to first task globaltag
-        if job_dict['Task1'].get('GlobalTag'):
-            job_dict['GlobalTag'] = job_dict['Task1']['GlobalTag']
+        # Set values to the main dictionary
+        if global_dict_step:
+            job_dict['CMSSWVersion'] = global_dict_step.get_release()
+            job_dict['ScramArch'] = global_dict_step.get_scram_arch()
+            job_dict['AcquisitionEra'] = job_dict['CMSSWVersion']
+            resolved_globaltag = global_dict_step.get('resolved_globaltag')
+            if resolved_globaltag:
+                job_dict['GlobalTag'] = resolved_globaltag
 
-        # Set main processing string to first task processing string
-        if job_dict['Task1'].get('ProcessingString'):
-            job_dict['ProcessingString'] = job_dict['Task1']['ProcessingString']
+            global_step_index = global_dict_step.get_index_in_parent()
+            processing_string = relval.get_processing_string(global_step_index)
+            if processing_string:
+                job_dict['ProcessingString'] = processing_string
 
-        # Set main CMSSW version to first task CMSSW version
-        job_dict['CMSSWVersion'] = job_dict['Task1']['CMSSWVersion']
-        job_dict['AcquisitionEra'] = job_dict['Task1']['AcquisitionEra']
+        if task_number > 0:
+            # At least one task - TaskChain workflow
+            job_dict['RequestType'] = 'TaskChain'
+            job_dict['TaskChain'] = task_number
+
+        elif global_dict_step:
+            # Only harvesting step - DQMHarvest workflow
+            job_dict['RequestType'] = 'DQMHarvest'
+            if input_step:
+                input_dict = input_step.get('input')
+                job_dict['InputDataset'] = input_dict['dataset']
+                if input_dict['lumisection']:
+                    job_dict['LumiList'] = input_dict['lumisection']
 
         return job_dict
 
