@@ -51,6 +51,8 @@ class Ticket(ModelBase):
         'n_streams': 0,
         # Whether to recycle first step
         'recycle_gs': False,
+        # Which step should be first that run while recycling the input
+        'recycle_input_of': '',
         # String to rewrite middle part of INPUT dataset(s) /.../THIS/...
         'rewrite_gt_string': '',
         # Tag to group workflow ids

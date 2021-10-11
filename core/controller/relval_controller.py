@@ -10,7 +10,8 @@ from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.global_config import Config
 from core_lib.utils.common_utils import (clean_split,
                                          cmssw_setup,
-                                         config_cache_lite_setup)
+                                         config_cache_lite_setup,
+                                         dbs_datasetlist)
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
@@ -357,7 +358,9 @@ class RelValController(ControllerBase):
         Conditions tree example:
         {
             "CMSSW_11_2_0_pre9": {
-                "auto:phase1_2021_realistic": None
+                "slc7_a_b_c": {
+                    "auto:phase1_2021_realistic": None
+                }
             }
         }
         """
@@ -563,18 +566,8 @@ class RelValController(ControllerBase):
         if not datasets_to_check:
             return {}
 
-        grid_cert = Config.get('grid_user_cert')
-        grid_key = Config.get('grid_user_key')
-        dbs_conn = ConnectionWrapper(host='cmsweb-prod.cern.ch',
-                                     cert_file=grid_cert,
-                                     key_file=grid_key)
-        self.logger.info('Will check datasets: %s', datasets_to_check)
-        dbs_response = dbs_conn.api('POST',
-                                    '/dbs/prod/global/DBSReader/datasetlist',
-                                    {'dataset': list(datasets_to_check),
-                                     'detail': 1})
-        dbs_response = json.loads(dbs_response.decode('utf-8'))
-        for dataset in dbs_response:
+        dbs_datasets = dbs_datasetlist(list(datasets_to_check))
+        for dataset in dbs_datasets:
             dataset_name = dataset['dataset']
             if dataset_name not in datasets_to_check:
                 continue

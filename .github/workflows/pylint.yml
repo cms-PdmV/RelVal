@@ -3,7 +3,6 @@ name: Pylint
 on:
   workflow_dispatch:
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [ master ]
 
 jobs:
@@ -14,6 +13,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        submodules: true
     - name: Set up Python 3.6
       uses: actions/setup-python@v1
       with:
@@ -22,12 +23,10 @@ jobs:
       run: |
         python3 -m pip install --upgrade pip
         python3 -m pip install -r requirements.txt
-        pip install pylint
-    - name: Checkout PdmVWebCore
-      run: |
-        git submodule init
-        git submodule update
-    - name: Analysing the code with pylint
+    - name: Run pylint
+      # --fail-under=9.5 - fail if score is below 9.5
+      # --fail-on=E - fail if there were errors, regardless of the score
+      # --reports=y - print a report at the end
       run: |
         python3 -m pylint --version
         python3 -m pylint --fail-under=9.5 --fail-on=E --reports=y `find . -type f | grep .py$ | grep -v "\./scripts/" | xargs`

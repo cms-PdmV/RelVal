@@ -58,7 +58,7 @@
             <a :href="'tickets?cmssw_release=' + item.cmssw_release" :title="'Show all tickets with ' + item.cmssw_release">{{item.cmssw_release}}</a>
             <small v-if="item.scram_arch.length">
               <br>
-              <a :href="'tickets?scram_arch=' + item.scram_arch" :title="'Show all tickets with ' + item.scram_arch">({{item.scram_arch}})</a>
+              <a :href="'tickets?scram_arch=' + item.scram_arch" :title="'Show all tickets with ' + item.scram_arch">{{item.scram_arch}}</a>
             </small>
           </template>
           <template v-slot:item.batch_name="{ item }">
@@ -91,6 +91,9 @@
               <li v-if="item.gpu.cuda_driver_version">CUDADriverVersion: {{item.gpu.cuda_driver_version}}</li>
               <li v-if="item.gpu.cuda_runtime_version">CUDARuntimeVersion: {{item.gpu.cuda_runtime_version}}</li>
             </ul>
+          </template>
+          <template v-slot:item.recycle_input_of="{ item }">
+            <a :href="'tickets?recycle_input_of=' + item.recycle_input_of" :title="'Show all tickets that recycle ' + item.recycle_input_of + ' input'">{{item.recycle_input_of}}</a>
           </template>
         </v-data-table>
       </div>
@@ -185,6 +188,7 @@ export default {
         {'dbName': 'gpu', 'displayName': 'GPU', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0, 'sortable': true},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0, 'sortable': true},
+        {'dbName': 'recycle_input_of', 'displayName': 'Recycle input of', 'visible': 0, 'sortable': true},
         {'dbName': 'rewrite_gt_string', 'displayName': 'Rewrite GT String', 'visible': 0, 'sortable': true},
         {'dbName': 'sample_tag', 'displayName': 'Sample Tag', 'visible': 0, 'sortable': true},
         {'dbName': 'n_streams', 'displayName': 'Streams', 'visible': 0, 'sortable': true},

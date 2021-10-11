@@ -102,19 +102,28 @@ class RelValStep(ModelBase):
         if json_input:
             json_input = deepcopy(json_input)
             # Remove -- from argument names
+            schema = self.schema()
             if json_input.get('input', {}).get('dataset'):
-                json_input['driver'] = self.schema().get('driver')
-                json_input['gpu'] = self.schema().get('gpu')
+                json_input['driver'] = schema.get('driver')
+                json_input['gpu'] = schema.get('gpu')
                 json_input['gpu']['requires'] = 'forbidden'
+                step_input = json_input['input']
+                for key, default_value in schema['input'].items():
+                    if key not in step_input:
+                        step_input[key] = default_value
             else:
                 json_input['driver'] = {k.lstrip('-'): v for k, v in json_input['driver'].items()}
-                json_input['input'] = self.schema().get('input')
+                json_input['input'] = schema.get('input')
                 if json_input.get('gpu', {}).get('requires') not in ('optional', 'required'):
-                    json_input['gpu'] = self.schema().get('gpu')
+                    json_input['gpu'] = schema.get('gpu')
                     json_input['gpu']['requires'] = 'forbidden'
                     json_input['gpu_steps'] = []
 
                 driver = json_input['driver']
+                for key, default_value in schema['driver'].items():
+                    if key not in driver:
+                        driver[key] = default_value
+
                 if driver.get('data') and driver.get('mc'):
                     raise  Exception('Both --data and --mc are not allowed in the same step')
 

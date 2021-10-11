@@ -27,11 +27,11 @@
             <a :href="'relvals/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone RelVal">Clone</a>&nbsp;
             <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>&nbsp;
             <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>&nbsp;
-            <a :href="'api/relvals/get_config_upload/' + item.prepid" v-if="role('administrator')" title="Show config upload script">Config upload</a>&nbsp;
             <a style="text-decoration: underline;" @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>&nbsp;
             <a style="text-decoration: underline;" @click="nextStatus([item])" v-if="role('manager') && item.status != 'done'" title="Move to next status">Next</a>&nbsp;
             <a style="text-decoration: underline;" @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted' && !isDev" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
             <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done' && !isDev" title="Show workflows of this RelVal in Stats2">Stats2</a>
+            <a :href="'tickets?created_relvals=' + item.prepid" title="Show ticket that was used to create this RelVal">Ticket</a>
           </template>
           <template v-slot:item.prepid="{ item }">
             <a :href="'relvals?prepid=' + item.prepid" title="Show only this RelVal">{{item.prepid}}</a>
