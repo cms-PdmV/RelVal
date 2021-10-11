@@ -30,7 +30,7 @@
             <a style="text-decoration: underline;" @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>&nbsp;
             <a style="text-decoration: underline;" @click="nextStatus([item])" v-if="role('manager') && item.status != 'done'" title="Move to next status">Next</a>&nbsp;
             <a style="text-decoration: underline;" @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted' && !isDev" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
-            <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done' && !isDev" title="Show workflows of this RelVal in Stats2">Stats2</a>
+            <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done' && !isDev" title="Show workflows of this RelVal in Stats2">Stats2</a>&nbsp;
             <a :href="'tickets?created_relvals=' + item.prepid" title="Show ticket that was used to create this RelVal">Ticket</a>
           </template>
           <template v-slot:item.prepid="{ item }">
