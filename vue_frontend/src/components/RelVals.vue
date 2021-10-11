@@ -90,6 +90,10 @@
           </template>
           <template v-slot:item.cmssw_release="{ item }">
             <a :href="'relvals?cmssw_release=' + item.cmssw_release" :title="'Show all RelVals with ' + item.cmssw_release + ' CMSSW release'">{{item.cmssw_release}}</a>
+            <template v-if="item.scram_arch">
+              <br>
+              <small><a :href="'relvals?scram_arch=' + item.scram_arch" :title="'Show all RelVals with ' + item.scram_arch + ' SCRAM arch'">{{item.scram_arch}}</a></small>
+            </template>
           </template>
           <template v-slot:item.batch_name="{ item }">
             <a :href="'relvals?batch_name=' + item.batch_name" :title="'Show all RelVals with ' + item.batch_name + ' batch name'">{{item.batch_name}}</a>

@@ -5,7 +5,7 @@ import weakref
 import json
 from copy import deepcopy
 from core.model.model_base import ModelBase
-from core_lib.utils.common_utils import get_scram_arch
+from core_lib.utils.common_utils import cmssw_setup, get_scram_arch
 
 
 class RelValStep(ModelBase):
@@ -77,7 +77,7 @@ class RelValStep(ModelBase):
     }
 
     lambda_checks = {
-        'cmssw_release': ModelBase.lambda_check('cmssw_release'),
+        'cmssw_release': lambda cmssw: not cmssw or ModelBase.lambda_check('cmssw_release')(cmssw),
         'config_id': lambda cid: ModelBase.matches_regex(cid, '[a-f0-9]{0,50}'),
         '_driver': {
             'conditions': lambda c: not c or ModelBase.matches_regex(c, '[a-zA-Z0-9_]{0,50}'),
@@ -431,18 +431,31 @@ class RelValStep(ModelBase):
     def get_release(self):
         """
         Return CMSSW release of the step
+        If CMSSW release is not specified, return release of the parent RelVal
         """
-        return self.get('cmssw_release')
+        cmssw_release = self.get('cmssw_release')
+        if cmssw_release:
+            return cmssw_release
+
+        if not self.parent:
+            raise Exception('Could not get CMSSW release, because step has no parent')
+
+        cmssw_release = self.parent().get('cmssw_release')
+        return cmssw_release
 
     def get_scram_arch(self):
         """
         Return the scram arch of the step
-        If scram arch is not specified in the step,
-        return scram arch of the release
+        If scram arch is not specified, return scram arch of the release
         """
         scram_arch = self.get('scram_arch')
         if scram_arch:
             return scram_arch
+
+        if self.parent:
+            scram_arch = self.parent().get('scram_arch')
+            if scram_arch:
+                return scram_arch
 
         cmssw_release = self.get_release()
         scram_arch = get_scram_arch(cmssw_release)

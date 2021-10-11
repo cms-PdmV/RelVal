@@ -53,6 +53,10 @@
           <td><input type="text" v-model="editableObject.sample_tag" placeholder="E.g. Run2, Run3, Phase2, HIN, GEN, ..." :disabled="!editingInfo.sample_tag"></td>
         </tr>
         <tr>
+          <td>SCRAM Arch</td>
+          <td><input type="text" v-model="editableObject.scram_arch" placeholder="If empty, uses default value of the release" :disabled="!editingInfo.scram_arch"></td>
+        </tr>
+        <tr>
           <td>Size per event</td>
           <td><input type="number" v-model="editableObject.size_per_event" :disabled="!editingInfo.size_per_event">kB</td>
         </tr>
@@ -66,7 +70,7 @@
                   <td>Name</td><td><input type="text" v-model="step.name" :disabled="!editingInfo.steps"></td>
                 </tr>
                 <tr>
-                  <td>CMSSW Release</td><td><input type="text" v-model="step.cmssw_release" :disabled="!editingInfo.steps"></td>
+                  <td>CMSSW Release</td><td><input type="text" v-model="step.cmssw_release" placeholder="If empty, uses same release as RelVal" :disabled="!editingInfo.steps"></td>
                 </tr>
                 <tr>
                   <td>SCRAM Arch</td><td><input type="text" v-model="step.scram_arch" placeholder="If empty, uses default value of the release" :disabled="!editingInfo.steps"></td>
