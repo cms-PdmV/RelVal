@@ -1,17 +1,15 @@
 """
 Module that contains TicketController class
 """
-from copy import deepcopy
-from http.client import responses
 import json
 import os
+from copy import deepcopy
 from random import Random
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
 from core_lib.utils.common_utils import clean_split, cmssw_setup, get_scram_arch, dbs_datasetlist
 from core_lib.utils.global_config import Config
-from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
 from core.model.relval_step import RelValStep
@@ -102,10 +100,9 @@ class TicketController(ControllerBase):
             input_dataset_split = input_dataset.split('/')
             input_dataset_split[2] = gt_rewrite
             input_dataset = '/'.join(input_dataset_split)
-            dataset_list = dbs_datasetlist(input_dataset.replace('das:', '', 1))
+            dataset_list = dbs_datasetlist(input_dataset)
             if not dataset_list:
-                raise Exception(f'Could not find {input_dataset.replace("das:", "", 1)} '
-                                f'dataset for {workflow_id}')
+                raise Exception(f'Could not find {input_dataset} dataset for {workflow_id}')
 
             input_dataset = sorted([x['dataset'] for x in dataset_list])[-1]
             input_dict['dataset'] = input_dataset
@@ -116,10 +113,9 @@ class TicketController(ControllerBase):
             pileup_input_split = pileup_input.split('/')
             pileup_input_split[2] = gt_rewrite
             pileup_input = '/'.join(pileup_input_split)
-            dataset_list = dbs_datasetlist(pileup_input.replace('das:', '', 1))
+            dataset_list = dbs_datasetlist(pileup_input)
             if not dataset_list:
-                raise Exception(f'Could not find {pileup_input.replace("das:", "", 1)} '
-                                f'PU dataset for {workflow_id}')
+                raise Exception(f'Could not find {pileup_input} PU dataset for {workflow_id}')
 
             pileup_input = sorted([x['dataset'] for x in dataset_list])[-1]
             driver_dict['pileup_input'] = pileup_input
@@ -174,8 +170,8 @@ class TicketController(ControllerBase):
                 # Collect only auto: ... conditions
                 continue
 
-            cmssw = step.get_release()
-            scram = step.get_scram_arch()
+            cmssw = recycled_step.get_release()
+            scram = recycled_step.get_scram_arch()
             conditions_tree.setdefault(cmssw, {}).setdefault(scram, {})[conditions] = None
 
         # Resolve auto:conditions to actual globaltags
@@ -389,7 +385,6 @@ class TicketController(ControllerBase):
         Create RelVals from given ticket. Return list of relval prepids
         """
         ticket_db = Database('tickets')
-        relval_db = Database('relvals')
         ticket_prepid = ticket.get_prepid()
         ssh_executor = SSHExecutor('lxplus.cern.ch', Config.get('credentials_path'))
         relval_controller = RelValController()
