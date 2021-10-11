@@ -65,7 +65,7 @@ class TicketController(ControllerBase):
         editing_info['notes'] = True
         editing_info['n_streams'] = not_done
         editing_info['recycle_gs'] = not_done
-        editing_info['recycle_step_input'] = not_done
+        editing_info['recycle_input_of'] = not_done
         editing_info['rewrite_gt_string'] = not_done
         editing_info['sample_tag'] = not_done
         editing_info['scram_arch'] = not_done
@@ -120,18 +120,18 @@ class TicketController(ControllerBase):
             pileup_input = sorted([x['dataset'] for x in dataset_list])[-1]
             driver_dict['pileup_input'] = pileup_input
 
-    def recycle_input_with_gt_rewrite(self, relvals, gt_rewrite, recycle_step_input):
+    def recycle_input_with_gt_rewrite(self, relvals, gt_rewrite, recycle_input_of):
         """
         Try to recycle input (based on --step) for certain steps by replacing
         steps by an input dataset when Rewrite GT string is provided
         """
-        self.logger.debug('Recycling with GT string input for %s', recycle_step_input)
+        self.logger.debug('Recycling with GT string input for %s', recycle_input_of)
         for relval in relvals:
             relval_steps = relval.get('steps')
             recycled_step = None
             recycle_index = 0
             for index, step in enumerate(relval_steps):
-                if step.has_step(recycle_step_input):
+                if step.has_step(recycle_input_of):
                     recycled_step = relval_steps[index - 1]
                     recycle_index = index
                     break
@@ -148,19 +148,19 @@ class TicketController(ControllerBase):
             input_step = RelValStep(input_step_json, relval, False)
             relval.set('steps', [input_step] + relval_steps[recycle_index:])
 
-    def recycle_input(self, relvals, relval_controller, recycle_step_input, label):
+    def recycle_input(self, relvals, relval_controller, recycle_input_of):
         """
         Try to recycle input (based on --step) for certain steps by replacing
         steps by an input dataset when there is no Rewrite GT string available
         """
-        self.logger.debug('Automagic recycling input for %s', recycle_step_input)
+        self.logger.debug('Automagic recycling input for %s', recycle_input_of)
         conditions_tree = {}
         selected_relvals = []
         for relval in relvals:
             relval_steps = relval.get('steps')
             recycled_index = 0
             for index, step in enumerate(relval_steps):
-                if step.has_step(recycle_step_input):
+                if step.has_step(recycle_input_of):
                     recycled_index = index - 1
                     break
             else:
@@ -190,18 +190,17 @@ class TicketController(ControllerBase):
                 conditions = conditions_tree[cmssw][scram][conditions]
 
             recycled_step.set('resolved_globaltag', conditions)
-            self.logger.debug(json.dumps(relval.get_json(), indent=2))
             processing_string = relval.get_processing_string(recycled_index)
             recycled_step.set('resolved_globaltag', '')
             relval_name = relval.get_name()
             datatier = recycled_step.get('driver')['datatier'][-1]
             dataset = f'/RelVal{relval_name}/{cmssw}-{processing_string}-v*/{datatier}'
-            self.logger.debug('Recycled input dataset template %s', dataset)
+            relval_id = relval.get('workflow_id')
+            self.logger.debug('Recycled input dataset template %s for %s', dataset, relval_id)
             dataset_list = dbs_datasetlist(dataset)
             if not dataset_list:
-                relval_id = relval.get('workflow_id')
                 raise Exception(f'Could not find a recyclable input for {relval_name} '
-                                f'({relval_id}), query: {dataset}, step: {recycle_step_input}')
+                                f'({relval_id}), query: {dataset}, step: {recycle_input_of}')
 
             dataset = sorted([x['dataset'] for x in dataset_list])[-1]
             input_step_json = recycled_step.get_json()
@@ -274,7 +273,7 @@ class TicketController(ControllerBase):
         ticket_prepid = ticket.get_prepid()
         ticket_dir = f'ticket_{ticket_prepid}'
         remote_directory = Config.get('remote_path').rstrip('/')
-        if ticket.get('recycle_gs') and not ticket.get('recycle_step_input'):
+        if ticket.get('recycle_gs') and not ticket.get('recycle_input_of'):
             recycle_gs_flag = '-r '
         else:
             recycle_gs_flag = ''
@@ -385,8 +384,7 @@ class TicketController(ControllerBase):
         with self.locker.get_lock(ticket_prepid):
             ticket = self.get(ticket_prepid)
             rewrite_gt_string = ticket.get('rewrite_gt_string')
-            recycle_step_input = ticket.get('recycle_step_input')
-            label = ticket.get('label')
+            recycle_input_of = ticket.get('recycle_input_of')
             try:
                 workflows = self.generate_workflows(ticket, ssh_executor)
                 # Iterate through workflows and create RelVal objects
@@ -397,16 +395,15 @@ class TicketController(ControllerBase):
                                                                     workflow_dict))
 
                 # Handle recycling if needed
-                if recycle_step_input:
+                if recycle_input_of:
                     if rewrite_gt_string:
                         self.recycle_input_with_gt_rewrite(relvals,
                                                            rewrite_gt_string,
-                                                           recycle_step_input)
+                                                           recycle_input_of)
                     else:
                         self.recycle_input(relvals,
                                            relval_controller,
-                                           recycle_step_input,
-                                           label)
+                                           recycle_input_of)
 
                 for relval in relvals:
                     relval = relval_controller.create(relval.get_json())

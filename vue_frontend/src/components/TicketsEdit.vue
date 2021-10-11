@@ -104,8 +104,8 @@
           <td><input type="checkbox" v-model="editableObject.recycle_gs" :disabled="!editingInfo.recycle_gs"/></td>
         </tr>
         <tr>
-          <td>Recycle input for step</td>
-          <td><input type="text" v-model="editableObject.recycle_step_input" placeholder="E.g. DIGI or RECO" :disabled="!editingInfo.recycle_step_input"></td>
+          <td>Recycle input of</td>
+          <td><input type="text" v-model="editableObject.recycle_input_of" placeholder="Step with it's input recycled, e.g. DIGI or RECO" :disabled="!editingInfo.recycle_input_of"></td>
         </tr>
         <tr>
           <td>Rewrite GT String</td>
