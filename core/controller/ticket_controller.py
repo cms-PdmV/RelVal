@@ -155,16 +155,19 @@ class TicketController(ControllerBase):
         """
         self.logger.debug('Automagic recycling input for %s', recycle_step_input)
         conditions_tree = {}
+        selected_relvals = []
         for relval in relvals:
             relval_steps = relval.get('steps')
-            recycled_step = None
+            recycled_index = 0
             for index, step in enumerate(relval_steps):
                 if step.has_step(recycle_step_input):
-                    recycled_step = relval_steps[index - 1]
+                    recycled_index = index - 1
                     break
             else:
                 continue
 
+            recycled_step = relval_steps[recycled_index]
+            selected_relvals.append((relval, recycled_step, recycled_index))
             conditions = recycled_step.get('driver')['conditions']
             if not conditions.startswith('auto:'):
                 # Collect only auto: ... conditions
@@ -178,31 +181,21 @@ class TicketController(ControllerBase):
         self.logger.debug('Conditions:\n%s', json.dumps(conditions_tree, indent=2))
         relval_controller.resolve_auto_conditions(conditions_tree)
         self.logger.debug('Resolved conditions:\n%s', json.dumps(conditions_tree, indent=2))
-        for relval in relvals:
+        for relval, recycled_step, recycled_index in selected_relvals:
             relval_steps = relval.get('steps')
-            recycled_step = None
-            recycle_index = 0
-            for index, step in enumerate(relval_steps):
-                if step.has_step(recycle_step_input):
-                    recycled_step = relval_steps[index - 1]
-                    recycle_index = index
-                    break
-            else:
-                continue
-
-            conditions = step.get('driver')['conditions']
-            cmssw = step.get_release()
+            conditions = recycled_step.get('driver')['conditions']
+            cmssw = recycled_step.get_release()
             if conditions.startswith('auto:'):
-                scram = step.get_scram_arch()
+                scram = recycled_step.get_scram_arch()
                 conditions = conditions_tree[cmssw][scram][conditions]
 
+            recycled_step.set('resolved_globaltag', conditions)
+            self.logger.debug(json.dumps(relval.get_json(), indent=2))
+            processing_string = relval.get_processing_string(recycled_index)
+            recycled_step.set('resolved_globaltag', '')
             relval_name = relval.get_name()
             datatier = recycled_step.get('driver')['datatier'][-1]
-            if label:
-                dataset = f'/RelVal{relval_name}/{cmssw}-{conditions}_{label}-v*/{datatier}'
-            else:
-                dataset = f'/RelVal{relval_name}/{cmssw}-{conditions}-v*/{datatier}'
-
+            dataset = f'/RelVal{relval_name}/{cmssw}-{processing_string}-v*/{datatier}'
             self.logger.debug('Recycled input dataset template %s', dataset)
             dataset_list = dbs_datasetlist(dataset)
             if not dataset_list:
@@ -216,7 +209,7 @@ class TicketController(ControllerBase):
             input_step_json['input'] = {'dataset': dataset, 'lumisection': {}, 'label': ''}
             input_step_json['name'] += '_Recycled'
             input_step = RelValStep(input_step_json, relval, False)
-            relval.set('steps', [input_step] + relval_steps[recycle_index:])
+            relval.set('steps', [input_step] + relval_steps[(recycled_index + 1):])
             self.logger.debug(relval)
 
     def make_relval_step(self, step_dict):
