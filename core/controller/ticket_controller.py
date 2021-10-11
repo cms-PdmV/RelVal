@@ -359,6 +359,8 @@ class TicketController(ControllerBase):
 
         for step_dict in workflow_dict['steps']:
             new_step = self.make_relval_step(step_dict)
+            new_step['cmssw_release'] = ''
+            new_step['scram_arch'] = ''
             if n_streams > 0:
                 new_step['driver']['nStreams'] = n_streams
 
