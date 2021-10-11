@@ -255,14 +255,13 @@ class TicketController(ControllerBase):
                                      'memory': ticket.get('memory'),
                                      'matrix': ticket.get('matrix'),
                                      'sample_tag': ticket.get('sample_tag'),
+                                     'scram_arch': scram_arch,
                                      'steps': [],
                                      'workflow_id': workflow_id,
                                      'workflow_name': workflow_dict['workflow_name']}
 
                     for step_dict in workflow_dict['steps']:
                         new_step = self.make_relval_step_dict(step_dict)
-                        new_step['cmssw_release'] = cmssw_release
-                        new_step['scram_arch'] = scram_arch
                         if n_streams > 0:
                             new_step['driver']['nStreams'] = n_streams
 

@@ -40,10 +40,6 @@ class RelValController(ControllerBase):
 
         prepid_part = f'{cmssw_release}__{batch_name}-{workflow_name}'.strip('-_')
         json_data['prepid'] = f'{prepid_part}-00000'
-        for step in json_data['steps']:
-            if not step.get('cmssw_release'):
-                step['cmssw_release'] = cmssw_release
-
         relval_db = Database('relvals')
         with self.locker.get_lock(f'generate-relval-prepid-{prepid_part}'):
             # Get a new serial number
@@ -106,6 +102,7 @@ class RelValController(ControllerBase):
         editing_info['notes'] = True
         editing_info['matrix'] = creating_new
         editing_info['sample_tag'] = is_new
+        editing_info['scram_arch'] = is_new
         editing_info['size_per_event'] = is_new
         editing_info['time_per_event'] = is_new
         editing_info['workflow_id'] = False
@@ -241,7 +238,7 @@ class RelValController(ControllerBase):
         if processing_string:
             task_dict['ProcessingString'] = processing_string
 
-        task_dict['CMSSWVersion'] = step.get('cmssw_release')
+        task_dict['CMSSWVersion'] = step.get_release()
         task_dict['AcquisitionEra'] = task_dict['CMSSWVersion']
         task_dict['Memory'] = relval.get('memory')
         task_dict['Multicore'] = relval.get('cpu_cores')

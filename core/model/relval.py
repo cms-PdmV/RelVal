@@ -41,6 +41,8 @@ class RelVal(ModelBase):
         'output_datasets': [],
         # Tag for grouping of RelVals
         'sample_tag': '',
+        # Overwrite default CMSSW scram arch
+        'scram_arch': '',
         # Size per event in kilobytes
         'size_per_event': 1.0,
         # Status of this relval
@@ -68,6 +70,7 @@ class RelVal(ModelBase):
         'memory': ModelBase.lambda_check('memory'),
         '__output_datasets': ModelBase.lambda_check('dataset'),
         'sample_tag': ModelBase.lambda_check('sample_tag'),
+        'scram_arch': lambda s: not s or ModelBase.lambda_check('scram_arch')(s),
         'size_per_event': lambda spe: spe > 0.0,
         'status': lambda status: status in ('new', 'approved', 'submitting', 'submitted', 'done'),
         'steps': lambda s: len(s) > 0,
@@ -207,7 +210,7 @@ class RelVal(ModelBase):
         """
         steps = self.get('steps')
         for step in steps:
-            cmssw_release = step.get('cmssw_release')
+            cmssw_release = step.get_release()
             if cmssw_release:
                 break
         else:
