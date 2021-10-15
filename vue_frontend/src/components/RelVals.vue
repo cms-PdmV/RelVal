@@ -22,16 +22,18 @@
                       v-model="selectedItems"
                       dense>
           <template v-slot:item._actions="{ item }">
-            <a :href="'relvals/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>&nbsp;
-            <a style="text-decoration: underline;" @click="deleteRelVals([item])" v-if="item.status == 'new' && role('manager')">Delete</a>&nbsp;
-            <a :href="'relvals/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone RelVal">Clone</a>&nbsp;
-            <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>&nbsp;
-            <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>&nbsp;
-            <a style="text-decoration: underline;" @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>&nbsp;
-            <a style="text-decoration: underline;" @click="nextStatus([item])" v-if="role('manager') && item.status != 'done'" title="Move to next status">Next</a>&nbsp;
-            <a style="text-decoration: underline;" @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted' && !isDev" title="Update RelVal information from Stats2">Update from Stats2</a>&nbsp;
-            <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done' && !isDev" title="Show workflows of this RelVal in Stats2">Stats2</a>&nbsp;
-            <a :href="'tickets?created_relvals=' + item.prepid" title="Show ticket that was used to create this RelVal">Ticket</a>
+            <div class="actions">
+              <a :href="'relvals/edit?prepid=' + item.prepid" v-if="role('manager')">Edit</a>
+              <a @click="deleteRelVals([item])" v-if="item.status == 'new' && role('manager')">Delete</a>
+              <a :href="'relvals/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone RelVal">Clone</a>
+              <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>
+              <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>
+              <a @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>
+              <a @click="nextStatus([item])" v-if="role('manager') && item.status != 'done'" title="Move to next status">Next</a>
+              <a @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted' && !isDev" title="Update RelVal information from Stats2">Update from Stats2</a>
+              <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done' && !isDev" title="Show workflows of this RelVal in Stats2">Stats2</a>
+              <a :href="'tickets?created_relvals=' + item.prepid" title="Show ticket that was used to create this RelVal">Ticket</a>
+            </div>
           </template>
           <template v-slot:item.prepid="{ item }">
             <a :href="'relvals?prepid=' + item.prepid" title="Show only this RelVal">{{item.prepid}}</a>
@@ -177,14 +179,16 @@
     </v-dialog>
 
     <footer>
-      <a :href="'relvals/edit'" v-if="role('manager') && !selectedItems.length">New RelVal</a>
-      <span v-if="role('manager') && selectedItems.length">Selected items ({{selectedItems.length}}) actions:</span>
-      <a v-if="role('manager') && selectedItems.length" @click="editRelVals(selectedItems)" title="Edit selected RelVals">Edit</a>
-      <a v-if="role('manager') && selectedItems.length" @click="deleteRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
-      <a v-if="role('manager') && selectedItems.length" @click="previousStatus(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
-      <a v-if="role('manager') && selectedItems.length" @click="nextStatus(selectedItems)" title="Move selected RelVals to next status">Next</a>
-      <a v-if="role('administrator') && selectedItems.length" @click="updateWorkflows(selectedItems)" title="Update selected RelVals' information from Stats2">Update from Stats2</a>
-      <a v-if="selectedItems.length" @click="openPmpMany(selectedItems)" title="Show selected RelVals in pMp">pMp</a>
+      <div class="actions" style="float: left; line-height: 52px">
+        <a :href="'relvals/edit'" v-if="role('manager') && !selectedItems.length">New RelVal</a>
+        <span v-if="role('manager') && selectedItems.length">Selected items ({{selectedItems.length}}) actions:</span>
+        <a v-if="role('manager') && selectedItems.length" @click="editRelVals(selectedItems)" title="Edit selected RelVals">Edit</a>
+        <a v-if="role('manager') && selectedItems.length" @click="deleteRelVals(selectedItems)" title="Delete selected RelVals">Delete</a>
+        <a v-if="role('manager') && selectedItems.length" @click="previousStatus(selectedItems)" title="Move selected RelVals to previous status">Previous</a>
+        <a v-if="role('manager') && selectedItems.length" @click="nextStatus(selectedItems)" title="Move selected RelVals to next status">Next</a>
+        <a v-if="role('administrator') && selectedItems.length" @click="updateWorkflows(selectedItems)" title="Update selected RelVals' information from Stats2">Update from Stats2</a>
+        <a v-if="selectedItems.length" @click="openPmpMany(selectedItems)" title="Show selected RelVals in pMp">pMp</a>
+      </div>
       <Paginator :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
     </footer>
