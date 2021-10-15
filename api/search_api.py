@@ -149,6 +149,7 @@ class WildSearchAPI(APIBase):
                     ('tickets', tickets_db, 'batch_name', True),
                     ('tickets', tickets_db, 'workflows', False),
                     ('tickets', tickets_db, 'label', True),
+                    ('tickets', tickets_db, 'created_relvals', True),
                     # Requests
                     ('relvals', relvals_db, 'cmssw_release', True),
                     ('relvals', relvals_db, 'batch_name', True),
@@ -214,7 +215,7 @@ class WildSearchAPI(APIBase):
             if item['workflow_id'] == float(query):
                 return [str(item['workflow_id'])]
 
-        if attribute in item:
+        if attribute in item and attribute not in ('created_relvals', ):
             return [item[attribute]]
 
         values = []
@@ -235,5 +236,10 @@ class WildSearchAPI(APIBase):
                 for workflow in item['workflows']:
                     if matcher.fullmatch(workflow['name']):
                         values.append(workflow['name'])
+        elif db_name == 'tickets':
+            if attribute == 'created_relvals':
+                for relval in item['created_relvals']:
+                    if matcher.fullmatch(relval):
+                        values.append(relval)
 
         return values

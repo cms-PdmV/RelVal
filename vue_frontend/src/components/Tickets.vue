@@ -19,13 +19,15 @@
                       class="elevation-1"
                       dense>
           <template v-slot:item._actions="{ item }">
-            <a :href="'tickets/edit?prepid=' + item.prepid" v-if="role('manager')" title="Edit ticket">Edit</a>&nbsp;
-            <a style="text-decoration: underline;" @click="showDeleteDialog(item)" v-if="role('manager') && (item.status == 'new' || (!item.created_relvals || item.created_relvals.length == 0))" title="Delete ticket">Delete</a>&nbsp;
-            <a :href="'tickets/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone ticket">Clone</a>&nbsp;
-            <a style="text-decoration: underline;" @click="showCreateRelValsDialog(item)" v-if="role('manager') && item.status == 'new'" title="Create RelVals from this ticket">Create RelVals</a>&nbsp;
-            <a :href="'relvals?ticket=' + item.prepid" v-if="item.created_relvals && item.created_relvals.length > 0" title="Show all RelVals created from this ticket">Show RelVals</a>&nbsp;
-            <a :href="'api/tickets/relvals_workflows/' + item.prepid" target="_blank" v-if="item.created_relvals && item.created_relvals.length > 0" title="Show a list of computing workflows of RelVals created from this ticket">List for RelMon</a>&nbsp;
-            <a :href="'api/tickets/run_the_matrix/' + item.prepid" target="_blank" title="Show a runTheMatrix.py command for this ticket">runTheMatrix.py</a>&nbsp;
+            <div class="actions">
+              <a :href="'tickets/edit?prepid=' + item.prepid" v-if="role('manager')" title="Edit ticket">Edit</a>
+              <a @click="showDeleteDialog(item)" v-if="role('manager') && (item.status == 'new' || (!item.created_relvals || item.created_relvals.length == 0))" title="Delete ticket">Delete</a>
+              <a :href="'tickets/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone ticket">Clone</a>
+              <a @click="showCreateRelValsDialog(item)" v-if="role('manager') && item.status == 'new'" title="Create RelVals from this ticket">Create RelVals</a>
+              <a :href="'relvals?ticket=' + item.prepid" v-if="item.created_relvals && item.created_relvals.length > 0" title="Show all RelVals created from this ticket">Show RelVals</a>
+              <a :href="'api/tickets/relvals_workflows/' + item.prepid" target="_blank" v-if="item.created_relvals && item.created_relvals.length > 0" title="Show a list of computing workflows of RelVals created from this ticket">List for RelMon</a>
+              <a :href="'api/tickets/run_the_matrix/' + item.prepid" target="_blank" title="Show a runTheMatrix.py command for this ticket">runTheMatrix.py</a>
+            </div>
           </template>
           <template v-slot:item.prepid="{ item }">
             <a :href="'tickets?prepid=' + item.prepid" title="Show only this ticket">{{item.prepid}}</a>
@@ -141,7 +143,9 @@
     <LoadingOverlay :visible="loadingCreatingRelVals"/>
 
     <footer>
-      <a :href="'tickets/edit'" v-if="role('manager')">New ticket</a>
+      <div class="actions" style="float: left; line-height: 52px">
+        <a :href="'tickets/edit'" v-if="role('manager')">New ticket</a>
+      </div>
       <Paginator :totalRows="totalItems"
                  v-on:update="onPaginatorUpdate"/>
     </footer>

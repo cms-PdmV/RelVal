@@ -104,12 +104,6 @@ footer {
   box-shadow: 0px -2px 4px -1px rgba(0, 0, 0, 0.2), 0px -4px 5px 0px rgba(0, 0, 0, 0.14), 0px -1px 10px 0px rgba(0, 0, 0, 0.12);
 }
 
-footer > a {
-  margin-left: 4px;
-  line-height: 52px;
-  text-decoration: underline;
-}
-
 table {
   white-space: nowrap;
 }
@@ -221,6 +215,22 @@ h1.page-title {
       display: block;
       margin-bottom: 6px;
   }
+}
+
+a {
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.actions > a:not(:last-of-type):after {
+  color: rgba(0,0,0,0.87);
+  content: "|";
+  margin-left: 3px;
+  margin-right: 3px;
+  display: inline-block
 }
 
 </style>
