@@ -62,11 +62,11 @@
                 <a v-if="!isDev" target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
                 <a v-if="isDev" target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb-testbed.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
                 <template v-if="!isDev">
-                  <small>open in:</small> <a target="_blank" title="Open workflow in Stats2" :href="'https://cms-pdmv.cern.ch/stats?workflow_name=' + workflow.name">Stats2</a>&nbsp;
+                  <small> open in:</small> <a target="_blank" title="Open workflow in Stats2" :href="'https://cms-pdmv.cern.ch/stats?workflow_name=' + workflow.name">Stats2</a>&nbsp;
                 </template>
-                <span v-if="workflow.status_history && workflow.status_history.length > 0">
-                  <small>status:</small> {{workflow.status_history[workflow.status_history.length - 1].status}}
-                </span>
+                <template v-if="workflow.status_history && workflow.status_history.length > 0">
+                  <small> status:</small> {{workflow.status_history[workflow.status_history.length - 1].status}}
+                </template>
                 <ul v-if="index == item.workflows.length - 1" class="zebra-datasets">
                   <li v-for="dataset in workflow.output_datasets" :key="dataset.name">
                     <div>
