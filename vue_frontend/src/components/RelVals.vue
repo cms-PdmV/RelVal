@@ -61,16 +61,25 @@
               <li v-for="(workflow, index) in item.workflows" :key="workflow.name">
                 <a v-if="!isDev" target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
                 <a v-if="isDev" target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb-testbed.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
-                <a v-if="!isDev" target="_blank" title="Open workflow in Stats2" :href="'https://cms-pdmv.cern.ch/stats?workflow_name=' + workflow.name">Stats2</a>&nbsp;
+                <template v-if="!isDev">
+                  <small>open in:</small> <a target="_blank" title="Open workflow in Stats2" :href="'https://cms-pdmv.cern.ch/stats?workflow_name=' + workflow.name">Stats2</a>&nbsp;
+                </template>
                 <span v-if="workflow.status_history && workflow.status_history.length > 0">
-                  <small>type:</small> {{workflow.type}}
                   <small>status:</small> {{workflow.status_history[workflow.status_history.length - 1].status}}
                 </span>
-                <ul v-if="index == item.workflows.length - 1">
+                <ul v-if="index == item.workflows.length - 1" class="zebra-datasets">
                   <li v-for="dataset in workflow.output_datasets" :key="dataset.name">
-                    <a target="_blank" title="Open dataset in DAS" :href="makeDASLink(dataset.name)">{{dataset.name}}</a>&nbsp;
-                    <small>events:</small> {{dataset.events}}
-                    <small>type:</small> {{dataset.type}}
+                    <div>
+                      <div class="gray-bar">
+                        <div :style="'width: ' +  dataset.completed + '%;'" :class="'bar ' + dataset.type.toLowerCase() + '-bar'"></div>
+                      </div>
+                      <small>datatier:</small> {{dataset.datatier}},
+                      <small>completed:</small> {{dataset.completed}}%,
+                      <small>events:</small> {{dataset.niceEvents}},
+                      <small>type:</small> <b :class="dataset.type.toLowerCase() + '-type'">{{dataset.type}}</b>
+                      <br>
+                      <a target="_blank" title="Open dataset in DAS" :href="makeDASLink(dataset.name)">{{dataset.name}}</a>
+                    </div>
                   </li>
                 </ul>
               </li>
@@ -123,15 +132,18 @@
           </template>
           <template v-slot:item._gpu="{ item }">
             <ul style="padding-left: 0; list-style: none;">
-              <li v-for="(step, index) in item.steps" :key="index">{{stepSteps(step)}}: {{step.gpu.requires}}
-              <ul v-if="step.gpu.requires != 'forbidden'">
-                <li v-if="step.gpu.gpu_memory">GPUMemory: {{step.gpu.gpu_memory}} MB</li>
-                <li v-if="step.gpu.cuda_capabilities.length">CUDACapabilities: {{step.gpu.cuda_capabilities.join(',')}}</li>
-                <li v-if="step.gpu.cuda_runtime">CUDARuntime: {{step.gpu.cuda_runtime}}</li>
-                <li v-if="step.gpu.gpu_name">GPUName: {{step.gpu.gpu_name}}</li>
-                <li v-if="step.gpu.cuda_driver_version">CUDADriverVersion: {{step.gpu.cuda_driver_version}}</li>
-                <li v-if="step.gpu.cuda_runtime_version">CUDARuntimeVersion: {{step.gpu.cuda_runtime_version}}</li>
-              </ul>
+              <li v-for="(step, index) in item.steps" :key="index">
+                <template v-if="stepSteps(step)">
+                  {{stepSteps(step)}}: {{step.gpu.requires}}
+                  <ul v-if="step.gpu.requires != 'forbidden'">
+                    <li v-if="step.gpu.gpu_memory">GPUMemory: {{step.gpu.gpu_memory}} MB</li>
+                    <li v-if="step.gpu.cuda_capabilities.length">CUDACapabilities: {{step.gpu.cuda_capabilities.join(',')}}</li>
+                    <li v-if="step.gpu.cuda_runtime">CUDARuntime: {{step.gpu.cuda_runtime}}</li>
+                    <li v-if="step.gpu.gpu_name">GPUName: {{step.gpu.gpu_name}}</li>
+                    <li v-if="step.gpu.cuda_driver_version">CUDADriverVersion: {{step.gpu.cuda_driver_version}}</li>
+                    <li v-if="step.gpu.cuda_runtime_version">CUDARuntimeVersion: {{step.gpu.cuda_runtime_version}}</li>
+                  </ul>
+                </template>
               </li>
             </ul>
           </template>
@@ -333,6 +345,16 @@ export default {
       });
       axios.get('api/search?db_name=relvals' + queryParams).then(response => {
         component.dataItems = response.data.response.results.map(function (x) { x._actions = undefined; return x});
+        component.dataItems.forEach(item => {
+          if (item.workflows && item.workflows.length) {
+            const lastWorkflow = item.workflows[item.workflows.length - 1];
+            lastWorkflow.output_datasets.forEach(ds => {
+              ds.datatier = ds.name.split('/').pop();
+              ds.completed = (lastWorkflow.total_events > 0 ? (ds.events / lastWorkflow.total_events * 100) : 0).toFixed(2);
+              ds.niceEvents = ds.events.toLocaleString('en-US');
+            })
+          }
+        });
         component.totalItems = response.data.response.total_rows;
         component.loading = false;
       }).catch(error => {
@@ -502,3 +524,59 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.bar {
+  line-height:10px;
+  height: 10px;
+  display: inline-block;
+  max-width: 100%;
+  background-color: #2C3E50;
+}
+
+.production-bar {
+  background-color:#F39C12;
+}
+
+.valid-bar {
+  background-color:#3498db;
+}
+
+.invalid-bar {
+  background-color:#C0392B;
+}
+
+.deleted-bar {
+  background-color:#E74C3C;
+}
+
+.gray-bar {
+  width: 100px;
+  background-color: #BDC3C7;
+  display: inline-block;
+  line-height:10px;
+  height: 10px;
+  font-size: 0;
+  overflow: hidden;
+  margin-right: 4px;
+}
+
+.valid-type {
+  color: green;
+}
+
+.production-type, .invalid-type, .deleted-type, .deprecated-type {
+  color: red;
+}
+
+.none-type {
+  color: #8A8A8A;
+}
+
+.zebra-datasets > li:nth-child(2n) > div {
+  background: #f5f5fc;
+  background: linear-gradient(90deg, #f5f5fc 0%, rgba(0,212,255,0) 100%);
+  padding-left: 24px;
+  margin-left: -24px;
+}
+</style>
