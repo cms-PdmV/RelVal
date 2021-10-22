@@ -348,11 +348,13 @@ export default {
         component.dataItems.forEach(item => {
           if (item.workflows && item.workflows.length) {
             const lastWorkflow = item.workflows[item.workflows.length - 1];
-            lastWorkflow.output_datasets.forEach(ds => {
-              ds.datatier = ds.name.split('/').pop();
-              ds.completed = (lastWorkflow.total_events > 0 ? (ds.events / lastWorkflow.total_events * 100) : 0).toFixed(2);
-              ds.niceEvents = ds.events.toLocaleString('en-US');
-            })
+            if (lastWorkflow.output_datasets) {
+              lastWorkflow.output_datasets.forEach(ds => {
+                ds.datatier = ds.name.split('/').pop();
+                ds.completed = (lastWorkflow.total_events > 0 ? (ds.events / lastWorkflow.total_events * 100) : 0).toFixed(2);
+                ds.niceEvents = ds.events.toLocaleString('en-US');
+              });
+            }
           }
         });
         component.totalItems = response.data.response.total_rows;
