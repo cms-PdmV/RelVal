@@ -39,8 +39,14 @@ class SearchAPI(APIBase):
         from_ticket = args.pop('ticket', None)
         if db_name == 'relvals' and from_ticket:
             ticket_database = Database('tickets')
-            ticket = ticket_database.get(from_ticket)
-            created_relvals = ','.join(ticket['created_relvals'])
+            tickets = ticket_database.query(query_string=f'prepid={from_ticket}',
+                                            limit=100,
+                                            ignore_case=True)
+            created_relvals = []
+            for ticket in tickets:
+                created_relvals.extend(ticket['created_relvals'])
+
+            created_relvals = ','.join(created_relvals)
             prepid_query = args.pop('prepid', '')
             args['prepid'] = ('%s,%s' % (prepid_query, created_relvals)).strip(',')
 
