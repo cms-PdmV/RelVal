@@ -29,9 +29,9 @@
               <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>
               <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>
               <a @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>
-              <a @click="nextStatus([item])" v-if="role('manager') && item.status != 'done'" title="Move to next status">Next</a>
+              <a @click="nextStatus([item])" v-if="role('manager') && item.status != 'done' && item.status != 'archived'" title="Move to next status">Next</a>
               <a @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted' && !isDev" title="Update RelVal information from Stats2">Update from Stats2</a>
-              <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="item.status == 'submitted' || item.status == 'done' && !isDev" title="Show workflows of this RelVal in Stats2">Stats2</a>
+              <a target="_blank" :href="'https://cms-pdmv.cern.ch/stats?prepid=' + item.prepid" v-if="(item.status == 'submitted' || item.status == 'done' || item.status == 'archived') && !isDev" title="Show workflows of this RelVal in Stats2">Stats2</a>
               <a :href="'tickets?created_relvals=' + item.prepid" title="Show ticket that was used to create this RelVal">Ticket</a>
             </div>
           </template>

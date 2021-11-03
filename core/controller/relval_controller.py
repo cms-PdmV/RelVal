@@ -451,6 +451,9 @@ class RelValController(ControllerBase):
             elif status == 'done':
                 raise Exception('Cannot move RelVals that are already done to next status')
 
+            elif status == 'archived':
+                raise Exception('Cannot move RelVals that are archived to next status')
+
         return results
 
     def previous_status(self, relval):
@@ -465,7 +468,7 @@ class RelValController(ControllerBase):
                 self.move_relval_back_to_approved(relval)
             elif relval.get('status') == 'submitted':
                 self.move_relval_back_to_approved(relval)
-            elif relval.get('status') == 'done':
+            elif relval.get('status') in ('done', 'archived'):
                 self.move_relval_back_to_approved(relval)
                 self.move_relval_back_to_new(relval)
 
@@ -650,36 +653,66 @@ class RelValController(ControllerBase):
 
     def move_relvals_to_done(self, relvals):
         """
-        Try to move RelVal to done status
+        Try to move RelVal to done or archived status
         """
         results = []
+        done_status = ('completed', )
+        archived_status = ('normal-archived', 'rejected-archived', 'aborted-archived')
+        # Archived threshold - if workflow is archived for more than a week, but
+        # is not done normally (VALID datasets) - move it to 'archived' status
+        archived_threshold = time.time() - 7 * 24 * 3600
         for relval in relvals:
             prepid = relval.get_prepid()
             with self.locker.get_nonblocking_lock(prepid):
                 relval = self.update_workflows(relval)
                 workflows = relval.get('workflows')
-                if workflows:
-                    last_workflow = workflows[-1]
-                    for output_dataset in last_workflow['output_datasets']:
-                        dataset_type = output_dataset['type']
-                        if dataset_type.lower() != 'valid':
-                            dataset_name = output_dataset['name']
-                            raise Exception(f'Could not move {prepid} to "done" '
-                                            f'because {dataset_name} is {dataset_type}')
+                if not workflows:
+                    raise Exception(f'{prepid} does not have any workflows in computing')
 
-                    for status in last_workflow['status_history']:
-                        if status['status'].lower() == 'completed':
-                            completed_timestamp = status['time']
-                            break
-                    else:
-                        last_workflow_name = last_workflow['name']
-                        raise Exception(f'Could not move {prepid} to "done" because '
-                                        f'{last_workflow_name} is not yet "completed"')
+                last_workflow = workflows[-1]
+                datasets = last_workflow['output_datasets']
+                status_history = last_workflow['status_history']
+                # Get all not-VALID datasets
+                not_valid_datasets = [d['name'] for d in datasets if d['type'].lower() != 'valid']
+                # Get time when workflow became completed
+                completed_timestamp = None
+                for status in status_history:
+                    if status['status'] in done_status:
+                        completed_timestamp = status['time']
+                        break
 
+                # All datasets are VALID and workflow was 'completed'
+                if not not_valid_datasets and completed_timestamp:
                     self.update_status(relval, 'done', completed_timestamp)
                     results.append(relval)
-                else:
-                    raise Exception(f'{prepid} does not have any workflows in computing')
+                    continue
+
+                # Get time when workflow became archived
+                archived_timestamp = None
+                for status in status_history:
+                    if status['status'] in archived_status:
+                        archived_timestamp = status['time']
+                        break
+
+                # Workflow was archived for more than the threshold
+                if archived_timestamp and archived_timestamp <= archived_threshold:
+                    self.update_status(relval, 'archived', archived_timestamp)
+                    results.append(relval)
+                    continue
+
+                if not_valid_datasets:
+                    datatiers = [ds.split('/')[-1] for ds in not_valid_datasets]
+                    raise Exception(f'Could not move {prepid} to "done" because '
+                                    f'{len(not_valid_datasets)} datasets are not VALID: '
+                                    f'{", ".join(datatiers)}')
+
+                last_workflow_name = last_workflow['name']
+                if not completed_timestamp:
+                    raise Exception(f'Could not move {prepid} to "done" because '
+                                    f'{last_workflow} is not yet "completed"')
+
+                raise Exception(f'Could not move {prepid} to "archived" because '
+                                f'{last_workflow_name} is not archived long enough')
 
         return results
 
