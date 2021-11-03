@@ -561,9 +561,7 @@ class RelValController(ControllerBase):
                 else:
                     continue
 
-                while dataset and dataset[0] != '/':
-                    dataset = dataset[1:]
-
+                dataset = dataset[dataset.index('/'):]
                 datasets_to_check.add(dataset)
 
         if not datasets_to_check:
@@ -607,9 +605,7 @@ class RelValController(ControllerBase):
                     else:
                         continue
 
-                    while dataset and dataset[0] != '/':
-                        dataset = dataset[1:]
-
+                    dataset = dataset[dataset.index('/'):]
                     access_type = dataset_access_types[dataset]
                     if access_type.lower() != 'valid':
                         raise Exception(f'{dataset} type is {access_type}, it must be VALID')

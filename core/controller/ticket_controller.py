@@ -113,12 +113,13 @@ class TicketController(ControllerBase):
             pileup_input_split = pileup_input.split('/')
             pileup_input_split[2] = gt_rewrite
             pileup_input = '/'.join(pileup_input_split)
+            pileup_prefix = pileup_input[:pileup_input.index('/')]
             dataset_list = dbs_datasetlist(pileup_input)
             if not dataset_list:
                 raise Exception(f'Could not find {pileup_input} PU dataset for {workflow_id}')
 
             pileup_input = sorted([x['dataset'] for x in dataset_list])[-1]
-            driver_dict['pileup_input'] = pileup_input
+            driver_dict['pileup_input'] = f'{pileup_prefix}{pileup_input}'
 
     def recycle_input_with_gt_rewrite(self, relvals, gt_rewrite, recycle_input_of):
         """
