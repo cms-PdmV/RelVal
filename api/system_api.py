@@ -114,7 +114,7 @@ class ObjectsInfoAPI(APIBase):
                                         key=lambda x: (x['count'], x['batch_name'].lower()),
                                         reverse=True)
 
-        statuses = ['new', 'approved', 'submitting', 'submitted', 'done']
+        statuses = ['new', 'approved', 'submitting', 'submitted', 'done', 'archived']
         by_status = sorted(by_status, key=lambda x: statuses.index(x['_id']))
         end_time = time.time()
         self.logger.debug('Getting objects info - RelVals, time taken %.2fs',
