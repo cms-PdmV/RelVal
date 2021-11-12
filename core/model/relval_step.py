@@ -117,7 +117,6 @@ class RelValStep(ModelBase):
                 if json_input.get('gpu', {}).get('requires') not in ('optional', 'required'):
                     json_input['gpu'] = schema.get('gpu')
                     json_input['gpu']['requires'] = 'forbidden'
-                    json_input['gpu_steps'] = []
 
                 driver = json_input['driver']
                 for key, default_value in schema['driver'].items():
