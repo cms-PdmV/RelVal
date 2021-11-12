@@ -330,6 +330,7 @@ export default {
       step.driver.datatier = step.driver.datatier.join(',');
       step.driver.eventcontent = step.driver.eventcontent.join(',');
       step.driver.step = step.driver.step.join(',');
+      step.gpu.cuda_capabilities = step.gpu.cuda_capabilities.join(',');
     }
     axios.get('api/relvals/get_editable/' + this.prepid).then(response => {
       if (query.clone && query.clone.length) {
@@ -373,6 +374,7 @@ export default {
         step.driver.datatier = this.cleanSplit(step.driver.datatier);
         step.driver.eventcontent = this.cleanSplit(step.driver.eventcontent);
         step.driver.step = this.cleanSplit(step.driver.step);
+        step.gpu.cuda_capabilities = this.cleanSplit(step.gpu.cuda_capabilities);
       }
       let httpRequest;
       this.loading = true;
