@@ -420,7 +420,7 @@ class RelValController(ControllerBase):
         relval.set('status', status)
         relval.add_history('status', status, None, timestamp)
         relval_db.save(relval.get_json())
-        self.logger.info('Set "%s" status to "%s"', relval.get_id(), status)
+        self.logger.info('Set "%s" status to "%s"', relval.get_prepid(), status)
 
     def next_status(self, relvals):
         """
