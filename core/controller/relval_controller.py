@@ -732,8 +732,10 @@ class RelValController(ControllerBase):
         active_workflows = self.pick_active_workflows(relval)
         if active_workflows:
             self.reject_workflows(active_workflows)
+            # Refresh after rejecting
+            self.force_stats_to_refresh([x['name'] for x in active_workflows])
+            relval = self.update_workflows(relval)
 
-        relval.set('workflows', [])
         for step in relval.get('steps'):
             step.set('config_id', '')
 
