@@ -420,6 +420,7 @@ class RelValController(ControllerBase):
         relval.set('status', status)
         relval.add_history('status', status, None, timestamp)
         relval_db.save(relval.get_json())
+        self.logger.info('Set "%s" status to "%s"', relval.get_id(), status)
 
     def next_status(self, relvals):
         """
@@ -452,7 +453,8 @@ class RelValController(ControllerBase):
                 raise Exception('Cannot move RelVals that are already done to next status')
 
             elif status == 'archived':
-                raise Exception('Cannot move RelVals that are archived to next status')
+                # Attempt to move relvals to "done" in case they were "fixed"
+                results.extend(self.move_relvals_to_done(relvals_with_status))
 
         return results
 
@@ -652,6 +654,7 @@ class RelValController(ControllerBase):
         Try to move RelVal to done or archived status
         """
         results = []
+        # RelVal will not have recoveries, so "completed" is the last state
         done_status = ('completed', )
         archived_status = ('normal-archived', 'rejected-archived', 'aborted-archived')
         # Archived threshold - if workflow is archived for more than a week, but
