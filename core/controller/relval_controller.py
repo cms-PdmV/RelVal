@@ -738,6 +738,7 @@ class RelValController(ControllerBase):
             step.set('config_id', '')
 
         relval.set('campaign_timestamp', 0)
+        relval.set('output_datasets', [])
         self.update_status(relval, 'approved')
         return relval
 
