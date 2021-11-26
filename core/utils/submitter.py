@@ -75,36 +75,43 @@ class RequestSubmitter(BaseSubmitter):
         recipients = emailer.get_recipients(relval)
         emailer.send(subject, body, recipients)
 
-    def __prepare_workspace(self, relval, controller, ssh_executor, remote_directory):
+    def prepare_workspace(self, relval, controller, ssh_executor, workspace_dir):
         """
         Clean or create a remote directory and upload all needed files
         """
         prepid = relval.get_prepid()
         self.logger.info('Preparing workspace for %s', prepid)
-        ssh_executor.execute_command([f'rm -rf {remote_directory}',
-                                      f'mkdir -p {remote_directory}'])
+        # Dump config generation to file
         with open(f'/tmp/{prepid}_generate.sh', 'w') as temp_file:
             config_file_content = controller.get_cmsdriver(relval, for_submission=True)
             temp_file.write(config_file_content)
 
+        # Dump config upload to file
         with open(f'/tmp/{prepid}_upload.sh', 'w') as temp_file:
             upload_file_content = controller.get_config_upload_file(relval, for_submission=True)
             temp_file.write(upload_file_content)
 
+        # Re-create the directory and create a voms proxy there
+        command = [f'rm -rf {workspace_dir}/{prepid}',
+                   f'mkdir -p {workspace_dir}/{prepid}',
+                   f'cd {workspace_dir}/{prepid}',
+                   f'voms-proxy-init -voms cms --valid 4:00 --out $(pwd)/proxy.txt']
+        ssh_executor.execute_command(command)
+
         # Upload config generation script - cmsDrivers
         ssh_executor.upload_file(f'/tmp/{prepid}_generate.sh',
-                                 f'{remote_directory}/config_generate.sh')
+                                 f'{workspace_dir}/{prepid}/config_generate.sh')
         # Upload config upload to ReqMgr2 script
         ssh_executor.upload_file(f'/tmp/{prepid}_upload.sh',
-                                 f'{remote_directory}/config_upload.sh')
+                                 f'{workspace_dir}/{prepid}/config_upload.sh')
         # Upload python script used by upload script
         ssh_executor.upload_file('./core_lib/utils/config_uploader.py',
-                                 f'{remote_directory}/config_uploader.py')
+                                 f'{workspace_dir}/{prepid}/config_uploader.py')
 
         os.remove(f'/tmp/{prepid}_generate.sh')
         os.remove(f'/tmp/{prepid}_upload.sh')
 
-    def __check_for_submission(self, relval):
+    def check_for_submission(self, relval):
         """
         Perform one last check of values before submitting a RelVal
         """
@@ -112,14 +119,16 @@ class RequestSubmitter(BaseSubmitter):
         if relval.get('status') != 'submitting':
             raise Exception(f'Cannot submit a request with status {relval.get("status")}')
 
-    def __generate_configs(self, relval, ssh_executor, remote_directory):
+    def generate_configs(self, relval, ssh_executor, workspace_dir):
         """
         SSH to a remote machine and generate cmsDriver config files
         """
         prepid = relval.get_prepid()
-        command = [f'cd {remote_directory}',
+        command = [f'cd {workspace_dir}',
+                   'export WORKSPACE_DIR=$(pwd)',
+                   f'cd {prepid}',
+                   'export RELVAL_DIR=$(pwd)',
                    'chmod +x config_generate.sh',
-                   'voms-proxy-init -voms cms --valid 4:00 --out $(pwd)/proxy.txt',
                    'export X509_USER_PROXY=$(pwd)/proxy.txt',
                    './config_generate.sh']
         stdout, stderr, exit_code = ssh_executor.execute_command(command)
@@ -129,12 +138,15 @@ class RequestSubmitter(BaseSubmitter):
 
         return stdout
 
-    def __upload_configs(self, relval, ssh_executor, remote_directory):
+    def upload_configs(self, relval, ssh_executor, workspace_dir):
         """
         SSH to a remote machine and upload cmsDriver config files to ReqMgr2
         """
         prepid = relval.get_prepid()
-        command = [f'cd {remote_directory}',
+        command = [f'cd {workspace_dir}',
+                   'export WORKSPACE_DIR=$(pwd)',
+                   f'cd {prepid}',
+                   'export RELVAL_DIR=$(pwd)',
                    'chmod +x config_upload.sh',
                    'export X509_USER_PROXY=$(pwd)/proxy.txt',
                    './config_upload.sh']
@@ -148,7 +160,7 @@ class RequestSubmitter(BaseSubmitter):
         stdout = [tuple(clean_split(x.strip(), ' ')[1:]) for x in stdout]
         return stdout
 
-    def __update_steps_with_config_hashes(self, relval, config_hashes):
+    def update_steps_with_config_hashes(self, relval, config_hashes):
         """
         Iterate through RelVal steps and set config_id values
         """
@@ -189,8 +201,7 @@ class RequestSubmitter(BaseSubmitter):
         """
         prepid = relval.get_prepid()
         credentials_file = Config.get('credentials_path')
-        remote_directory = Config.get('remote_path').rstrip('/')
-        remote_directory = f'{remote_directory}/{prepid}'
+        workspace_dir = Config.get('remote_path').rstrip('/')
         prepid = relval.get_prepid()
         self.logger.debug('Will try to acquire lock for %s', prepid)
         with Locker().get_lock(prepid):
@@ -198,20 +209,20 @@ class RequestSubmitter(BaseSubmitter):
             relval_db = Database('relvals')
             relval = controller.get(prepid)
             try:
-                self.__check_for_submission(relval)
-                with SSHExecutor('lxplus.cern.ch', credentials_file) as ssh_executor:
+                self.check_for_submission(relval)
+                with SSHExecutor('lxplus.cern.ch', credentials_file) as ssh:
                     # Start executing commands
-                    self.__prepare_workspace(relval, controller, ssh_executor, remote_directory)
+                    self.prepare_workspace(relval, controller, ssh, workspace_dir)
                     # Create configs
-                    self.__generate_configs(relval, ssh_executor, remote_directory)
+                    self.generate_configs(relval, ssh, workspace_dir)
                     # Upload configs
-                    config_hashes = self.__upload_configs(relval, ssh_executor, remote_directory)
-                    # Remove remote directory
-                    ssh_executor.execute_command([f'rm -rf {remote_directory}'])
+                    config_hashes = self.upload_configs(relval, ssh, workspace_dir)
+                    # Remove remote relval directory
+                    ssh.execute_command([f'rm -rf {workspace_dir}/{prepid}'])
 
                 self.logger.debug(config_hashes)
                 # Iterate through uploaded configs and save their hashes in RelVal steps
-                self.__update_steps_with_config_hashes(relval, config_hashes)
+                self.update_steps_with_config_hashes(relval, config_hashes)
                 # Submit job dict to ReqMgr2
                 job_dict = controller.get_job_dict(relval)
                 cmsweb_url = Config.get('cmsweb_url')

@@ -112,10 +112,15 @@ class RelVal(ModelBase):
             step_cmssw = step.get_release()
             step_scram_arch = step.get_scram_arch()
             if step_cmssw != previous_step_cmssw or step_scram_arch != previous_scram_arch:
-                reuse_cmssw = for_submission and (index != 0 or not fragment)
-                built_command += cmssw_setup(step_cmssw,
-                                             reuse=reuse_cmssw,
-                                             scram_arch=step_scram_arch)
+                if for_submission and (index != 0 or not fragment):
+                    # Reuse CMSSW for steps that do not have fragments
+                    built_command += '\ncd $WORKSPACE_DIR\n'
+
+                built_command += cmssw_setup(step_cmssw, scram_arch=step_scram_arch)
+                if for_submission and (index != 0 or not fragment):
+                    # Reuse CMSSW for steps that do not have fragments
+                    built_command += '\ncd $RELVAL_DIR\n'
+
                 built_command += '\n\n'
 
             previous_step_cmssw = step_cmssw
@@ -141,7 +146,7 @@ class RelVal(ModelBase):
 
             built_command += step.get_command(custom_fragment=custom_fragment_name,
                                               for_submission=for_submission)
-            built_command += '\n\n\n\n'
+            built_command += '\n\n'
 
         return built_command.strip()
 

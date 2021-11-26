@@ -5,7 +5,7 @@ import weakref
 import json
 from copy import deepcopy
 from core.model.model_base import ModelBase
-from core_lib.utils.common_utils import cmssw_setup, get_scram_arch
+from core_lib.utils.common_utils import get_scram_arch
 
 
 class RelValStep(ModelBase):
@@ -178,7 +178,7 @@ class RelValStep(ModelBase):
 
         return 'cms_driver'
 
-    def __build_cmsdriver(self, step_index, arguments):
+    def __build_cmsdriver(self, step_index, arguments, for_submission):
         """
         Build a cmsDriver command from given arguments
         Add comment in front of the command
@@ -189,7 +189,11 @@ class RelValStep(ModelBase):
 
         self.logger.info('Generating %s cmsDriver for step %s', fragment_name, step_index)
         # Actual command
-        command = f'# Command for step {step_index + 1}:\ncmsDriver.py {fragment_name}'
+        command = ''
+        if not for_submission:
+            command += f'# Command for step {step_index + 1}:\n'
+
+        command += f'cmsDriver.py {fragment_name}'
         # Comment in front of the command for better readability
         comment = f'# Arguments for step {step_index + 1}:\n'
         for key in sorted(arguments.keys()):
@@ -215,6 +219,8 @@ class RelValStep(ModelBase):
 
         # Exit the script with error of cmsDriver.py
         command += ' || exit $?'
+        if for_submission:
+            return command
 
         return comment + '\n' + command
 
@@ -310,7 +316,7 @@ class RelValStep(ModelBase):
                 else:
                     arguments_dict['filein'] = f'"file:step{input_number}_in{eventcontent}.root"'
 
-        cms_driver_command = self.__build_cmsdriver(index, arguments_dict)
+        cms_driver_command = self.__build_cmsdriver(index, arguments_dict, for_submission)
         return cms_driver_command
 
     def has_step(self, step):

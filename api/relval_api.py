@@ -159,7 +159,8 @@ class GetCMSDriverAPI(APIBase):
         Get a text file with RelVal's cmsDriver.py commands
         """
         relval = relval_controller.get(prepid)
-        commands = relval_controller.get_cmsdriver(relval)
+        for_submission = flask.request.args.get('submission', '').lower() == 'true'
+        commands = relval_controller.get_cmsdriver(relval, for_submission)
         return self.output_text(commands, content_type='text/plain')
 
 
@@ -177,7 +178,8 @@ class GetConfigUploadAPI(APIBase):
         Get a text file with relval's cmsDriver.py commands
         """
         relval = relval_controller.get(prepid)
-        commands = relval_controller.get_config_upload_file(relval)
+        for_submission = flask.request.args.get('submission', '').lower() == 'true'
+        commands = relval_controller.get_config_upload_file(relval, for_submission)
         return self.output_text(commands, content_type='text/plain')
 
 
