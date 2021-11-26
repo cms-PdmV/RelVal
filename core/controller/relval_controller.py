@@ -165,7 +165,7 @@ class RelValController(ControllerBase):
         if for_submission:
             command += '\ncd $WORKSPACE_DIR\n'
 
-        command += config_cache_lite_setup(reuse_files=for_submission)
+        command += config_cache_lite_setup()
         if for_submission:
             command += '\ncd $RELVAL_DIR\n'
 

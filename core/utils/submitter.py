@@ -95,7 +95,7 @@ class RequestSubmitter(BaseSubmitter):
         command = [f'rm -rf {workspace_dir}/{prepid}',
                    f'mkdir -p {workspace_dir}/{prepid}',
                    f'cd {workspace_dir}/{prepid}',
-                   f'voms-proxy-init -voms cms --valid 4:00 --out $(pwd)/proxy.txt']
+                   'voms-proxy-init -voms cms --valid 4:00 --out $(pwd)/proxy.txt']
         ssh_executor.execute_command(command)
 
         # Upload config generation script - cmsDrivers
