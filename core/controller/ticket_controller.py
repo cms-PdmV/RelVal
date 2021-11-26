@@ -3,8 +3,8 @@ Module that contains TicketController class
 """
 import json
 import os
+import time
 from copy import deepcopy
-from random import Random
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
@@ -272,7 +272,6 @@ class TicketController(ControllerBase):
         Remotely run workflow info extraction from CMSSW and return all workflows
         """
         ticket_prepid = ticket.get_prepid()
-        ticket_dir = f'ticket_{ticket_prepid}'
         remote_directory = Config.get('remote_path').rstrip('/')
         if ticket.get('recycle_gs') and not ticket.get('recycle_input_of'):
             recycle_gs_flag = '-r '
@@ -299,21 +298,19 @@ class TicketController(ControllerBase):
 
         workflow_ids = ','.join([str(x) for x in ticket.get('workflow_ids')])
         self.logger.info('Creating RelVals %s for %s', workflow_ids, ticket_prepid)
-        # Prepare empty directory with run_the_matrix_pdmv.py
-        command = [f'rm -rf {remote_directory}/{ticket_dir}',
-                   f'mkdir -p {remote_directory}/{ticket_dir}']
+        # Prepare remote directory with run_the_matrix_pdmv.py
+        command = [f'mkdir -p {remote_directory}']
         _, err, code = ssh_executor.execute_command(command)
         if code != 0:
             raise Exception(f'Error code {code} preparing workspace: {err}')
 
         ssh_executor.upload_file('core/utils/run_the_matrix_pdmv.py',
-                                 f'{remote_directory}/{ticket_dir}/run_the_matrix_pdmv.py')
-        # Create a random name for temporary file
-        random = Random()
-        file_name = f'{ticket_prepid}_{int(random.randint(1000, 9999))}.json'
+                                 f'{remote_directory}/run_the_matrix_pdmv.py')
+        # Defined a name for output file
+        file_name = f'{ticket_prepid}_{int(time.time())}.json'
         # Execute run_the_matrix_pdmv.py
-        command = [f'cd {remote_directory}/{ticket_dir}']
-        command.extend(cmssw_setup(cmssw_release, reuse=True, scram_arch=scram_arch).split('\n'))
+        command = [f'cd {remote_directory}']
+        command.extend(cmssw_setup(cmssw_release, scram_arch=scram_arch).split('\n'))
         command += ['python3 run_the_matrix_pdmv.py '
                     f'-l={workflow_ids} '
                     f'-w={matrix} '
@@ -324,11 +321,12 @@ class TicketController(ControllerBase):
         if code != 0:
             raise Exception(f'Error code {code} creating RelVals: {err}')
 
-        ssh_executor.download_file(f'{remote_directory}/{ticket_dir}/{file_name}',
+        # Download generated json
+        ssh_executor.download_file(f'{remote_directory}/{file_name}',
                                    f'/tmp/{file_name}')
 
-        # Cleanup remote directory
-        ssh_executor.execute_command(f'rm -rf {remote_directory}/{ticket_dir}')
+        # Cleanup remote directory by removing all ticket jsons
+        ssh_executor.execute_command(f'rm -rf {remote_directory}/{ticket_prepid}_*.json')
         with open(f'/tmp/{file_name}', 'r') as workflows_file:
             workflows = json.load(workflows_file)
 

@@ -162,7 +162,13 @@ class RelValController(ControllerBase):
 
         # Use ConfigCacheLite and TweakMakerLite instead of WMCore
         command += '\n\n'
-        command += config_cache_lite_setup(reuse_files=for_submission)
+        if for_submission:
+            command += '\ncd $WORKSPACE_DIR\n'
+
+        command += config_cache_lite_setup()
+        if for_submission:
+            command += '\ncd $RELVAL_DIR\n'
+
         # Upload command will be identical for all configs
         common_upload_part = ('\npython3 config_uploader.py --file $(pwd)/%s.py --label %s '
                               f'--group ppd --user $(echo $USER) --db {database_url} || exit $?')
@@ -176,7 +182,13 @@ class RelValController(ControllerBase):
                 step_scram = step.get_scram_arch()
                 if step_cmssw != previous_step_cmssw or step_scram != previous_step_scram:
                     command += '\n\n'
-                    command += cmssw_setup(step_cmssw, reuse=for_submission, scram_arch=step_scram)
+                    if for_submission:
+                        command += '\ncd $WORKSPACE_DIR\n'
+
+                    command += cmssw_setup(step_cmssw, scram_arch=step_scram)
+                    if for_submission:
+                        command += '\ncd $RELVAL_DIR\n'
+
                     command += '\n'
 
                 command += common_upload_part % (config_name, config_name)
@@ -380,15 +392,22 @@ class RelValController(ControllerBase):
         self.logger.debug('Resolve auto conditions command:\n%s', '\n'.join(command))
         with SSHExecutor('lxplus.cern.ch', credentials_file) as ssh_executor:
             # Upload python script to resolve auto globaltag by upload script
+            stdout, stderr, exit_code = ssh_executor.execute_command(f'mkdir -p {remote_directory}')
+            if exit_code != 0:
+                self.logger.error('Error creating %s:\nstdout:%s\nstderr:%s',
+                                  remote_directory,
+                                  stdout,
+                                  stderr)
+                raise Exception(f'Error creting remote directory: {stderr}')
+
             ssh_executor.upload_file('./core/utils/resolve_auto_global_tag.py',
                                      f'{remote_directory}/resolve_auto_global_tag.py')
             stdout, stderr, exit_code = ssh_executor.execute_command(command)
-
-        if exit_code != 0:
-            self.logger.error('Error resolving auto global tags:\nstdout:%s\nstderr:%s',
-                              stdout,
-                              stderr)
-            raise Exception(f'Error resolving auto globaltags: {stderr}')
+            if exit_code != 0:
+                self.logger.error('Error resolving auto global tags:\nstdout:%s\nstderr:%s',
+                                  stdout,
+                                  stderr)
+                raise Exception(f'Error resolving auto globaltags: {stderr}')
 
         tags = [x for x in clean_split(stdout, '\n') if x.startswith('GlobalTag:')]
         for resolved_tag in tags:
@@ -420,6 +439,7 @@ class RelValController(ControllerBase):
         relval.set('status', status)
         relval.add_history('status', status, None, timestamp)
         relval_db.save(relval.get_json())
+        self.logger.info('Set "%s" status to "%s"', relval.get_prepid(), status)
 
     def next_status(self, relvals):
         """
@@ -452,7 +472,8 @@ class RelValController(ControllerBase):
                 raise Exception('Cannot move RelVals that are already done to next status')
 
             elif status == 'archived':
-                raise Exception('Cannot move RelVals that are archived to next status')
+                # Attempt to move relvals to "done" in case they were "fixed"
+                results.extend(self.move_relvals_to_done(relvals_with_status))
 
         return results
 
@@ -652,6 +673,7 @@ class RelValController(ControllerBase):
         Try to move RelVal to done or archived status
         """
         results = []
+        # RelVal will not have recoveries, so "completed" is the last state
         done_status = ('completed', )
         archived_status = ('normal-archived', 'rejected-archived', 'aborted-archived')
         # Archived threshold - if workflow is archived for more than a week, but
@@ -732,12 +754,15 @@ class RelValController(ControllerBase):
         active_workflows = self.pick_active_workflows(relval)
         if active_workflows:
             self.reject_workflows(active_workflows)
+            # Refresh after rejecting
+            self.force_stats_to_refresh([x['name'] for x in active_workflows])
+            relval = self.update_workflows(relval)
 
-        relval.set('workflows', [])
         for step in relval.get('steps'):
             step.set('config_id', '')
 
         relval.set('campaign_timestamp', 0)
+        relval.set('output_datasets', [])
         self.update_status(relval, 'approved')
         return relval
 
@@ -886,10 +911,16 @@ class RelValController(ControllerBase):
             for workflow_name in all_workflow_names:
                 workflow = stats_conn.api('GET', f'/requests/{workflow_name}')
                 if not workflow:
+                    if Config.get('development'):
+                        continue
+
                     raise Exception(f'Could not find {workflow_name} in Stats2')
 
                 workflow = json.loads(workflow)
                 if not workflow.get('RequestName'):
+                    if Config.get('development'):
+                        continue
+
                     raise Exception(f'Could not find {workflow_name} in Stats2')
 
                 if workflow.get('RequestType', '').lower() == 'resubmission':

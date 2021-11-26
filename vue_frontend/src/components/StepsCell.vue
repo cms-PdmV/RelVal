@@ -9,9 +9,9 @@
           <template v-if="isDriver(step)">
             <li v-if="step.events_per_lumi && step.events_per_lumi.length">Events per Lumi: {{step.events_per_lumi}}</li>
             <li v-if="step.fragment_name && step.fragment_name.length">Fragment: {{step.fragment_name}}</li>
-            <li>Keep output: {{step.keep_output ? 'True' : 'False'}}</li>
+            <li v-if="!step.keep_output">Keep output: False</li>
             <li v-if="step.lumis_per_job && step.lumis_per_job.length">Lumis Per Job: {{step.lumis_per_job}}</li>
-            <li v-for="(value, key) in step.driver" :key="key">{{key}} {{value}}</li>
+            <li v-for="(value, key) in step.driver" :key="key">{{key}} {{value === true ? '' : value}}</li>
           </template>
           <template v-else>
             <li>Dataset: {{step.input.dataset}}</li>
@@ -95,6 +95,10 @@ export default {
 .monospace {
   font-family: monospace;
   font-size: 0.9em;
+}
+
+li {
+  margin-bottom: -4px;
 }
 
 </style>
