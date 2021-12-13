@@ -109,6 +109,16 @@ class TicketController(ControllerBase):
         elif driver_dict.get('pileup_input'):
             # Driver step
             pileup_input = driver_dict['pileup_input']
+            # Removing PU_ from the pileup input dataset because it is already
+            # clear that PU dataset is PU without PU_
+            gt_rewrite = gt_rewrite.replace('-PU_', '-')
+            # Due to removal of PU_, the version might be different, so fetch
+            # the newest one
+            gt_rewrite = gt_rewrite.split('-')
+            if gt_rewrite[-1].startswith('v'):
+                gt_rewrite[-1] = 'v*'
+
+            gt_rewrite = '-'.join(gt_rewrite)
             self.logger.info('Will replace %s middle part with %s', pileup_input, gt_rewrite)
             pileup_input_split = pileup_input.split('/')
             pileup_input_split[2] = gt_rewrite
