@@ -102,7 +102,8 @@ class TicketController(ControllerBase):
             input_dataset = '/'.join(input_dataset_split)
             dataset_list = dbs_datasetlist(input_dataset)
             if not dataset_list:
-                raise Exception(f'Could not find {input_dataset} dataset for {workflow_id}')
+                raise Exception(f'Could not find {input_dataset} input dataset for {workflow_id} '
+                                f'after applying {gt_rewrite} GT rewrite')
 
             input_dataset = sorted([x['dataset'] for x in dataset_list])[-1]
             input_dict['dataset'] = input_dataset
