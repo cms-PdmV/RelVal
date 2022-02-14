@@ -27,6 +27,13 @@
           </td>
         </tr>
         <tr>
+          <td>Job Dict overwrite</td>
+          <td>
+            <span class="show-job-dict-overwrite" v-if="!showJobDictOverwrite" v-on:click="toggleJobDictOverwrite()">Edit</span>
+            <JSONField v-show="showJobDictOverwrite" v-model="editableObject.job_dict_overwrite" :disabled="!editingInfo.job_dict_overwrite"/>
+          </td>
+        </tr>
+        <tr>
           <td>Label (--label)</td>
           <td><input type="text" v-model="editableObject.label" placeholder="E.g. gcc8 or rsb or pmx" :disabled="!editingInfo.label"></td>
         </tr>
@@ -100,11 +107,7 @@
                   </tr>
                   <tr>
                     <td>Lumisection ranges</td>
-                    <td>
-                      <input type="text" style="width: 75%;font-family: monospace;" v-model="step.input.lumisection" v-on:input="checkLumisectionJSON(step.input.lumisection)" :disabled="!editingInfo.steps">
-                      <span v-if="lumisectionJSONValid" class="ml-2" style="color: #27ae60">Valid JSON</span>
-                      <span v-else class="ml-2" style="color: #e74c3c">Invalid JSON</span>
-                    </td>
+                    <td><JSONField v-model="step.input.lumisection" :disabled="!editingInfo.steps"/></td>
                   </tr>
                 </template>
                 <template v-else>
@@ -291,10 +294,12 @@
 import axios from 'axios'
 import { utilsMixin } from '../mixins/UtilsMixin.js'
 import LoadingOverlay from './LoadingOverlay.vue'
+import JSONField from './JSONField.vue'
 
 export default {
   components: {
-    LoadingOverlay
+    LoadingOverlay,
+    JSONField
   },
   mixins: [
     utilsMixin
@@ -304,6 +309,7 @@ export default {
       prepid: undefined,
       editableObject: {},
       editingInfo: {},
+      showJobDictOverwrite: false,
       loading: true,
       creatingNew: true,
       lumisectionJSONValid: true,
@@ -326,7 +332,6 @@ export default {
     let component = this;
     let prepareStep = function(step) {
       step.step_type = step.input.dataset && step.input.dataset.length ? 'input' : 'driver';
-      step.input.lumisection = JSON.stringify(step.input.lumisection);
       step.driver.datatier = step.driver.datatier.join(',');
       step.driver.eventcontent = step.driver.eventcontent.join(',');
       step.driver.step = step.driver.step.join(',');
@@ -345,6 +350,7 @@ export default {
           }
           component.editableObject = templateResponse.data.response.object;
           component.editingInfo = response.data.response.editing_info;
+          component.showJobDictOverwrite = Object.keys(component.editableObject.job_dict_overwrite) != 0;
           component.loading = false;
         }).catch(error => {
           component.loading = false;
@@ -356,6 +362,7 @@ export default {
         }
         component.editableObject = response.data.response.object;
         component.editingInfo = response.data.response.editing_info;
+        component.showJobDictOverwrite = Object.keys(component.editableObject.job_dict_overwrite) != 0;
         component.loading = false;
       }
     }).catch(error => {
@@ -370,7 +377,6 @@ export default {
       editableObject.notes = editableObject.notes.trim();
       editableObject.fragment = editableObject.fragment.trim();
       for (let step of editableObject.steps) {
-        step.input.lumisection = JSON.parse(step.input.lumisection);
         step.driver.datatier = this.cleanSplit(step.driver.datatier);
         step.driver.eventcontent = this.cleanSplit(step.driver.eventcontent);
         step.driver.step = this.cleanSplit(step.driver.step);
@@ -409,6 +415,16 @@ export default {
       this.errorDialog.description = description;
       this.errorDialog.visible = true;
     },
+    toggleJobDictOverwrite: function() {
+      if (this.showJobDictOverwrite) {
+        this.showJobDictOverwrite = false;
+        return;
+      }
+      const component = this;
+      if (confirm('Are you sure you know what you are doing? This is a very dangerous action!')) {
+        component.showJobDictOverwrite = true;
+      }
+    },
     addStep: function() {
       this.loading = true;
       let component = this;
@@ -422,7 +438,6 @@ export default {
           newStep.driver.conditions = previousStep.driver.conditions;
         }
         newStep.step_type = 'driver';
-        newStep.input.lumisection = JSON.stringify(newStep.input.lumisection);
         newStep.driver.datatier = newStep.driver.datatier.join(',');
         newStep.driver.eventcontent = newStep.driver.eventcontent.join(',');
         newStep.driver.step = newStep.driver.step.join(',');
@@ -435,15 +450,21 @@ export default {
     },
     deleteStep: function(index) {
       this.editableObject['steps'].splice(index, 1);
-    },
-    checkLumisectionJSON: function(jsonText) {
-      try {
-        JSON.parse(jsonText);
-        this.lumisectionJSONValid = true;
-      } catch(err) {
-        this.lumisectionJSONValid = false;
-      }
-    },
+    }
   }
 }
 </script>
+
+<style scoped>
+
+.show-job-dict-overwrite {
+  color: var(--v-anchor-base);
+  cursor: pointer;
+}
+
+.show-job-dict-overwrite:hover {
+  color: red;
+  font-weight: 700;
+}
+
+</style>

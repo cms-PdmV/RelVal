@@ -98,6 +98,7 @@ class RelValController(ControllerBase):
         editing_info['cmssw_release'] = creating_new
         editing_info['cpu_cores'] = is_new
         editing_info['fragment'] = is_new
+        editing_info['job_dict_overwrite'] = is_new
         editing_info['memory'] = is_new
         editing_info['label'] = is_new
         editing_info['notes'] = True
@@ -362,7 +363,24 @@ class RelValController(ControllerBase):
                 if input_dict['lumisection']:
                     job_dict['LumiList'] = input_dict['lumisection']
 
+        job_dict_overwrite = relval.get('job_dict_overwrite')
+        if job_dict_overwrite:
+            self.logger.info('Overwriting job dict for %s with %s', prepid, job_dict_overwrite)
+            self.apply_job_dict_overwrite(job_dict, job_dict_overwrite)
+
         return job_dict
+
+    def apply_job_dict_overwrite(self, job_dict, overwrite):
+        for key, value in overwrite.items():
+            obj = job_dict
+            key_parts = key.split('.')
+            for part in key_parts[:-1]:
+                if part in obj:
+                    obj = obj[part]
+                else:
+                    break
+            else:
+                obj[key_parts[-1]] = value
 
     def resolve_auto_conditions(self, conditions_tree):
         """

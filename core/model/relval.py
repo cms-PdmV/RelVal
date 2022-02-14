@@ -29,6 +29,8 @@ class RelVal(ModelBase):
         'fragment': '',
         # Action history
         'history': [],
+        # Manual overwrite of job dict
+        'job_dict_overwrite': {},
         # Label
         'label': '',
         # Type of relval: standard, upgrade

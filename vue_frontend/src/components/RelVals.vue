@@ -27,7 +27,7 @@
               <a @click="deleteRelVals([item])" v-if="item.status == 'new' && role('manager')">Delete</a>
               <a :href="'relvals/edit?clone=' + item.prepid" v-if="role('manager')" title="Clone RelVal">Clone</a>
               <a :href="'api/relvals/get_cmsdriver/' + item.prepid" title="Show cmsDriver.py command for this RelVal">cmsDriver</a>
-              <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict</a>
+              <a :href="'api/relvals/get_dict/' + item.prepid" title="Show JSON dictionary for ReqMgr2">Job dict<b v-if="Object.keys(item.job_dict_overwrite).length > 0" style="color: red"> !</b></a>
               <a @click="previousStatus([item])" v-if="role('manager') && item.status != 'new'" title="Move to previous status">Previous</a>
               <a @click="nextStatus([item])" v-if="role('manager') && item.status != 'done'" title="Move to next status">Next</a>
               <a @click="updateWorkflows([item])" v-if="role('administrator') && item.status == 'submitted' && !isDev" title="Update RelVal information from Stats2">Update from Stats2</a>
