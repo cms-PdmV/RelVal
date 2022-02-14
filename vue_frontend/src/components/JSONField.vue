@@ -37,7 +37,7 @@
       }
     },
     watch: {
-      internalValue: function(value) {
+      internalValue: function() {
         if (!this.internalValue || !this.internalValue.length) {
             this.isJSONValid = true;
             this.errorMessage = undefined;
