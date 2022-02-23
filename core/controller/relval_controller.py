@@ -6,12 +6,14 @@ import time
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
-from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.global_config import Config
 from core_lib.utils.common_utils import (clean_split,
                                          cmssw_setup,
+                                         cmsweb_reject_workflows,
                                          config_cache_lite_setup,
-                                         dbs_datasetlist)
+                                         dbs_datasetlist,
+                                         get_workflows_from_stats,
+                                         get_workflows_from_stats_for_prepid)
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
@@ -371,6 +373,9 @@ class RelValController(ControllerBase):
         return job_dict
 
     def apply_job_dict_overwrite(self, job_dict, overwrite):
+        """
+        Apply overwrites to job dictionary
+        """
         for key, value in overwrite.items():
             obj = job_dict
             key_parts = key.split('.')
@@ -860,15 +865,10 @@ class RelValController(ControllerBase):
         """
         Reject or abort list of workflows in ReqMgr2
         """
-        cmsweb_url = Config.get('cmsweb_url')
-        grid_cert = Config.get('grid_user_cert')
-        grid_key = Config.get('grid_user_key')
-        connection = ConnectionWrapper(host=cmsweb_url,
-                                       keep_open=True,
-                                       cert_file=grid_cert,
-                                       key_file=grid_key)
-        headers = {'Content-type': 'application/json',
-                   'Accept': 'application/json'}
+        """
+        Reject or abort list of workflows in ReqMgr2
+        """
+        workflow_status_pairs = []
         for workflow in workflows:
             workflow_name = workflow['name']
             status_history = workflow.get('status_history')
@@ -877,30 +877,9 @@ class RelValController(ControllerBase):
                 status_history = [{'status': '<unknown>'}]
 
             last_workflow_status = status_history[-1]['status']
-            self.logger.info('%s last status is %s', workflow_name, last_workflow_status)
-            # Depending on current status of workflow,
-            # it might need to be either aborted or rejected
-            if last_workflow_status in ('assigned',
-                                        'staging',
-                                        'staged',
-                                        'acquired',
-                                        'running-open',
-                                        'running-closed'):
-                new_status = 'aborted'
-            else:
-                new_status = 'rejected'
+            workflow_status_pairs.append((workflow_name, last_workflow_status))
 
-            self.logger.info('Will change %s status %s to %s',
-                             workflow_name,
-                             last_workflow_status,
-                             new_status)
-            reject_response = connection.api('PUT',
-                                             f'/reqmgr2/data/request/{workflow_name}',
-                                             {'RequestStatus': new_status},
-                                             headers)
-            self.logger.info(reject_response)
-
-        connection.close()
+        cmsweb_reject_workflows(workflow_status_pairs)
 
     def update_workflows(self, relval):
         """
@@ -910,47 +889,27 @@ class RelValController(ControllerBase):
         relval_db = Database('relvals')
         with self.locker.get_lock(prepid):
             relval = self.get(prepid)
-            stats_conn = ConnectionWrapper(host='vocms074.cern.ch',
-                                           port=5984,
-                                           https=False,
-                                           keep_open=True)
-            existing_workflows = relval.get('workflows')
-            stats_workflows = stats_conn.api(
-                'GET',
-                f'/requests/_design/_designDoc/_view/prepids?key="{prepid}"&include_docs=True'
-            )
-            stats_workflows = json.loads(stats_workflows)
-            stats_workflows = [x['doc'] for x in stats_workflows['rows']]
-            existing_workflows = [x['name'] for x in existing_workflows]
-            stats_workflows = [x['RequestName'] for x in stats_workflows]
-            all_workflow_names = list(set(existing_workflows) | set(stats_workflows))
-            self.logger.info('All workflows of %s are %s', prepid, ', '.join(all_workflow_names))
+            workflow_names = {w['name'] for w in relval.get('workflows')}
+            workflows = get_workflows_from_stats_for_prepid(prepid)
+            workflow_names -= {w['RequestName'] for w in workflows}
+            self.logger.info('%s workflows that are not in stats: %s',
+                             len(workflow_names),
+                             workflow_names)
+            workflows += get_workflows_from_stats(list(workflow_names))
             all_workflows = {}
-            for workflow_name in all_workflow_names:
-                workflow = stats_conn.api('GET', f'/requests/{workflow_name}')
-                if not workflow:
-                    if Config.get('development'):
-                        continue
-
-                    raise Exception(f'Could not find {workflow_name} in Stats2')
-
-                workflow = json.loads(workflow)
-                if not workflow.get('RequestName'):
-                    if Config.get('development'):
-                        continue
-
-                    raise Exception(f'Could not find {workflow_name} in Stats2')
+            for workflow in workflows:
+                if not workflow or not workflow.get('RequestName'):
+                    raise Exception('Could not find workflow in Stats2')
 
                 if workflow.get('RequestType', '').lower() == 'resubmission':
                     continue
 
-                all_workflows[workflow_name] = workflow
-                self.logger.info('Fetched workflow %s', workflow_name)
+                name = workflow.get('RequestName')
+                all_workflows[name] = workflow
+                self.logger.info('Found workflow %s', name)
 
-            stats_conn.close()
             output_datasets = self.get_output_datasets(relval, all_workflows)
             new_workflows = self.pick_workflows(all_workflows, output_datasets)
-            all_workflow_names = [x['name'] for x in new_workflows]
             relval.set('output_datasets', output_datasets)
             relval.set('workflows', new_workflows)
             relval_db.save(relval.get_json())
