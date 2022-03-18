@@ -10,7 +10,7 @@
         <li v-if="userInfo"><a :href="'tickets?created_by=' + userInfo.username">My Tickets</a> - show tickets created by me</li>
         <li v-if="userInfo"><a :href="'relvals?created_by=' + userInfo.username + '&sort=created_on&sort_asc=false'">My RelVals</a> - show RelVals created by me</li>
         <li><a :href="'relvals?status=submitted&workflows.status_history.status=normal-archived'">Stuck RelVals</a> - show "submitted" RelVals that are "normal-archived" in ReqMgr2</li>
-        <li><a :href="'relvals?status=submitted&workflows.status_history.status=normal-archived&created_by=' + userInfo.username">My stuck  RelVals</a> - show "submitted" RelVals that are "normal-archived" in ReqMgr2 created by me</li>
+        <li v-if="userInfo"><a :href="'relvals?status=submitted&workflows.status_history.status=normal-archived&created_by=' + userInfo.username">My stuck  RelVals</a> - show "submitted" RelVals that are "normal-archived" in ReqMgr2 created by me</li>
       </ul>
       <h3 class="mt-3">Objects in RelVal database:</h3>
       <ul>

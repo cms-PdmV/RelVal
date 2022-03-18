@@ -8,7 +8,7 @@ from core_lib.utils.locker import Locker
 from core_lib.database.database import Database
 from core_lib.utils.connection_wrapper import ConnectionWrapper
 from core_lib.utils.submitter import Submitter as BaseSubmitter
-from core_lib.utils.common_utils import clean_split
+from core_lib.utils.common_utils import clean_split, refresh_workflows_in_stats
 from core_lib.utils.global_config import Config
 from core.utils.emailer import Emailer
 
@@ -200,7 +200,7 @@ class RequestSubmitter(BaseSubmitter):
         Method that is used by submission workers. This is where the actual submission happens
         """
         prepid = relval.get_prepid()
-        credentials_file = Config.get('credentials_path')
+        credentials_file = Config.get('credentials_file')
         workspace_dir = Config.get('remote_path').rstrip('/')
         prepid = relval.get_prepid()
         self.logger.debug('Will try to acquire lock for %s', prepid)
@@ -241,7 +241,7 @@ class RequestSubmitter(BaseSubmitter):
                 self.approve_workflow(workflow_name, connection)
                 connection.close()
                 if not Config.get('development'):
-                    controller.force_stats_to_refresh([workflow_name])
+                    refresh_workflows_in_stats([workflow_name])
 
             except Exception as ex:
                 self.__handle_error(relval, str(ex))

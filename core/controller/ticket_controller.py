@@ -389,7 +389,7 @@ class TicketController(ControllerBase):
         """
         ticket_db = Database('tickets')
         ticket_prepid = ticket.get_prepid()
-        ssh_executor = SSHExecutor('lxplus.cern.ch', Config.get('credentials_path'))
+        ssh_executor = SSHExecutor('lxplus.cern.ch', Config.get('credentials_file'))
         relval_controller = RelValController()
         created_relvals = []
         with self.locker.get_lock(ticket_prepid):
