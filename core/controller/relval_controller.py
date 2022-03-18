@@ -13,11 +13,16 @@ from core_lib.utils.common_utils import (clean_split,
                                          config_cache_lite_setup,
                                          dbs_datasetlist,
                                          get_workflows_from_stats,
-                                         get_workflows_from_stats_for_prepid)
+                                         get_workflows_from_stats_for_prepid,
+                                         refresh_workflows_in_stats)
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
 from core.model.relval_step import RelValStep
+
+
+DEAD_WORKFLOW_STATUS = {'rejected', 'aborted', 'failed', 'rejected-archived',
+                        'aborted-archived', 'failed-archived', 'aborted-completed'}
 
 
 class RelValController(ControllerBase):
@@ -400,7 +405,7 @@ class RelValController(ControllerBase):
         }
         """
         self.logger.debug('Resolve auto conditions of:\n%s', json.dumps(conditions_tree, indent=2))
-        credentials_file = Config.get('credentials_path')
+        credentials_file = Config.get('credentials_file')
         remote_directory = Config.get('remote_path').rstrip('/')
         command = [f'cd {remote_directory}']
         for cmssw_version, scram_tree in conditions_tree.items():
@@ -707,6 +712,7 @@ class RelValController(ControllerBase):
             with self.locker.get_nonblocking_lock(prepid):
                 relval = self.update_workflows(relval)
                 workflows = relval.get('workflows')
+                workflows = [w for w in workflows if w['type'].lower() != 'resubmission']
                 if not workflows:
                     raise Exception(f'{prepid} does not have any workflows in computing')
 
@@ -772,13 +778,13 @@ class RelValController(ControllerBase):
         Try to move RelVal back to approved
         """
         active_workflows = self.pick_active_workflows(relval)
-        self.force_stats_to_refresh([x['name'] for x in active_workflows])
+        refresh_workflows_in_stats([x['name'] for x in active_workflows])
         # Take active workflows again in case any of them changed during Stats refresh
         active_workflows = self.pick_active_workflows(relval)
         if active_workflows:
             self.reject_workflows(active_workflows)
             # Refresh after rejecting
-            self.force_stats_to_refresh([x['name'] for x in active_workflows])
+            refresh_workflows_in_stats([x['name'] for x in active_workflows])
             relval = self.update_workflows(relval)
 
         for step in relval.get('steps'):
@@ -794,6 +800,9 @@ class RelValController(ControllerBase):
         Pick, process and sort workflows from computing based on output datasets
         """
         new_workflows = []
+        self.logger.info('Picking workflows %s for datasets %s',
+                         [x['RequestName'] for x in all_workflows.values()],
+                         output_datasets)
         for _, workflow in all_workflows.items():
             new_workflow = {'name': workflow['RequestName'],
                             'type': workflow['RequestType'],
@@ -827,10 +836,9 @@ class RelValController(ControllerBase):
         prepid = relval.get_prepid()
         workflows = relval.get('workflows')
         active_workflows = []
-        inactive_statuses = {'aborted', 'rejected', 'failed'}
         for workflow in workflows:
             status_history = set(x['status'] for x in workflow.get('status_history', []))
-            if not inactive_statuses & status_history:
+            if not DEAD_WORKFLOW_STATUS & status_history:
                 active_workflows.append(workflow)
 
         self.logger.info('Active workflows of %s are %s',
@@ -838,33 +846,7 @@ class RelValController(ControllerBase):
                          ', '.join([x['name'] for x in active_workflows]))
         return active_workflows
 
-    def force_stats_to_refresh(self, workflows):
-        """
-        Force Stats2 to update workflows with given workflow names
-        """
-        if not workflows:
-            return
-
-        credentials_path = Config.get('credentials_path')
-        with self.locker.get_lock('refresh-stats'):
-            workflow_update_commands = ['cd /home/pdmvserv/private',
-                                        'source setup_credentials.sh',
-                                        'cd /home/pdmvserv/Stats2']
-            for workflow_name in workflows:
-                workflow_update_commands.append(
-                    f'python3 stats_update.py --action update --name {workflow_name}'
-                )
-
-            self.logger.info('Will make Stats2 refresh these workflows: %s', ', '.join(workflows))
-            with SSHExecutor('vocms074.cern.ch', credentials_path) as ssh_executor:
-                ssh_executor.execute_command(workflow_update_commands)
-
-            self.logger.info('Finished making Stats2 refresh workflows')
-
     def reject_workflows(self, workflows):
-        """
-        Reject or abort list of workflows in ReqMgr2
-        """
         """
         Reject or abort list of workflows in ReqMgr2
         """
@@ -890,28 +872,25 @@ class RelValController(ControllerBase):
         with self.locker.get_lock(prepid):
             relval = self.get(prepid)
             workflow_names = {w['name'] for w in relval.get('workflows')}
-            workflows = get_workflows_from_stats_for_prepid(prepid)
-            workflow_names -= {w['RequestName'] for w in workflows}
+            stats_workflows = get_workflows_from_stats_for_prepid(prepid)
+            workflow_names -= {w['RequestName'] for w in stats_workflows}
             self.logger.info('%s workflows that are not in stats: %s',
                              len(workflow_names),
                              workflow_names)
-            workflows += get_workflows_from_stats(list(workflow_names))
+            stats_workflows += get_workflows_from_stats(list(workflow_names))
             all_workflows = {}
-            for workflow in workflows:
+            for workflow in stats_workflows:
                 if not workflow or not workflow.get('RequestName'):
                     raise Exception('Could not find workflow in Stats2')
-
-                if workflow.get('RequestType', '').lower() == 'resubmission':
-                    continue
 
                 name = workflow.get('RequestName')
                 all_workflows[name] = workflow
                 self.logger.info('Found workflow %s', name)
 
             output_datasets = self.get_output_datasets(relval, all_workflows)
-            new_workflows = self.pick_workflows(all_workflows, output_datasets)
+            workflows = self.pick_workflows(all_workflows, output_datasets)
             relval.set('output_datasets', output_datasets)
-            relval.set('workflows', new_workflows)
+            relval.set('workflows', workflows)
             relval_db.save(relval.get_json())
 
         return relval
@@ -928,10 +907,12 @@ class RelValController(ControllerBase):
         output_datatiers_set = set(output_datatiers)
         self.logger.info('%s output datatiers are: %s', prepid, ', '.join(output_datatiers))
         output_datasets_tree = {k: {} for k in output_datatiers}
-        ignore_status = {'aborted', 'aborted-archived', 'rejected', 'rejected-archived', 'failed'}
         for workflow_name, workflow in all_workflows.items():
+            if workflow.get('RequestType', '').lower() == 'resubmission':
+                continue
+
             status_history = set(x['Status'] for x in workflow.get('RequestTransition', []))
-            if ignore_status & status_history:
+            if DEAD_WORKFLOW_STATUS & status_history:
                 self.logger.debug('Ignoring %s', workflow_name)
                 continue
 

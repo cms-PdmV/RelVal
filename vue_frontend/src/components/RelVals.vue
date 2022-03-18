@@ -58,7 +58,7 @@
           </template>
           <template v-slot:item.workflows="{ item }">
             <ol>
-              <li v-for="(workflow, index) in item.workflows" :key="workflow.name">
+              <li v-for="workflow in item.workflows" :key="workflow.name">
                 <a v-if="!isDev" target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
                 <a v-if="isDev" target="_blank" title="Open workflow in ReqMgr2" :href="'https://cmsweb-testbed.cern.ch/reqmgr2/fetch?rid=' + workflow.name">{{workflow.name}}</a>&nbsp;
                 <template v-if="!isDev">
@@ -67,7 +67,7 @@
                 <template v-if="workflow.status_history && workflow.status_history.length > 0">
                   <small> status:</small> {{workflow.status_history[workflow.status_history.length - 1].status}}
                 </template>
-                <ul v-if="index == item.workflows.length - 1" class="zebra-datasets">
+                <ul class="zebra-datasets">
                   <li v-for="dataset in workflow.output_datasets" :key="dataset.name">
                     <div>
                       <div class="gray-bar">
@@ -346,12 +346,12 @@ export default {
       axios.get('api/search?db_name=relvals' + queryParams).then(response => {
         component.dataItems = response.data.response.results.map(function (x) { x._actions = undefined; return x});
         component.dataItems.forEach(item => {
-          if (item.workflows && item.workflows.length) {
-            const lastWorkflow = item.workflows[item.workflows.length - 1];
-            if (lastWorkflow.output_datasets) {
-              lastWorkflow.output_datasets.forEach(ds => {
+          item.workflows = item.workflows.filter(x => !x.type || x.type.toLowerCase() != 'resubmission');
+          for (let workflow of item.workflows) {
+            if (workflow.output_datasets) {
+              workflow.output_datasets.forEach(ds => {
                 ds.datatier = ds.name.split('/').pop();
-                ds.completed = (lastWorkflow.total_events > 0 ? (ds.events / lastWorkflow.total_events * 100) : 0).toFixed(2);
+                ds.completed = (workflow.total_events > 0 ? (ds.events / workflow.total_events * 100) : 0).toFixed(2);
                 ds.niceEvents = ds.events.toLocaleString('en-US');
               });
             }
@@ -495,7 +495,8 @@ export default {
     updateWorkflows: function(relvals) {
       let component = this;
       this.loading = true;
-      axios.post('api/relvals/update_workflows', relvals.slice()).then(() => {
+      let relvalOnlyIds = relvals.map(x => Object({'_id': x['_id'], 'prepid': x['prepid']}));
+      axios.post('api/relvals/update_workflows', relvalOnlyIds).then(() => {
         component.fetchObjects();
         component.selectedItems =  [];
       }).catch(error => {
