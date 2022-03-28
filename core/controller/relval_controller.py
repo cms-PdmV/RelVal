@@ -237,6 +237,8 @@ class RelValController(ControllerBase):
                 task_dict['InputDataset'] = input_dict['dataset']
                 if input_dict['lumisection']:
                     task_dict['LumiList'] = input_dict['lumisection']
+                elif input_dict['run']:
+                    task_dict['RunWhitelist'] = input_dict['run']
             else:
                 task_dict['InputTask'] = input_step.get_short_name()
                 _, input_module = step.get_input_eventcontent(input_step)
@@ -369,6 +371,8 @@ class RelValController(ControllerBase):
                 job_dict['InputDataset'] = input_dict['dataset']
                 if input_dict['lumisection']:
                     job_dict['LumiList'] = input_dict['lumisection']
+                elif input_dict['run']:
+                    job_dict['RunWhitelist'] = input_dict['run']
 
         job_dict_overwrite = relval.get('job_dict_overwrite')
         if job_dict_overwrite:

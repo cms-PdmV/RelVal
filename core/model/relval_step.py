@@ -64,6 +64,7 @@ class RelValStep(ModelBase):
         'input': {
             'dataset': '',
             'lumisection': {},
+            'run': [],
             'label': '',
         },
         # Keeping output of this task
@@ -178,6 +179,17 @@ class RelValStep(ModelBase):
 
         return 'cms_driver'
 
+    @staticmethod
+    def chunkify(items, chunk_size):
+        """
+        Yield fixed size chunks of given list
+        """
+        start = 0
+        chunk_size = max(chunk_size, 1)
+        while start < len(items):
+            yield items[start: start + chunk_size]
+            start += chunk_size
+
     def __build_cmsdriver(self, step_index, arguments, for_submission):
         """
         Build a cmsDriver command from given arguments
@@ -230,28 +242,45 @@ class RelValStep(ModelBase):
         """
         input_dict = self.get('input')
         dataset = input_dict['dataset']
-        runs = input_dict['lumisection']
-        if not runs:
-            return f'# Step {step_index + 1} is input dataset for next step: {dataset}'
+        lumisections = input_dict['lumisection']
+        if lumisections:
+            self.logger.info('Making a DAS command for step %s with lumisection list', step_index)
+            files_name = f'step{step_index + 1}_files.txt'
+            lumis_name = f'step{step_index + 1}_lumi_ranges.txt'
+            comment = f'# Arguments for step {step_index + 1}:\n'
+            command = f'# Command for step {step_index + 1}:\n'
+            comment += f'#   dataset: {dataset}\n'
+            command += f'echo "" > {files_name}\n'
+            for run, lumi_ranges in lumisections.items():
+                for lumi_range in lumi_ranges:
+                    comment += f'#   run: {run}, range: {lumi_range[0]} - {lumi_range[1]}\n'
+                    command += 'dasgoclient --limit 0 --format json '
+                    command += f'--query "lumi,file dataset={dataset} run={run}"'
+                    command += f' | das-selected-lumis.py {lumi_range[0]},{lumi_range[1]}'
+                    command += f' | sort -u >> {files_name}\n'
 
-        self.logger.info('Making a DAS command for step %s', step_index)
-        files_name = f'step{step_index + 1}_files.txt'
-        lumis_name = f'step{step_index + 1}_lumi_ranges.txt'
-        comment = f'# Arguments for step {step_index + 1}:\n'
-        command = f'# Command for step {step_index + 1}:\n'
-        comment += f'#   dataset: {dataset}\n'
-        command += f'echo "" > {files_name}\n'
-        for run, run_info in runs.items():
-            for lumi_range in run_info:
-                comment += f'#   run: {run}, range: {lumi_range[0]} - {lumi_range[1]}\n'
-                command += 'dasgoclient --limit 0 --format json '
-                command += f'--query "lumi,file dataset={dataset} run={run}"'
-                command += f' | das-selected-lumis.py {lumi_range[0]},{lumi_range[1]}'
-                command += f' | sort -u >> {files_name}\n'
+            lumi_json = json.dumps(lumisections)
+            command += f'echo \'{lumi_json}\' > {lumis_name}'
+            return (comment + '\n' + command).strip()
 
-        lumi_json = json.dumps(runs)
-        command += f'echo \'{lumi_json}\' > {lumis_name}'
-        return comment + '\n' + command
+        runs = input_dict['run']
+        if runs:
+            self.logger.info('Making a DAS command for step %s with run list', step_index)
+            files_name = f'step{step_index + 1}_files.txt'
+            comment = f'# Arguments for step {step_index + 1}:\n'
+            command = f'# Command for step {step_index + 1}:\n'
+            comment += f'#   dataset: {dataset}\n'
+            command += f'echo "" > {files_name}\n'
+            for run_chunk in self.chunkify(runs, 25):
+                run_chunk = ','.join([str(r) for r in run_chunk])
+                comment += f'#   runs: {run_chunk}\n'
+                command += 'dasgoclient --limit 0 '
+                command += f'--query "file dataset={dataset} run in [{run_chunk}]" '
+                command += f'>> {files_name}\n'
+
+            return (comment + '\n' + command).strip()
+
+        return f'# Step {step_index + 1} is input dataset for next step: {dataset}'
 
     def get_command(self, custom_fragment=None, for_submission=False):
         """
@@ -299,10 +328,14 @@ class RelValStep(ModelBase):
                 else:
                     previous_input = previous.get('input')
                     previous_lumisection = previous_input['lumisection']
+                    previous_run = previous_input['run']
                     if previous_lumisection:
                         # If there are lumi ranges, add a file with them and list of files as input
                         arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
                         arguments_dict['lumiToProcess'] = f'"step{index}_lumi_ranges.txt"'
+                    elif previous_run:
+                        # If there is a run whitelist, add the file
+                        arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
                     else:
                         # If there are no lumi ranges, use input file normally
                         previous_dataset = previous_input['dataset']

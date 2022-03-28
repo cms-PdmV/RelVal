@@ -109,6 +109,10 @@
                     <td>Lumisection ranges</td>
                     <td><JSONField v-model="step.input.lumisection" :disabled="!editingInfo.steps"/></td>
                   </tr>
+                  <tr>
+                    <td>Runs ({{runListLength(step.input.run)}})</td>
+                    <td><textarea v-model="step.input.run" :disabled="!editingInfo.steps"></textarea></td>
+                  </tr>
                 </template>
                 <template v-else>
                   <tr>
@@ -336,6 +340,7 @@ export default {
       step.driver.eventcontent = step.driver.eventcontent.join(',');
       step.driver.step = step.driver.step.join(',');
       step.gpu.cuda_capabilities = step.gpu.cuda_capabilities.join(',');
+      step.input.run = step.input.run.join(',');
     }
     axios.get('api/relvals/get_editable/' + this.prepid).then(response => {
       if (query.clone && query.clone.length) {
@@ -381,6 +386,7 @@ export default {
         step.driver.eventcontent = this.cleanSplit(step.driver.eventcontent);
         step.driver.step = this.cleanSplit(step.driver.step);
         step.gpu.cuda_capabilities = this.cleanSplit(step.gpu.cuda_capabilities);
+        step.input.run = this.cleanSplit(step.input.run);
       }
       let httpRequest;
       this.loading = true;
@@ -450,7 +456,10 @@ export default {
     },
     deleteStep: function(index) {
       this.editableObject['steps'].splice(index, 1);
-    }
+    },
+    runListLength: function(list) {
+      return this.cleanSplit(list).length;
+    },
   }
 }
 </script>
