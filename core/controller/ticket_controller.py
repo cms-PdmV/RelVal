@@ -156,7 +156,10 @@ class TicketController(ControllerBase):
             self.logger.debug('Recycled input dataset %s', dataset)
             input_step_json = recycled_step.get_json()
             input_step_json['driver'] = {}
-            input_step_json['input'] = {'dataset': dataset, 'lumisection': {}, 'label': ''}
+            input_step_json['input'] = {'dataset': dataset,
+                                        'lumisection': {},
+                                        'run': [],
+                                        'label': ''}
             input_step = RelValStep(input_step_json, relval, False)
             relval.set('steps', [input_step] + relval_steps[recycle_index:])
 
@@ -217,7 +220,10 @@ class TicketController(ControllerBase):
             dataset = sorted([x['dataset'] for x in dataset_list])[-1]
             input_step_json = recycled_step.get_json()
             input_step_json['driver'] = {}
-            input_step_json['input'] = {'dataset': dataset, 'lumisection': {}, 'label': ''}
+            input_step_json['input'] = {'dataset': dataset,
+                                        'lumisection': {},
+                                        'run': [],
+                                        'label': ''}
             input_step_json['name'] += '_Recycled'
             input_step = RelValStep(input_step_json, relval, False)
             relval.set('steps', [input_step] + relval_steps[(recycled_index + 1):])

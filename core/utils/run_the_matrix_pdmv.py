@@ -169,10 +169,12 @@ def make_relval_step(workflow_step, workflow_step_name, wmsplit):
 
     if 'INPUT' in workflow_step:
         # This step has input dataset
-        step['input'] = {'dataset': workflow_step['INPUT'].dataSet,
-                         'lumisection': workflow_step['INPUT'].ls,
-                         'label': workflow_step['INPUT'].label,
-                         'events': workflow_step['INPUT'].events}
+        step_input = workflow_step['INPUT']
+        step['input'] = {'dataset': step_input.dataSet,
+                         'lumisection': step_input.ls,
+                         'run': step_input.run,
+                         'label': step_input.label,
+                         'events': step_input.events}
     else:
         # This is cmsDriver step
         # Rename some arguments
