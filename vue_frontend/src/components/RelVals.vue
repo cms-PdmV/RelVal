@@ -434,7 +434,7 @@ export default {
       const submit = function () {
         component.clearDialog();
         component.loading = true;
-        axios.post('api/relvals/next_status', relvals.slice()).then(() => {
+        axios.post('api/relvals/next_status', {timeout: 0, data: relvals.slice()}).then(() => {
           component.fetchObjects();
           component.selectedItems = [];
         }).catch(error => {

@@ -14,7 +14,8 @@ from core_lib.utils.common_utils import (clean_split,
                                          dbs_datasetlist,
                                          get_workflows_from_stats,
                                          get_workflows_from_stats_for_prepid,
-                                         refresh_workflows_in_stats)
+                                         refresh_workflows_in_stats,
+                                         run_commands_in_singularity)
 from core.utils.submitter import RequestSubmitter
 from core.model.ticket import Ticket
 from core.model.relval import RelVal
@@ -145,6 +146,8 @@ class RelValController(ControllerBase):
         """
         self.logger.debug('Getting cmsDriver commands for %s', relval.get_prepid())
         cms_driver = '#!/bin/bash\n\n'
+        cms_driver += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
+        cms_driver += '\n'
         cms_driver += relval.get_cmsdrivers(for_submission)
         cms_driver += '\n\n'
 
@@ -156,12 +159,14 @@ class RelValController(ControllerBase):
         """
         self.logger.debug('Getting config upload script for %s', relval.get_prepid())
         database_url = Config.get('cmsweb_url').replace('https://', '').replace('http://', '')
-        command = '#!/bin/bash'
+        command = '#!/bin/bash\n\n'
+        command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
+        command += '\n'
         # Check if all expected config files are present
-        common_check_part = '\n\nif [ ! -s "%s.py" ]; then\n'
+        common_check_part = 'if [ ! -s "%s.py" ]; then\n'
         common_check_part += '  echo "File %s.py is missing" >&2\n'
         common_check_part += '  exit 1\n'
-        common_check_part += 'fi'
+        common_check_part += 'fi\n'
         for step in relval.get('steps'):
             # Run config check
             config_name = step.get_config_file_name()
@@ -169,40 +174,63 @@ class RelValController(ControllerBase):
                 command += common_check_part % (config_name, config_name)
 
         # Use ConfigCacheLite and TweakMakerLite instead of WMCore
-        command += '\n\n'
-        if for_submission:
-            command += '\ncd $WORKSPACE_DIR\n'
-
+        command += '\n'
         command += config_cache_lite_setup()
-        if for_submission:
-            command += '\ncd $RELVAL_DIR\n'
+        command += '\n\n'
 
         # Upload command will be identical for all configs
         common_upload_part = ('\npython3 config_uploader.py --file $(pwd)/%s.py --label %s '
                               f'--group ppd --user $(echo $USER) --db {database_url} || exit $?')
         previous_step_cmssw = None
         previous_step_scram = None
-        for step in relval.get('steps'):
+        container_code = ''
+        container_steps = []
+        default_os = 'slc7_'
+        for index, step in enumerate(relval.get('steps')):
             # Run config uploader
             config_name = step.get_config_file_name()
-            if config_name:
-                step_cmssw = step.get_release()
-                step_scram = step.get_scram_arch()
-                if step_cmssw != previous_step_cmssw or step_scram != previous_step_scram:
-                    command += '\n\n'
-                    if for_submission:
-                        command += '\ncd $WORKSPACE_DIR\n'
+            if not config_name:
+                continue
 
-                    command += cmssw_setup(step_cmssw, scram_arch=step_scram)
-                    if for_submission:
-                        command += '\ncd $RELVAL_DIR\n'
+            step_cmssw = step.get_release()
+            real_scram_arch = step.get_scram_arch()
+            os_name, _, gcc_version = clean_split(real_scram_arch, '_')
+            scram_arch = f'{os_name}_amd64_{gcc_version}'
 
-                    command += '\n'
+            if step_cmssw != previous_step_cmssw or scram_arch != previous_step_scram:
+                if container_code:
+                    if not previous_step_scram.startswith(default_os):
+                        container_script_name = f'upload-steps-{"-".join(container_steps)}'
+                        container_code = run_commands_in_singularity(container_code,
+                                                                     previous_step_scram,
+                                                                     container_script_name)
+                        container_code = '\n'.join(container_code)
 
-                command += common_upload_part % (config_name, config_name)
-                previous_step_cmssw = step_cmssw
-                previous_step_scram = step_scram
+                    command += container_code.strip()
+                    command += '\n\n\n'
+                    container_code = ''
+                    container_steps = []
 
+                if real_scram_arch != scram_arch:
+                    container_code += f'# Real scram arch is {real_scram_arch}\n'
+
+                container_code += cmssw_setup(step_cmssw, scram_arch=scram_arch)
+                container_code += '\n'
+
+            container_code += common_upload_part % (config_name, config_name)
+            container_code += '\n'
+            container_steps.append(str(index + 1))
+            previous_step_cmssw = step_cmssw
+            previous_step_scram = scram_arch
+
+        if not scram_arch.startswith(default_os):
+            container_script_name = f'upload-steps-{"-".join(container_steps)}'
+            container_code = run_commands_in_singularity(container_code,
+                                                         scram_arch,
+                                                         container_script_name)
+            container_code = '\n'.join(container_code)
+
+        command += container_code
         return command.strip()
 
     def get_task_dict(self, relval, step, step_index):
@@ -416,7 +444,9 @@ class RelValController(ControllerBase):
             for scram_arch, conditions in scram_tree.items():
                 # Setup CMSSW environment
                 # No need to explicitly reuse CMSSW as this happens in relval_submission directory
-                command.extend(cmssw_setup(cmssw_version, scram_arch=scram_arch).split('\n'))
+                os_name, _, gcc_version = clean_split(scram_arch, '_')
+                amd_scram_arch = f'{os_name}_amd64_{gcc_version}'
+                command.extend(cmssw_setup(cmssw_version, scram_arch=amd_scram_arch).split('\n'))
                 conditions_str = ','.join(list(conditions.keys()))
                 command += [('python3 resolve_auto_global_tag.py ' +
                              f'"{cmssw_version}" "{scram_arch}" "{conditions_str}" || exit $?')]
