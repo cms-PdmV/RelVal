@@ -143,7 +143,7 @@ class TicketController(ControllerBase):
             recycled_step = None
             recycle_index = 0
             for index, step in enumerate(relval_steps):
-                if step.has_step(recycle_input_of):
+                if index != 0 and step.has_step(recycle_input_of):
                     recycled_step = relval_steps[index - 1]
                     recycle_index = index
                     break
@@ -175,7 +175,7 @@ class TicketController(ControllerBase):
             relval_steps = relval.get('steps')
             recycled_index = 0
             for index, step in enumerate(relval_steps):
-                if step.has_step(recycle_input_of):
+                if index != 0 and step.has_step(recycle_input_of):
                     recycled_index = index - 1
                     break
             else:
