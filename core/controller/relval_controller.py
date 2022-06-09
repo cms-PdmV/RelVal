@@ -190,7 +190,7 @@ class RelValController(ControllerBase):
                 bash += run_commands_in_cmsenv(commands, previous_cmssw, previous_scram).split('\n')
                 commands = []
 
-            commands.append(('python3 config_uploader.py '
+            commands.append(('$PYTHON_INT config_uploader.py '
                              f'--file $(pwd)/{config_name}.py '
                              f'--label {config_name} '
                              '--group ppd '
@@ -416,7 +416,7 @@ class RelValController(ControllerBase):
         for cmssw_version, scram_tree in conditions_tree.items():
             for scram_arch, conditions in scram_tree.items():
                 conditions_str = ','.join(list(conditions.keys()))
-                resolve_command += run_commands_in_cmsenv(['python3 resolve_auto_global_tag.py '
+                resolve_command += run_commands_in_cmsenv(['$PYTHON_INT resolve_auto_global_tag.py '
                                                            f'"{cmssw_version}" '
                                                            f'"{scram_arch}" '
                                                            f'"{conditions_str}" || exit $?'],

@@ -329,7 +329,7 @@ class TicketController(ControllerBase):
         file_name = f'{ticket_prepid}.json'
         # Execute run_the_matrix_pdmv.py
         matrix_command = run_commands_in_cmsenv([f'cd {remote_directory}',
-                                                 'python3 run_the_matrix_pdmv.py '
+                                                 '$PYTHON_INT run_the_matrix_pdmv.py '
                                                  f'-l={workflow_ids} '
                                                  f'-w={matrix} '
                                                  f'-o={file_name} '
@@ -342,7 +342,7 @@ class TicketController(ControllerBase):
                                     f'{remote_directory}/generate.sh')
         command = [f'cd {remote_directory}',
                    'chmod +x generate.sh',
-                   './generate.sh',
+                   './generate.sh || exit $?',
                    'rm generate.sh']
         out, err, code = ssh_executor.execute_command(command)
         if code != 0:
