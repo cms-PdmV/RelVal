@@ -1,6 +1,7 @@
 """
 Script that resolves auto:... to global tag values
 """
+from __future__ import print_function
 import sys
 #pylint: disable=wrong-import-position,import-error
 from Configuration.AlCa.autoCond import autoCond as auto_globaltag
@@ -17,7 +18,7 @@ def resolve_globaltag(tag):
 
     tag = tag.replace('auto:', '', 1)
     if tag not in auto_globaltag:
-        print(f'Cannot resolve "{tag}"', file=sys.stderr)
+        print('Cannot resolve "%s"' % (tag), file=sys.stderr)
         sys.exit(1)
 
     resolved_tag = auto_globaltag[tag]
