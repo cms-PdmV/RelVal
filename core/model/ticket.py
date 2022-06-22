@@ -27,6 +27,8 @@ class Ticket(ModelBase):
         'cpu_cores': 1,
         # List of prepids of relvals that were created from this ticket
         'created_relvals': [],
+        # Multiply events in --relval by this factor
+        'events_factor': 1.0,
         # GPU parameters that will be added to selected steps
         'gpu': {'requires': 'forbidden',
                 'gpu_memory': '',
@@ -71,6 +73,7 @@ class Ticket(ModelBase):
         'cmssw_release': ModelBase.lambda_check('cmssw_release'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         '__created_relvals': ModelBase.lambda_check('relval'),
+        'events_factor': lambda factor: factor > 0,
         '_gpu': {
             'requires': lambda r: r in ('forbidden', 'optional', 'required'),
             'cuda_capabilities': lambda l: isinstance(l, list),
