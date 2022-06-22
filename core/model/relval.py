@@ -65,7 +65,7 @@ class RelVal(ModelBase):
         'prepid': ModelBase.lambda_check('relval'),
         'batch_name': ModelBase.lambda_check('batch_name'),
         'campaign_timestamp': lambda ct: ct >= 0,
-        'cmssw_release': ModelBase.lambda_check('cmssw_release'),
+        'cmssw_release': ModelBase.lambda_check('cmssw_path'),
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         'label': ModelBase.lambda_check('label'),
         'matrix': ModelBase.lambda_check('matrix'),
@@ -228,6 +228,7 @@ class RelVal(ModelBase):
         else:
             raise Exception('No steps have CMSSW release')
 
+        cmssw_release = cmssw_release.split('/')[-1]
         # Maximum length of ReqMgr2 workflow name is 100 characters and
         # pdmvserv_..._000000_000000_0000 take up 28 characters, so 100 - 28 = 72
         relval_name = self.get_name()
@@ -304,7 +305,7 @@ class RelVal(ModelBase):
         Get campaign name, include campaign timestamp if it is available
         """
         batch_name = self.get('batch_name')
-        cmssw_release = self.get('cmssw_release')
+        cmssw_release = self.get('cmssw_release').split('/')[-1]
         campaign_timestamp = self.get('campaign_timestamp')
         if campaign_timestamp:
             return f'{cmssw_release}__{batch_name}-{campaign_timestamp}'

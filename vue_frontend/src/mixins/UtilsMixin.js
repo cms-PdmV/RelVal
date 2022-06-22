@@ -58,5 +58,12 @@ export const utilsMixin = {
       }
       return '{' + outputLines + '}';
     },
+    parseRelease: function(cmssw) {
+      if (!cmssw || !cmssw.length) {
+        return '';
+      }
+      const parts = cmssw.split('/');
+      return parts[parts.length - 1];
+    },
   }
 }

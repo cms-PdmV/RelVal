@@ -36,7 +36,7 @@ class RelValController(ControllerBase):
         self.model_class = RelVal
 
     def create(self, json_data):
-        cmssw_release = json_data.get('cmssw_release')
+        cmssw_release = json_data.get('cmssw_release').split('/')[-1]
         batch_name = json_data.get('batch_name')
         # Use workflow name for prepid if possible, if not - first step name
         if json_data.get('workflow_name'):
@@ -262,7 +262,7 @@ class RelValController(ControllerBase):
         if processing_string:
             task_dict['ProcessingString'] = processing_string
 
-        task_dict['CMSSWVersion'] = step.get_release()
+        task_dict['CMSSWVersion'] = step.get_release().split('/')[-1]
         task_dict['AcquisitionEra'] = task_dict['CMSSWVersion']
         task_dict['Memory'] = relval.get('memory')
         task_dict['Multicore'] = relval.get('cpu_cores')
@@ -347,7 +347,7 @@ class RelValController(ControllerBase):
 
         # Set values to the main dictionary
         if global_dict_step:
-            job_dict['CMSSWVersion'] = global_dict_step.get_release()
+            job_dict['CMSSWVersion'] = global_dict_step.get_release().split('/')[-1]
             job_dict['ScramArch'] = global_dict_step.get_scram_arch()
             job_dict['AcquisitionEra'] = job_dict['CMSSWVersion']
             resolved_globaltag = global_dict_step.get('resolved_globaltag')
@@ -655,7 +655,7 @@ class RelValController(ControllerBase):
             prepid = relval.get_prepid()
             with self.locker.get_nonblocking_lock(prepid):
                 batch_name = relval.get('batch_name')
-                cmssw_release = relval.get('cmssw_release')
+                cmssw_release = relval.get('cmssw_release').split('/')[-1]
                 relval_db = Database('relvals')
                 # Make sure all datasets are VALID in DBS
                 steps = relval.get('steps')

@@ -57,7 +57,10 @@
             <span v-if="item.workflow_ids.length">{{item.workflow_ids.length}} workflows: <small>{{item.workflow_ids.join(', ')}}</small></span>
           </template>
           <template v-slot:item.cmssw_release="{ item }">
-            <a :href="'tickets?cmssw_release=' + item.cmssw_release" :title="'Show all tickets with ' + item.cmssw_release">{{item.cmssw_release}}</a>
+            <a :href="'tickets?cmssw_release=*' + parseRelease(item.cmssw_release)" :title="'Show all tickets with ' + parseRelease(item.cmssw_release)">
+              {{parseRelease(item.cmssw_release)}}
+              <b v-if="item.cmssw_release && item.cmssw_release[0] == '/'" style="color: red"> !</b>
+            </a>
             <small v-if="item.scram_arch.length">
               <br>
               <a :href="'tickets?scram_arch=' + item.scram_arch" :title="'Show all tickets with ' + item.scram_arch">{{item.scram_arch}}</a>
