@@ -100,7 +100,10 @@
             {{item.recycle_gs ? 'Yes' : 'No'}}
           </template>
           <template v-slot:item.cmssw_release="{ item }">
-            <a :href="'relvals?cmssw_release=' + item.cmssw_release" :title="'Show all RelVals with ' + item.cmssw_release + ' CMSSW release'">{{item.cmssw_release}}</a>
+            <a :href="'relvals?cmssw_release=*' + parseRelease(item.cmssw_release)" :title="'Show all RelVals with ' + parseRelease(item.cmssw_release) + ' CMSSW release'">
+              {{parseRelease(item.cmssw_release)}}
+              <b v-if="item.cmssw_release && item.cmssw_release[0] == '/'" style="color: red"> !</b>
+            </a>
             <template v-if="item.scram_arch">
               <br>
               <small><a :href="'relvals?scram_arch=' + item.scram_arch" :title="'Show all RelVals with ' + item.scram_arch + ' SCRAM arch'">{{item.scram_arch}}</a></small>
@@ -111,7 +114,7 @@
           </template>
           <template v-slot:item.campaign_timestamp="{ item }">
             <template v-if="item.campaign_timestamp">
-              <a :href="'relvals?cmssw_release=' + item.cmssw_release + '&batch_name=' + item.batch_name + '&campaign_timestamp=' + item.campaign_timestamp" :title="'Show RelVals in ' + item.cmssw_release + '__' + item.batch_name + ' campaign with ' + item.campaign_timestamp + ' timestamp'">{{item.cmssw_release + '__' + item.batch_name + '-' + item.campaign_timestamp}}</a>
+              <a :href="'relvals?cmssw_release=*' + parseRelease(item.cmssw_release) + '&batch_name=' + item.batch_name + '&campaign_timestamp=' + item.campaign_timestamp" :title="'Show RelVals in ' + parseRelease(item.cmssw_release) + '__' + item.batch_name + ' campaign with ' + item.campaign_timestamp + ' timestamp'">{{parseRelease(item.cmssw_release) + '__' + item.batch_name + '-' + item.campaign_timestamp}}</a>
               <small> ({{niceDate(item.campaign_timestamp)}})</small>
             </template>
             <template v-else>

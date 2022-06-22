@@ -29,7 +29,7 @@ class TicketController(ControllerBase):
 
     def create(self, json_data):
         # Clean up the input
-        cmssw_release = json_data.get('cmssw_release')
+        cmssw_release = json_data.get('cmssw_release').split('/')[-1]
         batch_name = json_data.get('batch_name')
         prepid_part = f'{cmssw_release}__{batch_name}'
         ticket_db = Database('tickets')
@@ -299,7 +299,7 @@ class TicketController(ControllerBase):
 
         cmssw_release = ticket.get('cmssw_release')
         scram_arch = ticket.get('scram_arch')
-        scram_arch = scram_arch if scram_arch else get_scram_arch(cmssw_release)
+        scram_arch = scram_arch if scram_arch else get_scram_arch(cmssw_release.split('/')[-1])
         if not scram_arch:
             raise Exception(f'Could not find SCRAM arch of {cmssw_release}')
 
@@ -338,6 +338,7 @@ class TicketController(ControllerBase):
                                                 cmssw_release,
                                                 scram_arch)
 
+        self.logger.debug('Matrix command:\n\n%s', matrix_command)
         ssh_executor.upload_as_file(matrix_command,
                                     f'{remote_directory}/generate.sh')
         command = [f'cd {remote_directory}',

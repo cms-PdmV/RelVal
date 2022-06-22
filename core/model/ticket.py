@@ -68,7 +68,7 @@ class Ticket(ModelBase):
     lambda_checks = {
         'prepid': lambda prepid: ModelBase.matches_regex(prepid, '[a-zA-Z0-9_\\-]{1,75}'),
         'batch_name': ModelBase.lambda_check('batch_name'),
-        'cmssw_release': ModelBase.lambda_check('cmssw_release'),
+        'cmssw_release': ModelBase.lambda_check('cmssw_path'),  # Allow path
         'cpu_cores': ModelBase.lambda_check('cpu_cores'),
         '__created_relvals': ModelBase.lambda_check('relval'),
         '_gpu': {
