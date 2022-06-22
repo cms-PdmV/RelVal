@@ -58,6 +58,7 @@ class TicketController(ControllerBase):
         editing_info['command'] = not_done
         editing_info['command_steps'] = not_done
         editing_info['cpu_cores'] = not_done
+        editing_info['events_factor'] = not_done
         editing_info['gpu'] = not_done
         editing_info['gpu_steps'] = not_done
         editing_info['label'] = not_done
@@ -365,6 +366,7 @@ class TicketController(ControllerBase):
         gpu_dict = ticket.get('gpu')
         gpu_steps = ticket.get('gpu_steps')
         rewrite_gt_string = ticket.get('rewrite_gt_string')
+        events_factor = ticket.get('events_factor')
         relval_json = {'prepid': 'TempRelValObject-00000',
                        'batch_name': ticket.get('batch_name'),
                        'cmssw_release': cmssw_release,
@@ -388,6 +390,11 @@ class TicketController(ControllerBase):
             step_steps = [x.split(':')[0] for x in new_step['driver']['step']]
             if gpu_steps and (set(gpu_steps) & set(step_steps)):
                 new_step['gpu'] = deepcopy(gpu_dict)
+
+            if new_step['driver'].get('relval'):
+                events, events_per_job = new_step['driver']['relval'].split(',', 1)
+                events = max(1, int(int(events) * events_factor))
+                new_step['driver']['relval'] = f'{events},{events_per_job}'
 
             self.rewrite_gt_string_if_needed(workflow_id, new_step, rewrite_gt_string)
             relval_json['steps'].append(new_step)

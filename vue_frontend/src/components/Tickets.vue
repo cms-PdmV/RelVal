@@ -189,6 +189,7 @@ export default {
         {'dbName': 'command_steps', 'displayName': 'Command Steps', 'visible': 0},
         {'dbName': 'created_relvals', 'displayName': 'Created RelVals', 'visible': 0},
         {'dbName': '_created', 'displayName': 'Creation', 'visible': 0, 'sortable': true},
+        {'dbName': 'events_factor', 'displayName': 'Events Factor', 'visible': 0, 'sortable': true},
         {'dbName': 'gpu', 'displayName': 'GPU', 'visible': 0},
         {'dbName': 'history', 'displayName': 'History', 'visible': 0, 'sortable': true},
         {'dbName': 'label', 'displayName': 'Label', 'visible': 0, 'sortable': true},

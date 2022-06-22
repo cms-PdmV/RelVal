@@ -29,6 +29,10 @@
           <td><input type="number" v-model="editableObject.cpu_cores" :disabled="!editingInfo.cpu_cores" min="1" max="8"></td>
         </tr>
         <tr>
+          <td>Events Factor</td>
+          <td><input type="number" v-model="editableObject.events_factor" :disabled="!editingInfo.events_factor" min="0" max="100"></td>
+        </tr>
+        <tr>
           <td>GPU</td>
           <td>
             <select v-model="editableObject.gpu.requires" :disabled="!editingInfo.gpu">
