@@ -376,7 +376,9 @@ class RelValStep(ModelBase):
         index = self.get_index_in_parent()
         this_is_harvesting = self.has_step('HARVESTING')
         self_step = self.get('driver')['step']
+        self_dataset_name = self.get('input')['dataset']
         this_is_alca = self_step and self_step[0].startswith('ALCA')
+        this_is_dataset_with_reco = self_dataset_name and "GEN-SIM-RECO" in self_dataset_name
         self.logger.info('Get input for step %s, harvesting: %s', index, this_is_harvesting)
         for step_index in reversed(range(0, index)):
             step = all_steps[step_index]
@@ -384,17 +386,17 @@ class RelValStep(ModelBase):
             if step.has_step('HARVESTING'):
                 continue
 
-            # AlCa step is never input
+            # AlCa step is never input and its input dataset is not GEN-SIM-RECO
             step_step = step.get('driver')['step']
-            if step_step and step_step[0].startswith('ALCA'):
+            if step_step and step_step[0].startswith('ALCA') and not this_is_dataset_with_reco:
                 continue
 
             # Harvesting step needs DQM as input
             if this_is_harvesting and not step.has_eventcontent('DQM'):
                 continue
 
-            # AlCa step needs RECO as input
-            if this_is_alca and not step.has_step('RECO'):
+            # AlCa step needs RECO as input and its input dataset is not GEN-SIM-RECO
+            if this_is_alca and not step.has_step('RECO') and not this_is_dataset_with_reco:
                 continue
 
             return step_index
