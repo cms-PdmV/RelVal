@@ -13,6 +13,7 @@ def resolve_globaltag(tag):
     Translate auto:... to an actual globaltag
     If globaltag value is a list, it returns the first element
     """
+    print('[resolve_auto_global_tag][resolve_globaltag] Parameter tag: %s' % (tag))
     if not tag.startswith('auto:'):
         return tag
 
@@ -22,9 +23,11 @@ def resolve_globaltag(tag):
         sys.exit(1)
 
     resolved_tag = auto_globaltag[tag]
+    print('[resolve_auto_global_tag][resolve_globaltag] Resolved auto_tag: %s' % (resolved_tag))
     if isinstance(resolved_tag, (list, tuple)):
         resolved_tag = resolved_tag[0]
 
+    print('[resolve_auto_global_tag][resolve_globaltag] Returned auto_tag: %s' % (resolved_tag))
     return resolved_tag
 
 
