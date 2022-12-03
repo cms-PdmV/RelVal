@@ -437,7 +437,7 @@ class RelValStep(ModelBase):
                 if eventcontent.startswith('RECO') or eventcontent.startswith('FEVTDEBUGHLT'):
                     return eventcontent_index, eventcontent
 
-            raise Exception(f'No RECO eventcontent in the input step {input_step_eventcontent}')
+            raise Exception(f'No RECO or FEVTDEBUGHLT eventcontent in the input step {input_step_eventcontent}')
 
         input_step_eventcontent = [x for x in input_step_eventcontent if not x.startswith('DQM')]
         return len(input_step_eventcontent) - 1, input_step_eventcontent[-1]
