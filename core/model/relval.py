@@ -248,6 +248,18 @@ class RelVal(ModelBase):
                 # Avoid infinite loop
                 break
 
+        # Try harder if we didn't succeed -- we need to cut the suffix
+        if len(request_string) > 72:
+            self.logger.debug('Request string %s too long (%s char)',
+                              request_string,
+                              len(request_string))
+            # Shorten each "word" in the suffix to at most 3 characters
+            suffix = '_'.join(part[:3] for part in suffix.split('_'))
+            request_string = f'RV{cmssw_release}{relval_name}__{suffix}'.strip('_')
+            self.logger.debug('Request string shortened to %s (%s char)',
+                              request_string,
+                              len(request_string))
+
         return request_string
 
     def get_name(self):
