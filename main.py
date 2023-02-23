@@ -240,6 +240,7 @@ def main():
         app=app,
         client_id=config.get("oidc_client_id"),
         client_secret=config.get("oidc_client_secret"),
+        home_endpoint="catch_all",
         valid_audiences=config.get("valid_audiences"),
     )
 
