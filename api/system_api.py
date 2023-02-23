@@ -1,6 +1,7 @@
 """
 Module that contains all system APIs
 """
+import sys
 import time
 import os.path
 from core_lib.api.api_base import APIBase
@@ -92,6 +93,13 @@ class ObjectsInfoAPI(APIBase):
         """
         Return summary of RelVals by status and submitted RelVals by CMSSW and batch name
         """
+        def sort_by_index(data_structure, condition):
+            try:
+                return data_structure.index(condition)
+            except ValueError:
+                # Item not found
+                return sys.maxsize
+
         start_time = time.time()
         collection = Database('relvals').collection
         status_query = [{'$match': {'deleted': {'$ne': True}}},
@@ -115,7 +123,8 @@ class ObjectsInfoAPI(APIBase):
                                         reverse=True)
 
         statuses = ['new', 'approved', 'submitting', 'submitted', 'done', 'archived']
-        by_status = sorted(by_status, key=lambda x: statuses.index(x['_id']))
+
+        by_status = sorted(by_status, key=lambda x: sort_by_index(data_structure=statuses, condition=x['_id']))
         end_time = time.time()
         self.logger.debug('Getting objects info - RelVals, time taken %.2fs',
                           end_time - start_time)
