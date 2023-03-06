@@ -9,7 +9,7 @@ import logging.handlers
 import argparse
 from flask_restful import Api
 from flask_cors import CORS
-from flask import Flask, Blueprint, request, session, render_template
+from flask import Flask, request, session, render_template
 from jinja2.exceptions import TemplateNotFound
 from werkzeug.middleware.proxy_fix import ProxyFix
 from core_lib.middlewares.auth import AuthenticationMiddleware
@@ -209,33 +209,40 @@ def setup_logging(debug):
     return logger
 
 
-def main():
+def set_app(config_path: str = "config.cfg", mode: str = "dev", debug: bool = True) -> tuple[str, int, bool]:
     """
-    Main function: start Flask web server
+    Set Flask appplication configuration via config.cfg file
+    
+    Parameters
+    ----------
+    config_path : str
+        Path to config.cfg file with all environment variables
+    mode: str
+        Web server deployment mode: dev or prod
+    debug: bool
+        Set DEBUG logging level
+
+    Returns
+    ----------
+    tuple[str, int, bool]
+        Host name, port number, debug mode configurations for deployment server
     """
     # Instantiate the middleware here
     # Configure cookie security settings for the Flask application
     global auth, app
-
-    parser = argparse.ArgumentParser(description="RelVal Machine")
-    parser.add_argument(
-        "--mode",
-        help="Use production (prod) or development (dev) section of config",
-        choices=["prod", "dev"],
-        required=True,
-    )
-    parser.add_argument(
-        "--config", default="config.cfg", help="Specify non standard config file name"
-    )
-    parser.add_argument("--debug", help="Run Flask in debug mode", action="store_true")
-    args = vars(parser.parse_args())
-    config = Config.load(args.get("config"), args.get("mode"))
+    
+    logger = setup_logging(debug)
+    logger.info(f"Setting up Flask application in mode: {mode}")
+    logger.info(f"Configuration file path: {config_path}")
+    
+    config = Config.load(config_path, mode)
     database_auth = config.get("database_auth")
 
     # Include the application secret key used to sign cookiess
     app.secret_key = config.get("secret_key")
 
     # Include the middleware
+    logger.info(f"Creating authetication middleware")
     auth = AuthenticationMiddleware(
         app=app,
         client_id=config.get("oidc_client_id"),
@@ -243,6 +250,7 @@ def main():
         home_endpoint="catch_all",
         valid_audiences=config.get("valid_audiences"),
     )
+    logger.info(f"Authentication middleware: {auth}")
 
     Database.set_database_name("relval")
     if database_auth:
@@ -257,10 +265,40 @@ def main():
     Database.add_search_rename("relvals", "workflow", "workflows.name")
     Database.add_search_rename("relvals", "output_dataset", "output_datasets")
 
+    # Deployment server configuration
+    port: int = int(config.get("port", 8005))
+    host: str = config.get("host", "0.0.0.0")
+    logger.info(f"Deployment host: {host}:{port}")
+    logger.info(f"Debug mode: {debug}")
+    return host, port, debug
+
+
+def main():
+    """
+    Main function: start Flask web server
+    """
+    parser = argparse.ArgumentParser(description="RelVal Machine")
+    parser.add_argument(
+        "--mode",
+        help="Use production (prod) or development (dev) section of config",
+        choices=["prod", "dev"],
+        required=True,
+    )
+    parser.add_argument(
+        "--config", default="config.cfg", help="Specify non standard config file name"
+    )
+    parser.add_argument("--debug", help="Run Flask in debug mode", action="store_true")
+    args = vars(parser.parse_args())
     debug = args.get("debug", False)
-    port = int(config.get("port", 8005))
-    host = config.get("host", "0.0.0.0")
-    logger = setup_logging(debug)
+
+    # Set Flask app configurations
+    host, port, debug = set_app(
+        config_path=args.get("config"),
+        mode=args.get("mode"),
+        debug=debug,
+    )
+
+    logger = logging.getLogger()
     if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
         # Do only once, before the reloader
         pid = os.getpid()
