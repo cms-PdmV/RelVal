@@ -13,3 +13,4 @@ debug = parse_bool(os.environ.get("DEBUG", True))
 host, port, debug = set_app(mode=mode, debug=debug)
 bind = f"{host}:{port}"
 workers = multiprocessing.cpu_count() * 2 + 1
+timeout = 120
