@@ -27,6 +27,15 @@ Attributes:
     HOST (str): Host for service the web application
     PORT (int): Port for service the web application
     LOG_FOLDER (str): Path to the log folder to store RelVal logs.
+    CALLBACK_CLIENT_ID (str): This credential is used for requesting access_token via client_credential grant
+        for batch job integrations. For this application, it is used to request authentication tokens to perform
+        updates in Stats2 (refresh_workflows_in_stats function in core_lib). 
+    CALLBACK_CLIENT_SECRET (str): This credential is used for requesting access_token via client_credential grant
+        for batch job integrations. For this application, it is used to request authentication tokens to perform
+        updates in Stats2 (refresh_workflows_in_stats function in core_lib). 
+    APPLICATION_CLIENT_ID (str): This is ID for target application (audience),
+        registered in CERN Application Portal, that handles OIDC authentication flow 
+        for PdmV applications or RelVal application.
 """
 import os
 import inspect
@@ -50,6 +59,9 @@ GRID_USER_KEY: str = os.getenv("GRID_USER_KEY", "")
 HOST: str = os.getenv("HOST", "0.0.0.0")
 PORT: int = int(os.getenv("PORT", "8000"))
 LOG_FOLDER: str = os.getenv("LOG_FOLDER", "")
+CALLBACK_CLIENT_ID: str = os.getenv("CALLBACK_CLIENT_ID", "")
+CALLBACK_CLIENT_SECRET: str = os.getenv("CALLBACK_CLIENT_SECRET", "")
+APPLICATION_CLIENT_ID: str = os.getenv("APPLICATION_CLIENT_ID", "")
 
 # Raise an error if they are empty variables
 missing_environment_variables: dict[str, str] = dict(
