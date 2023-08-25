@@ -26,6 +26,7 @@ Attributes:
     GRID_USER_KEY (str): Path to Private Key to authenticate to CMS WEB Services
     HOST (str): Host for service the web application
     PORT (int): Port for service the web application
+    SECRET_KEY (str): Flask secret key for securing Flask sessions
     LOG_FOLDER (str): Path to the log folder to store RelVal logs.
     CALLBACK_CLIENT_ID (str): This credential is used for requesting access_token via client_credential grant
         for batch job integrations. For this application, it is used to request authentication tokens to perform
@@ -62,6 +63,7 @@ LOG_FOLDER: str = os.getenv("LOG_FOLDER", "")
 CALLBACK_CLIENT_ID: str = os.getenv("CALLBACK_CLIENT_ID", "")
 CALLBACK_CLIENT_SECRET: str = os.getenv("CALLBACK_CLIENT_SECRET", "")
 APPLICATION_CLIENT_ID: str = os.getenv("APPLICATION_CLIENT_ID", "")
+SECRET_KEY: str = os.getenv("SECRET_KEY", "")
 
 # Raise an error if they are empty variables
 missing_environment_variables: dict[str, str] = dict(

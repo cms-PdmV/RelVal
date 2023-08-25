@@ -11,10 +11,11 @@ import logging.handlers
 import environment
 from flask_restful import Api
 from flask_cors import CORS
-from flask import Flask, render_template
+from flask import Flask, render_template, request, session
 from jinja2.exceptions import TemplateNotFound
 from core_lib.database.database import Database
 from core_lib.utils.username_filter import UsernameFilter
+from core_lib.middlewares.auth import AuthenticationMiddleware
 from api.system_api import (
     LockerStatusAPI,
     UserInfoAPI,
@@ -71,6 +72,11 @@ CORS(
     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
     supports_credentials=True,
 )
+
+# Include OIDC middleware
+app.secret_key = environment.SECRET_KEY
+auth: AuthenticationMiddleware = AuthenticationMiddleware(app=app)
+app.before_request(lambda: auth.authenticate(request=request, flask_session=session))
 
 
 @app.route("/", defaults={"_path": ""})
