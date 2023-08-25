@@ -1,8 +1,8 @@
 """
 Module that handles all email notifications
 """
+from environment import DEVELOPMENT
 from core_lib.utils.emailer import Emailer as BaseEmailer
-from core_lib.utils.global_config import Config
 
 
 class Emailer(BaseEmailer):
@@ -11,10 +11,10 @@ class Emailer(BaseEmailer):
     """
 
     def send(self, subject, body, recipients):
-        body = body.strip()  + '\n\nSincerely,\nRelVal Machine'
-        if Config.get('development'):
-            subject = f'[RelVal-DEV] {subject}'
+        body = body.strip() + "\n\nSincerely,\nRelVal Machine"
+        if DEVELOPMENT:
+            subject = f"[RelVal-DEV] {subject}"
         else:
-            subject = f'[RelVal] {subject}'
+            subject = f"[RelVal] {subject}"
 
         super().send(subject, body, recipients)
