@@ -94,7 +94,7 @@ def main():
     # Set database configuration
     Database.set_host_port(
         host=database_credentials["MONGO_DB_HOST"],
-        port=database_credentials["MONGO_DB_HOST"]
+        port=database_credentials["MONGO_DB_PORT"]
     )
     Database.set_credentials(
         username=database_credentials["MONGO_DB_USERNAME"],
