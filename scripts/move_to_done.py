@@ -58,7 +58,7 @@ def move_to_done(host, client_credentials):
             to authenticate request to the SSO
     """
     connection = http.client.HTTPSConnection(host=host, timeout=300)
-    headers = {'Content-Type': 'application/json'},
+    headers = {'Content-Type': 'application/json'}
     relval_db = Database('relvals')
     relvals = [{}]
     page = 0
