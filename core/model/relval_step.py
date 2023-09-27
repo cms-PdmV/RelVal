@@ -125,10 +125,10 @@ class RelValStep(ModelBase):
                         driver[key] = default_value
 
                 if driver.get('data') and driver.get('mc'):
-                    raise  Exception('Both --data and --mc are not allowed in the same step')
+                    raise AssertionError('Both --data and --mc are not allowed in the same step')
 
                 if driver.get('data') and driver.get('fast'):
-                    raise Exception('Both --data and --fast are not allowed in the same step')
+                    raise AssertionError('Both --data and --fast are not allowed in the same step')
 
         ModelBase.__init__(self, json_input, check_attributes)
         if parent:
@@ -168,7 +168,7 @@ class RelValStep(ModelBase):
             if self == step:
                 return index
 
-        raise Exception(f'Step is not a child of {self.parent().get_prepid()}')
+        raise AssertionError(f'Step is not a child of {self.parent().get_prepid()}')
 
     def get_step_type(self):
         """
@@ -403,14 +403,14 @@ class RelValStep(ModelBase):
 
         name = self.get('name')
         if this_is_harvesting:
-            raise Exception('No step with --eventcontent DQM could be found'
+            raise AssertionError('No step with --eventcontent DQM could be found'
                             f'as input for {name} (Harvesting step)')
 
         if this_is_alca:
-            raise Exception('No step with --step RECO could be found '
+            raise AssertionError('No step with --step RECO could be found '
                             f'as input for {name} (AlCa)')
 
-        raise Exception(f'No input step for {name} could be found')
+        raise AssertionError(f'No input step for {name} could be found')
 
     def get_input_eventcontent(self, input_step=None):
         """
@@ -430,14 +430,16 @@ class RelValStep(ModelBase):
                 if eventcontent == 'DQM':
                     return eventcontent_index, eventcontent
 
-            raise Exception(f'No DQM eventcontent in the input step {input_step_eventcontent}')
+            raise AssertionError(f'No DQM eventcontent in the input step {input_step_eventcontent}')
 
         if this_is_alca:
             for eventcontent_index, eventcontent in enumerate(input_step_eventcontent):
                 if eventcontent.startswith('RECO') or eventcontent.startswith('FEVTDEBUGHLT'):
                     return eventcontent_index, eventcontent
 
-            raise Exception(f'No RECO or FEVTDEBUGHLT eventcontent in the input step {input_step_eventcontent}')
+            raise AssertionError(
+                f'No RECO or FEVTDEBUGHLT eventcontent in the input step {input_step_eventcontent}'
+            )
 
         input_step_eventcontent = [x for x in input_step_eventcontent if not x.startswith('DQM')]
         return len(input_step_eventcontent) - 1, input_step_eventcontent[-1]
@@ -458,11 +460,11 @@ class RelValStep(ModelBase):
         """
         relval = self.get('driver')['relval']
         if not relval:
-            raise Exception('--relval is not set')
+            raise AssertionError('--relval is not set')
 
         relval = relval.split(',')
         if len(relval) < 2:
-            raise Exception('Not enough parameters in --relval argument')
+            raise AssertionError('Not enough parameters in --relval argument')
 
         requested_events = int(relval[0])
         events_per = int(relval[1])
@@ -478,7 +480,7 @@ class RelValStep(ModelBase):
             return cmssw_release
 
         if not self.parent:
-            raise Exception('Could not get CMSSW release, because step has no parent')
+            raise ValueError('Could not get CMSSW release, because step has no parent')
 
         cmssw_release = self.parent().get('cmssw_release')
         return cmssw_release
@@ -502,7 +504,7 @@ class RelValStep(ModelBase):
         if scram_arch:
             return scram_arch
 
-        raise Exception(f'Could not find SCRAM arch of {cmssw_release}')
+        raise ValueError(f'Could not find SCRAM arch of {cmssw_release}')
 
     def get_gpu_requires(self):
         """

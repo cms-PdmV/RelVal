@@ -292,7 +292,7 @@ def main():
     print('All workflows:')
     print(json.dumps(workflows, indent=2, sort_keys=True))
     if opt.output_file:
-        with open(opt.output_file, 'w') as workflows_file:
+        with open(opt.output_file, 'w', encoding='utf-8') as workflows_file:
             json.dump(workflows, workflows_file)
 
 

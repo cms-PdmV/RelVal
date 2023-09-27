@@ -100,7 +100,7 @@ class SuggestionsAPI(APIBase):
         limit = max(1, min(50, args.pop('limit', 20)))
 
         if not db_name or not query:
-            raise Exception('Bad db_name or query parameter')
+            raise ValueError('Bad db_name or query parameter')
 
         database = Database(db_name)
         db_query = {'prepid': re.compile(f'.*{query}.*', re.IGNORECASE)}

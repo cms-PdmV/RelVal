@@ -92,7 +92,7 @@ class RelVal(ModelBase):
                                   check_attributes=check_attributes)
                 step_objects.append(step)
                 if step_index > 0 and step.get_step_type() == 'input_file':
-                    raise Exception('Only first step can be input file')
+                    raise AssertionError('Only first step can be input file')
 
             json_input['steps'] = step_objects
 
@@ -226,7 +226,7 @@ class RelVal(ModelBase):
             if cmssw_release:
                 break
         else:
-            raise Exception('No steps have CMSSW release')
+            raise AssertionError('No steps have CMSSW release')
 
         cmssw_release = cmssw_release.split('/')[-1]
         # Maximum length of ReqMgr2 workflow name is 100 characters and
