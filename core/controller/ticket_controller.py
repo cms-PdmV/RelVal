@@ -2,13 +2,13 @@
 Module that contains TicketController class
 """
 import json
+from copy import deepcopy
 from environment import (
     REMOTE_PATH,
     REMOTE_SSH_NODE,
     REMOTE_SSH_PASSWORD,
     REMOTE_SSH_USERNAME,
 )
-from copy import deepcopy
 from core_lib.database.database import Database
 from core_lib.controller.controller_base import ControllerBase
 from core_lib.utils.ssh_executor import SSHExecutor
@@ -87,7 +87,7 @@ class TicketController(ControllerBase):
         created_relvals = obj.get("created_relvals")
         prepid = obj.get("prepid")
         if created_relvals:
-            raise Exception(
+            raise AssertionError(
                 f"It is not allowed to delete tickets that have relvals created. "
                 f"{prepid} has {len(created_relvals)} relvals"
             )
@@ -116,7 +116,7 @@ class TicketController(ControllerBase):
             input_dataset = "/".join(input_dataset_split)
             dataset_list = dbs_datasetlist(input_dataset)
             if not dataset_list:
-                raise Exception(
+                raise ValueError(
                     f"Could not find {input_dataset} input dataset for {workflow_id} "
                     f"after applying {gt_rewrite} GT rewrite"
                 )
@@ -145,7 +145,7 @@ class TicketController(ControllerBase):
             pileup_prefix = pileup_input[: pileup_input.index("/")]
             dataset_list = dbs_datasetlist(pileup_input)
             if not dataset_list:
-                raise Exception(
+                raise ValueError(
                     f"Could not find {pileup_input} PU dataset for {workflow_id}"
                 )
 
@@ -242,7 +242,7 @@ class TicketController(ControllerBase):
             )
             dataset_list = dbs_datasetlist(dataset)
             if not dataset_list:
-                raise Exception(
+                raise ValueError(
                     f"Could not find a recyclable input for {relval_name} "
                     f"({relval_id}), query: {dataset}, step: {recycle_input_of}"
                 )
@@ -336,7 +336,7 @@ class TicketController(ControllerBase):
             scram_arch if scram_arch else get_scram_arch(cmssw_release.split("/")[-1])
         )
         if not scram_arch:
-            raise Exception(f"Could not find SCRAM arch of {cmssw_release}")
+            raise ValueError(f"Could not find SCRAM arch of {cmssw_release}")
 
         matrix = ticket.get("matrix")
         additional_command = ticket.get("command").strip()
@@ -357,7 +357,7 @@ class TicketController(ControllerBase):
             [f"rm -rf {remote_directory}", f"mkdir -p {remote_directory}"]
         )
         if code != 0:
-            raise Exception(
+            raise RuntimeError(
                 f"Error code {code} preparing workspace. stdout: {out}, stderr: {err}"
             )
 
@@ -392,7 +392,7 @@ class TicketController(ControllerBase):
         ]
         out, err, code = ssh_executor.execute_command(command)
         if code != 0:
-            raise Exception(
+            raise RuntimeError(
                 f"Error code {code} creating RelVals. stdout: {out}, stderr: {err}"
             )
 

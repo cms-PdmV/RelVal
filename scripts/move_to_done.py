@@ -8,6 +8,7 @@ import json
 import os.path
 import http.client
 import pprint
+# pylint: disable-next=wrong-import-position
 sys.path.append(os.path.abspath(os.path.pardir))
 from core_lib.database.database import Database
 from core_lib.utils.common_utils import get_client_credentials, get_access_token
@@ -36,15 +37,15 @@ def get_database_credentials() -> dict[str, str | int]:
         "MONGO_DB_HOST": os.getenv("MONGO_DB_HOST", ""),
         "MONGO_DB_PORT": int(os.getenv("MONGO_DB_PORT", "27017"))
     }
-    
+
     for var, value in database_variables.items():
         if not value:
             missing_variables.append(var)
-    
+
     if missing_variables:
         error_msg += pprint.pformat(missing_variables, indent=4)
         raise RuntimeError(error_msg)
-    
+
     return database_variables
 
 

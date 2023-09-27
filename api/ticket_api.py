@@ -136,11 +136,11 @@ class CreateRelValsForTicketAPI(APIBase):
         prepid = request_data.get('prepid')
         if not prepid:
             self.logger.error('No prepid in given data: %s', json.dumps(request_data, indent=2))
-            raise Exception('No prepid in submitted data')
+            raise AssertionError('No prepid in submitted data')
 
         ticket = ticket_controller.get(prepid)
         if not ticket:
-            raise Exception(f'Ticket "{prepid}" does not exist')
+            raise AssertionError(f'Ticket "{prepid}" does not exist')
 
         result = ticket_controller.create_relvals_for_ticket(ticket)
         return self.output_text({'response': result, 'success': True, 'message': ''})

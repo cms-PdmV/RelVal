@@ -8,11 +8,11 @@ import pathlib
 import datetime
 import logging
 import logging.handlers
-import environment
 from flask_restful import Api
 from flask_cors import CORS
 from flask import Flask, render_template, request, session
 from jinja2.exceptions import TemplateNotFound
+import environment
 from core_lib.database.database import Database
 from core_lib.utils.username_filter import UsernameFilter
 from core_lib.middlewares.auth import AuthenticationMiddleware
@@ -245,7 +245,7 @@ def main():
         # Do only once, before the reloader
         pid = os.getpid()
         logger.info("PID: %s", pid)
-        with open("relval.pid", "w") as pid_file:
+        with open("relval.pid", "w", encoding='utf-8') as pid_file:
             pid_file.write(str(pid))
 
     logger.info(

@@ -486,7 +486,7 @@ class RelValController(ControllerBase):
                     stdout,
                     stderr,
                 )
-                raise Exception(f"Error creting remote directory: {stderr}")
+                raise RuntimeError(f"Error creting remote directory: {stderr}")
 
             ssh_executor.upload_file(
                 "./core/utils/resolve_auto_global_tag.py",
@@ -509,7 +509,7 @@ class RelValController(ControllerBase):
                     stdout,
                     stderr,
                 )
-                raise Exception(f"Error resolving auto globaltags: {stderr}")
+                raise RuntimeError(f"Error resolving auto globaltags: {stderr}")
 
         tags = [x for x in clean_split(stdout, "\n") if x.startswith("GlobalTag:")]
         for resolved_tag in tags:
@@ -569,7 +569,7 @@ class RelValController(ControllerBase):
                 results.extend(self.move_relvals_to_submitting(relvals_with_status))
 
             elif status == "submitting":
-                raise Exception(
+                raise AssertionError(
                     "Cannot move RelVals that are being submitted to next status"
                 )
 
@@ -577,7 +577,7 @@ class RelValController(ControllerBase):
                 results.extend(self.move_relvals_to_done(relvals_with_status))
 
             elif status == "done":
-                raise Exception(
+                raise AssertionError(
                     "Cannot move RelVals that are already done to next status"
                 )
 
@@ -646,17 +646,17 @@ class RelValController(ControllerBase):
                 if step.get_gpu_requires() != "forbidden":
                     gpu_dict = step.get("gpu")
                     if not gpu_dict.get("gpu_memory"):
-                        raise Exception(
+                        raise AssertionError(
                             f"GPU Memory not set in {prepid} step {index + 1}"
                         )
 
                     if not gpu_dict.get("cuda_capabilities"):
-                        raise Exception(
+                        raise AssertionError(
                             f"CUDA Capabilities not set in {prepid} step {index + 1}"
                         )
 
                     if not gpu_dict.get("cuda_runtime"):
-                        raise Exception(
+                        raise AssertionError(
                             f"GPU Runtime not set in {prepid} step {index + 1}"
                         )
 
@@ -718,7 +718,7 @@ class RelValController(ControllerBase):
 
         if datasets_to_check:
             datasets_to_check = ", ".join(list(datasets_to_check))
-            raise Exception(f"Could not get status for datasets: {datasets_to_check}")
+            raise RuntimeError(f"Could not get status for datasets: {datasets_to_check}")
 
         return dataset_access_types
 
@@ -747,7 +747,7 @@ class RelValController(ControllerBase):
                     dataset = dataset[dataset.index("/") :]
                     access_type = dataset_access_types[dataset]
                     if access_type.lower() != "valid":
-                        raise Exception(
+                        raise AssertionError(
                             f"{dataset} type is {access_type}, it must be VALID"
                         )
 
@@ -816,7 +816,7 @@ class RelValController(ControllerBase):
                     w for w in workflows if w["type"].lower() != "resubmission"
                 ]
                 if not workflows:
-                    raise Exception(
+                    raise AssertionError(
                         f"{prepid} does not have any workflows in computing"
                     )
 
@@ -855,7 +855,7 @@ class RelValController(ControllerBase):
 
                 if not_valid_datasets:
                     datatiers = [ds.split("/")[-1] for ds in not_valid_datasets]
-                    raise Exception(
+                    raise AssertionError(
                         f'Could not move {prepid} to "done" because '
                         f"{len(not_valid_datasets)} datasets are not VALID: "
                         f'{", ".join(datatiers)}'
@@ -863,12 +863,12 @@ class RelValController(ControllerBase):
 
                 last_workflow_name = last_workflow["name"]
                 if not completed_timestamp:
-                    raise Exception(
+                    raise AssertionError(
                         f'Could not move {prepid} to "done" because '
                         f'{last_workflow} is not yet "completed"'
                     )
 
-                raise Exception(
+                raise AssertionError(
                     f'Could not move {prepid} to "archived" because '
                     f"{last_workflow_name} is not archived long enough"
                 )
@@ -1014,7 +1014,7 @@ class RelValController(ControllerBase):
             all_workflows = {}
             for workflow in stats_workflows:
                 if not workflow or not workflow.get("RequestName"):
-                    raise Exception("Could not find workflow in Stats2")
+                    raise AssertionError("Could not find workflow in Stats2")
 
                 name = workflow.get("RequestName")
                 all_workflows[name] = workflow

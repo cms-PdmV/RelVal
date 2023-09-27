@@ -6,6 +6,7 @@ import json
 import os
 import argparse
 import pprint
+# pylint: disable-next=wrong-import-position
 sys.path.append(os.path.abspath(os.path.pardir))
 from core_lib.database.database import Database
 
@@ -33,15 +34,15 @@ def get_database_credentials() -> dict[str, str | int]:
         "MONGO_DB_HOST": os.getenv("MONGO_DB_HOST", ""),
         "MONGO_DB_PORT": int(os.getenv("MONGO_DB_PORT", "27017"))
     }
-    
+
     for var, value in database_variables.items():
         if not value:
             missing_variables.append(var)
-    
+
     if missing_variables:
         error_msg += pprint.pformat(missing_variables, indent=4)
         raise RuntimeError(error_msg)
-    
+
     return database_variables
 
 
@@ -62,12 +63,12 @@ def dump_documents(output_dir, database_name, collections):
         os.makedirs(collection_path)
         while documents:
             documents = collection.find({}).sort('_id', 1).skip(page * limit).limit(limit)
-            documents = [d for d in documents]
+            documents = list(documents)
             if not documents:
                 break
 
             file_name = f'{collection_path}/{database_name}_{collection_name}_{page}.json'
-            with open(file_name, 'w') as output_file:
+            with open(file_name, 'w', encoding='utf-8') as output_file:
                 json.dump(documents, output_file)
 
             print('Page %s done' % (page))
@@ -107,8 +108,8 @@ def main():
 
 
     dump_documents(
-        output_dir=output_dir, 
-        database_name=db_name, 
+        output_dir=output_dir,
+        database_name=db_name,
         collections=collections
     )
 

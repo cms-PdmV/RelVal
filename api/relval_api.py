@@ -57,7 +57,7 @@ class DeleteRelValAPI(APIBase):
             for single_relval_json in relval_json:
                 results.append(relval_controller.delete(single_relval_json))
         else:
-            raise Exception('Expected a single RelVal dict or a list of RelVal dicts')
+            raise ValueError('Expected a single RelVal dict or a list of RelVal dicts')
 
         return self.output_text({'response': results, 'success': True, 'message': ''})
 
@@ -86,7 +86,7 @@ class UpdateRelValAPI(APIBase):
             for single_relval_json in relval_json:
                 results.append(relval_controller.update(single_relval_json))
         else:
-            raise Exception('Expected a single RelVal dict or a list of RelVal dicts')
+            raise ValueError('Expected a single RelVal dict or a list of RelVal dicts')
 
         return self.output_text({'response': results, 'success': True, 'message': ''})
 
@@ -252,7 +252,7 @@ class RelValNextStatus(APIBase):
             results = relval_controller.next_status(relvals)
             results = [x.get_json() for x in results]
         else:
-            raise Exception('Expected a single RelVal dict or a list of RelVal dicts')
+            raise ValueError('Expected a single RelVal dict or a list of RelVal dicts')
 
         return self.output_text({'response': results, 'success': True, 'message': ''})
 
@@ -288,7 +288,7 @@ class RelValPreviousStatus(APIBase):
 
             results = [x.get_json() for x in results]
         else:
-            raise Exception('Expected a single RelVals dict or a list of RelVals dicts')
+            raise ValueError('Expected a single RelVals dict or a list of RelVals dicts')
 
         return self.output_text({'response': results, 'success': True, 'message': ''})
 
@@ -324,6 +324,6 @@ class UpdateRelValWorkflowsAPI(APIBase):
 
             results = [x.get_json() for x in results]
         else:
-            raise Exception('Expected a single RelVal dict or a list of RelVal dicts')
+            raise ValueError('Expected a single RelVal dict or a list of RelVal dicts')
 
         return self.output_text({'response': results, 'success': True, 'message': ''})

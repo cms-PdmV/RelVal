@@ -120,7 +120,7 @@ class RequestSubmitter(BaseSubmitter):
         """
         self.logger.debug("Performing one last check for %s", relval.get_prepid())
         if relval.get("status") != "submitting":
-            raise Exception(
+            raise AssertionError(
                 f'Cannot submit a request with status {relval.get("status")}'
             )
 
@@ -138,7 +138,7 @@ class RequestSubmitter(BaseSubmitter):
         stdout, stderr, exit_code = ssh_executor.execute_command(command)
         self.logger.debug("Exit code %s for %s config generation", exit_code, prepid)
         if exit_code != 0:
-            raise Exception(f"Error generating configs for {prepid}.\n{stderr}")
+            raise RuntimeError(f"Error generating configs for {prepid}.\n{stderr}")
 
         return stdout
 
@@ -156,7 +156,7 @@ class RequestSubmitter(BaseSubmitter):
         stdout, stderr, exit_code = ssh_executor.execute_command(command)
         self.logger.debug("Exit code %s for %s config upload", exit_code, prepid)
         if exit_code != 0:
-            raise Exception(f"Error uploading configs for {prepid}.\n{stderr}")
+            raise RuntimeError(f"Error uploading configs for {prepid}.\n{stderr}")
 
         stdout = [x for x in clean_split(stdout, "\n") if "DocID" in x]
         # Get all lines that have DocID as tuples split by space
@@ -183,10 +183,10 @@ class RequestSubmitter(BaseSubmitter):
                     )
                     break
             else:
-                raise Exception(f"Could not find hash for {step_name}")
+                raise ValueError(f"Could not find hash for {step_name}")
 
         if config_hashes:
-            raise Exception(f"Unused hashes: {config_hashes}")
+            raise AssertionError(f"Unused hashes: {config_hashes}")
 
         for step in relval.get("steps"):
             step_config_name = step.get_config_file_name()
@@ -195,7 +195,7 @@ class RequestSubmitter(BaseSubmitter):
 
             if not step.get("config_id"):
                 step_name = step.get("name")
-                raise Exception(f"Missing hash for step {step_name}")
+                raise ValueError(f"Missing hash for step {step_name}")
 
     def submit_relval(self, relval, controller):
         """

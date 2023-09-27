@@ -12,7 +12,8 @@ Attributes:
     DEBUG (bool): If True, this sets the debug level for the root logger to DEBUG
     REMOTE_PATH (str): This is the folder, into AFS or EOS, where RelVal submissions files will
         be stored before to submit a job via ReqMgr2.
-    SERVICE_URL (str): RelVal Service access URL. For example, https://cms-pdmv-prod.web.cern.ch/relval
+    SERVICE_URL (str): RelVal Service access URL. 
+        For example, https://cms-pdmv-prod.web.cern.ch/relval
     CMSWEB_URL (str): URL to CMS WEB Services. For example, https://cmsweb.cern.ch
     REMOTE_SSH_USERNAME (str): Username to authenticate to the remote node via SSH
     REMOTE_SSH_PASSWORD (str): Password to authenticate to the remote node via SSH
@@ -28,11 +29,13 @@ Attributes:
     PORT (int): Port for service the web application
     SECRET_KEY (str): Flask secret key for securing Flask sessions
     LOG_FOLDER (str): Path to the log folder to store RelVal logs.
-    CALLBACK_CLIENT_ID (str): This credential is used for requesting access_token via client_credential grant
-        for batch job integrations. For this application, it is used to request authentication tokens to perform
+    CALLBACK_CLIENT_ID (str): This credential is used for requesting access_token
+        via client_credential grant for batch job integrations. 
+        For this application, it is used to request authentication tokens to perform
         updates in Stats2 (refresh_workflows_in_stats function in core_lib). 
-    CALLBACK_CLIENT_SECRET (str): This credential is used for requesting access_token via client_credential grant
-        for batch job integrations. For this application, it is used to request authentication tokens to perform
+    CALLBACK_CLIENT_SECRET (str): This credential is used for requesting access_token
+        via client_credential grant for batch job integrations. 
+        For this application, it is used to request authentication tokens to perform
         updates in Stats2 (refresh_workflows_in_stats function in core_lib). 
     APPLICATION_CLIENT_ID (str): This is ID for target application (audience),
         registered in CERN Application Portal, that handles OIDC authentication flow 
@@ -66,16 +69,14 @@ APPLICATION_CLIENT_ID: str = os.getenv("APPLICATION_CLIENT_ID", "")
 SECRET_KEY: str = os.getenv("SECRET_KEY", "")
 
 # Raise an error if they are empty variables
-missing_environment_variables: dict[str, str] = dict(
-    [
-        (k, v)
-        for k, v in globals().items()
-        if not k.startswith("__")
-        and not inspect.ismodule(v)
-        and not isinstance(v, bool)
-        and not v
-    ]
-)
+missing_environment_variables: dict[str, str] = {
+    k: v
+    for k, v in globals().items()
+    if not k.startswith("__")
+    and not inspect.ismodule(v)
+    and not isinstance(v, bool)
+    and not v
+}
 
 if missing_environment_variables:
     msg: str = (
