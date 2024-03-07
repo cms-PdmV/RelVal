@@ -331,7 +331,10 @@ class RelValController(ControllerBase):
         job_dict["SubRequestType"] = "RelVal"
         job_dict["RequestString"] = relval.get_request_string()
         job_dict["Campaign"] = relval.get_campaign()
-        job_dict["RequestPriority"] = 500000
+        if "SpecialRV" in job_dict["PrepID"]:
+            job_dict["RequestPriority"] = 200000
+        else:
+            job_dict["RequestPriority"] = 500000
         job_dict["TimePerEvent"] = relval.get("time_per_event")
         job_dict["SizePerEvent"] = relval.get("size_per_event")
         job_dict["ProcessingVersion"] = 1
