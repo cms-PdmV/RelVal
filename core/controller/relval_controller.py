@@ -315,6 +315,22 @@ class RelValController(ControllerBase):
 
         return task_dict
 
+    def get_request_priority(self, relval: RelVal) -> int:
+        """
+        Returns the priority for the given RelVal,
+        customizing it for some special cases.
+        """
+        campaign = relval.get_campaign()
+        if "SpecialRV" in campaign:
+            priority = 200000
+            self.logger.info(
+                "Setting `RequestPriority` to %s because it includes the placeholder `SpecialRV` in the campaign name",
+                priority
+            )
+            return priority
+
+        return 500000
+
     def get_job_dict(self, relval):
         # pylint: disable=too-many-statements
         """
@@ -331,7 +347,7 @@ class RelValController(ControllerBase):
         job_dict["SubRequestType"] = "RelVal"
         job_dict["RequestString"] = relval.get_request_string()
         job_dict["Campaign"] = relval.get_campaign()
-        job_dict["RequestPriority"] = 500000
+        job_dict["RequestPriority"] = self.get_request_priority(relval)
         job_dict["TimePerEvent"] = relval.get("time_per_event")
         job_dict["SizePerEvent"] = relval.get("size_per_event")
         job_dict["ProcessingVersion"] = 1
