@@ -92,6 +92,7 @@
               <option>premix</option>
               <option>extendedgen</option>
               <option>gpu</option>
+              <option>data_highstats</option>
             </select>
           </td>
         </tr>
