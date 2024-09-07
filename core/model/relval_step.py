@@ -280,7 +280,25 @@ class RelValStep(ModelBase):
                 command += 'dasgoclient --limit 0 '
                 command += f'--query "file dataset={dataset} run in [{run_chunk}]" '
                 command += f'>> {files_name}\n'
+            return (comment + '\n' + command).strip()
 
+        events = input_dict['events']
+
+        ## N.B. das-up-to-nevents.py exists only from 14_1_0_pre7
+        cmssw_components = lambda x: x.strip().split("_")
+        cmssw_release = cmssw_components(self.get_release())
+        cmssw_release >= cmssw_components("14_1_0_pre7")
+
+        if events and check_das_up_to_nevents:
+            self.logger.info('Making a DAS command for step %s with max events', step_index)
+            files_name = f'step{step_index + 1}_files.txt'
+            comment = f'# Arguments for step {step_index + 1}:\n'
+            command = f'# Command for step {step_index + 1}:\n'
+            comment += f'#   dataset: {dataset}\n'
+            comment += f'#   events : {events}\n'
+            command += f'echo "" > {files_name}\n'
+            commnad += f'das-up-to-nevents.py -d {dataset} -e {events} --pc'
+            command += f'>> {files_name}\n'
             return (comment + '\n' + command).strip()
 
         return f'# Step {step_index + 1} is input dataset for next step: {dataset}'
