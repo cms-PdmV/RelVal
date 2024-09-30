@@ -322,14 +322,22 @@ class RelValController(ControllerBase):
         """
         campaign = relval.get_campaign()
         if "SpecialRV" in campaign:
-            priority = 200000
+            priority = 300000
             self.logger.info(
                 "Setting `RequestPriority` to %s because it includes the placeholder `SpecialRV` in the campaign name",
                 priority
             )
             return priority
-
-        return 500000
+            
+        if "HighPrio" in campaign:
+            priority = 500000
+            self.logger.info(
+                "Setting `RequestPriority` to %s because it includes the placeholder `HighPrio` in the campaign name",
+                priority
+            )
+            return priority
+            
+        return 450000
 
     def get_job_dict(self, relval):
         # pylint: disable=too-many-statements
