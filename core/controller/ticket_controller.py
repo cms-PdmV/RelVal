@@ -255,6 +255,7 @@ class TicketController(ControllerBase):
                 "lumisection": {},
                 "run": [],
                 "label": "",
+                "events": 0,
             }
             input_step_json["name"] += "_Recycled"
             input_step = RelValStep(input_step_json, relval, False)
@@ -268,7 +269,6 @@ class TicketController(ControllerBase):
         """
         # Deal with input file part
         input_dict = step_dict.get("input", {})
-        input_dict.pop("events", None)
 
         # Deal with driver part
         arguments = step_dict.get("arguments", {})
