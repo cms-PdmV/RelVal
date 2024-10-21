@@ -66,6 +66,7 @@ class RelValStep(ModelBase):
             'lumisection': {},
             'run': [],
             'label': '',
+            'events': 0,
         },
         # Keeping output of this task
         'keep_output': True,
@@ -92,7 +93,8 @@ class RelValStep(ModelBase):
         },
         '_input': {
             'dataset': lambda ds: not ds or ModelBase.lambda_check('dataset')(ds),
-            'label': lambda l: not l or ModelBase.lambda_check('label')(l)
+            'label': lambda l: not l or ModelBase.lambda_check('label')(l),
+            'events': lambda m: m == '' or (m.isnumeric() and int(m) > 0),
         },
         'lumis_per_job': lambda l: l == '' or int(l) > 0,
         'name': lambda n: ModelBase.matches_regex(n, '[a-zA-Z0-9_\\-]{1,150}'),
@@ -109,12 +111,14 @@ class RelValStep(ModelBase):
                 json_input['gpu'] = schema.get('gpu')
                 json_input['gpu']['requires'] = 'forbidden'
                 step_input = json_input['input']
+             
                 for key, default_value in schema['input'].items():
                     if key not in step_input:
                         step_input[key] = default_value
             else:
                 json_input['driver'] = {k.lstrip('-'): v for k, v in json_input['driver'].items()}
                 json_input['input'] = schema.get('input')
+         
                 if json_input.get('gpu', {}).get('requires') not in ('optional', 'required'):
                     json_input['gpu'] = schema.get('gpu')
                     json_input['gpu']['requires'] = 'forbidden'
@@ -277,7 +281,25 @@ class RelValStep(ModelBase):
                 command += 'dasgoclient --limit 0 '
                 command += f'--query "file dataset={dataset} run in [{run_chunk}]" '
                 command += f'>> {files_name}\n'
+            return (comment + '\n' + command).strip()
 
+        events = input_dict['events']
+        
+        ## N.B. das-up-to-nevents.py exists only from 14_1_0_pre7
+        cmssw_components = lambda x: x.strip().split("_")
+        cmssw_release = cmssw_components(self.get_release())
+        check_das_up_to_nevents = cmssw_release >= cmssw_components("14_1_0_pre7")
+        
+        if events > 0 and check_das_up_to_nevents:
+            self.logger.info('Making a DAS command for step %s with max events', step_index)
+            files_name = f'step{step_index + 1}_files.txt'
+            comment = f'# Arguments for step {step_index + 1}:\n'
+            command = f'# Command for step {step_index + 1}:\n'
+            comment += f'#   dataset: {dataset}\n'
+            comment += f'#   events : {events}\n'
+            command += f'echo "" > {files_name}\n'
+            command += f'das-up-to-nevents.py -d {dataset} -e {events} '
+            command += f'>> {files_name}\n'
             return (comment + '\n' + command).strip()
 
         return f'# Step {step_index + 1} is input dataset for next step: {dataset}'
@@ -329,12 +351,16 @@ class RelValStep(ModelBase):
                     previous_input = previous.get('input')
                     previous_lumisection = previous_input['lumisection']
                     previous_run = previous_input['run']
+                    previous_events = previous_input['events']
                     if previous_lumisection:
                         # If there are lumi ranges, add a file with them and list of files as input
                         arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
                         arguments_dict['lumiToProcess'] = f'"step{index}_lumi_ranges.txt"'
                     elif previous_run:
                         # If there is a run whitelist, add the file
+                        arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
+                    elif previous_events:
+                        # If there is a max number of events, add the file
                         arguments_dict['filein'] = f'"filelist:step{index}_files.txt"'
                     else:
                         # If there are no lumi ranges, use input file normally
