@@ -94,7 +94,7 @@ class RelValStep(ModelBase):
         '_input': {
             'dataset': lambda ds: not ds or ModelBase.lambda_check('dataset')(ds),
             'label': lambda l: not l or ModelBase.lambda_check('label')(l),
-            'events': lambda m: m == '' or int(m) > 0,
+            'events': lambda m: m == '' or (m.isnumeric() and int(m) > 0),
         },
         'lumis_per_job': lambda l: l == '' or int(l) > 0,
         'name': lambda n: ModelBase.matches_regex(n, '[a-zA-Z0-9_\\-]{1,150}'),
