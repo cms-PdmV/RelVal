@@ -332,6 +332,10 @@ class RelVal(ModelBase):
         Determine if the `cmsRun` command should be execute
         when generating the Python configuration.
         """
+        # Temporary: Force any execution to run to explore
+        # the behavior with several RelVal configurations
+        return True
+    
         execute_steps = None
         try:
             execute_steps = self.get('execute_steps')
