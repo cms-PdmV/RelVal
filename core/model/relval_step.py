@@ -321,8 +321,12 @@ class RelValStep(ModelBase):
         if custom_fragment:
             arguments_dict['fragment_name'] = custom_fragment
 
-        # No execution
-        arguments_dict['no_exec'] = True
+        # Enable the execution of `cmsRun` for a quick
+        # validation
+        execute_cmsrun = self.parent().execute_steps_for_configuration()
+        if not execute_cmsrun:
+            arguments_dict['no_exec'] = True
+
         # Handle input/output file names
         arguments_dict['fileout'] = f'"file:step{index + 1}.root"'
         arguments_dict['python_filename'] = f'{self.get_config_file_name()}.py'
