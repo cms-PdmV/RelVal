@@ -244,7 +244,7 @@ class RelValController(ControllerBase):
             "Getting step %s dict for %s", step_index, relval.get_prepid()
         )
         task_dict = {}
-        # If it's firtst step and not input file - it is generator
+        # If it's first step and not input file - it is generator
         # set Seeding to AutomaticSeeding, RequestNumEvets, EventsPerJob and EventsPerLumi
         # It expects --relval attribute
         if step_index == 0:
@@ -264,6 +264,9 @@ class RelValController(ControllerBase):
                 task_dict["EventsPerLumi"] = int(events_per_job)
         else:
             input_step = relval.get("steps")[step.get_input_step_index()]
+
+            task_dict["SplittingAlgo"] = "LumiBased"
+
             if input_step.get_step_type() == "input_file":
                 input_dict = input_step.get("input")
                 # Input file step is not a task
@@ -273,6 +276,7 @@ class RelValController(ControllerBase):
                     task_dict["LumiList"] = input_dict["lumisection"]
                 elif input_dict["run"]:
                     task_dict["RunWhitelist"] = input_dict["run"]
+
             else:
                 task_dict["InputTask"] = input_step.get_short_name()
                 _, input_module = step.get_input_eventcontent(input_step)
@@ -280,9 +284,7 @@ class RelValController(ControllerBase):
 
             if step.get("lumis_per_job") != "":
                 task_dict["LumisPerJob"] = int(step.get("lumis_per_job"))
-
-            task_dict["SplittingAlgo"] = "LumiBased"
-
+                
         task_dict["TaskName"] = step.get_short_name()
         task_dict["ConfigCacheID"] = step.get("config_id")
         task_dict["KeepOutput"] = step.get("keep_output")
