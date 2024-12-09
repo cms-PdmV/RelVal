@@ -237,6 +237,7 @@ export default {
         {'dbName': 'status', 'displayName': 'Status', 'visible': 1, 'sortable': true},
         {'dbName': 'batch_name', 'displayName': 'Batch Name', 'visible': 1, 'sortable': true},
         {'dbName': 'cmssw_release', 'displayName': 'CMSSW Release', 'visible': 1, 'sortable': true},
+        {'dbName': 'execute_steps', 'displayName': 'Execute cmsRun', 'visible': 1},
         {'dbName': 'cpu_cores', 'displayName': 'CPU Cores', 'visible': 1, 'sortable': true},
         {'dbName': 'matrix', 'displayName': 'Matrix', 'visible': 1, 'sortable': true},
         {'dbName': 'memory', 'displayName': 'Memory', 'visible': 1, 'sortable': true},

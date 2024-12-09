@@ -263,6 +263,17 @@
           </td>
         </tr>
         <tr>
+          <td>Execute cmsRun for steps</td>
+          <td>
+            <input
+                  type="checkbox"
+                  title="Execute cmsRun for every step with a few events to cross-check the configuration"
+                  v-model="editableObject.execute_steps" 
+                  :disabled="!editingInfo.execute_steps"
+            />
+          </td>
+        </tr>
+        <tr>
           <td>Time per event</td>
           <td><input type="number" v-model="editableObject.time_per_event" :disabled="!editingInfo.time_per_event">s</td>
         </tr>
