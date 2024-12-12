@@ -5,6 +5,13 @@ import itertools
 import numpy as np
 
 def get_lumi_ranges(i):
+    """
+    Having in input a list of lumis this outputs a list of list
+    grouping contigous elements in a single rangel-like list.
+    E.g.
+     > input = [4,5,6,7,8,200,201,202,222]
+     > output = [[4, 8], [200, 202], [222, 222]]
+    """
     result = []
     for _, b in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
         b = list(b)
@@ -12,17 +19,18 @@ def get_lumi_ranges(i):
     return result
 
 def das_do_command(cmd):
+    """
+    A simple wrapper for dasgoclient
+    """
     out = subprocess.check_output(cmd, shell=True, executable="/bin/bash").decode('utf8')
     return out.split("\n")
 
-def das_file_site(dataset, site):
-    cmd = "dasgoclient --query='file dataset=%s site=%s'"%(dataset,site)
-    out = das_do_command(cmd)
-    df = pd.DataFrame(out,columns=["file"])
-
-    return df
-
 def das_file_data(dataset,opt=""):
+    """
+    Given a dataset create a pandas DataFrame
+    with the list of file names and number 
+    of events per file
+    """
     cmd = "dasgoclient --query='file dataset=%s %s| grep file.name, file.nevents'"%(dataset,opt)
     out = das_do_command(cmd)
     out = [np.array(r.split(" "))[[0,3]] for r in out if len(r) > 0]
@@ -33,6 +41,18 @@ def das_file_data(dataset,opt=""):
     return df
 
 def das_lumi_data(dataset,opt=""):
+    """
+    Produces a file by file+lumi+run pandas DataFrame
+
+    Args:
+        dataset: the dataset anme '/PD/GTString/DATA-TIER'
+    
+    Returns:
+        A pandas DataFrame having for each row a single file and as columns: 
+        - the file name;
+        - the lumisections;
+    
+    """
     cmd = "dasgoclient --query='file,lumi,run dataset=%s %s'"%(dataset,opt)
     
     out = das_do_command(cmd)
@@ -42,33 +62,24 @@ def das_lumi_data(dataset,opt=""):
     
     return df
 
-def das_run_events_data(dataset,run,opt=""):
-    cmd = "dasgoclient --query='file dataset=%s run=%s %s | sum(file.nevents) '"%(dataset,run,opt)
-    out = das_do_command(cmd)[0]
-
-    out = [o for o in out.split(" ") if "sum" not in o]
-    out = int([r.split(" ") for r in out if len(r)>0][0][0])
-
-    return out
-
-def das_run_data(dataset,opt=""):
-    cmd = "dasgoclient --query='run dataset=%s %s '"%(dataset,opt)
-    out = das_do_command(cmd)
-
-    return out
-
 def get_events_df(golden,dataset,events):
 
-    '''
-    Given in input:
-    - a run by run certification json
-    - the dataset name
-    - the number of desired events
-    this produces a pandas dataframe with a file per row.
+    """
+    Produces a file by file pandas DataFrame
 
-    For each row it has: the file name, lumisections, run and number
-    of events and the cumulative sum of the events.
-    '''
+    Args:
+        golden: a run by run certification json
+        dataset: the dataset anme '/PD/GTString/DATA-TIER'
+        events: max number of events (an int).
+
+    Returns:
+        A pandas DataFrame having for each row a single file and as columns: 
+        - the file name;
+        - the lumisections;
+        - the run;
+        - the number of events.
+
+    """
 
     lumi_df = das_lumi_data(dataset)
     file_df = das_file_data(dataset)
@@ -113,7 +124,22 @@ def get_events_df(golden,dataset,events):
     return df
     
 def get_run_lumi(df):
+    """
+    Produces the lumi mask dict starting from a pandas DataFrame
 
+    Args:
+        df: a pandas DataFrame having for each row a single file and as columns: 
+            - the file name;
+            - the lumisections;
+            - the run;
+            - the number of events.
+    Returns:
+        A "CMS"-like lumi mask dict mapping:
+        - the run number;
+        - to the list of good lumisection ranges.
+
+        E.g. {run : [[lumi_1,lumi_2],[lumi_3,lumi_4]]}
+    """
     if len(df) == 0:
         return {}
 
@@ -125,7 +151,22 @@ def get_run_lumi(df):
     return lumi_ranges
 
 def get_lumi_dict(golden,dataset,events):
-    
+    """
+    Produces a lumi mask for a given datasets, up to envets, using a certification json
+
+    Args:
+        golden: a run by run certification json
+        dataset: the dataset anme '/PD/GTString/DATA-TIER'
+        events: max number of events (an int).
+
+    Returns:
+        A "CMS"-like lumi mask dict mapping:
+        - the run number;
+        - to the list of good lumisection ranges.
+        
+        E.g. {run : [[lumi_1,lumi_2],[lumi_3,lumi_4]]}
+    """
+
     df = get_events_df(golden,dataset,events)
     lumi = get_run_lumi(df)
 

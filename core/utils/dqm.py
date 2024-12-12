@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-import pycurl
+import requests
 from io import BytesIO
 import os
 import ast
@@ -10,7 +10,9 @@ base_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification/"
 base_cert_path = "/eos/user/c/cmsdqm/www/CAF/certification/"
 
 def get_url_clean(url):
-    
+    """
+    A simple cleaner for pycurl
+    """
     buffer = BytesIO()
     c = pycurl.Curl()
     c.setopt(c.URL, url)
@@ -21,7 +23,9 @@ def get_url_clean(url):
     return BeautifulSoup(buffer.getvalue(), "lxml").text
 
 def get_cert_type(dataset):
-
+    """
+    Get the type of certification linked to a dataset
+    """
     year = dataset.split("Run")[1][2:4] # from 20XX to XX
     PD = dataset.split("/")[1]
     cert_type = "Collisions" + str(year)
@@ -34,8 +38,11 @@ def get_cert_type(dataset):
     
     return cert_type
 
-def get_json_list(dataset,cert_type,web_fallback):
-
+def get_json_list(cert_type,web_fallback):
+    """
+    Get the list of Golden jsons given the type of
+    certification we are looking for (Collisions,Cosmics,Commisioning,HI)
+    """
     ## if we have access to eos we get from there ...
     if not web_fallback:
         cert_path = base_cert_path + cert_type + "/"
@@ -47,17 +54,25 @@ def get_json_list(dataset,cert_type,web_fallback):
     ## ... if not we go to the website
     else:
         cert_url = base_cert_url + cert_type + "/"
-        json_list = get_url_clean(cert_url).split("\n")
+
+        response = requests.get(url=cert_url)
+        if response.status_code != 200:
+            raise RuntimeError(f"Unable to retrieve the content from: {url}")
+        
+        page_content = response.text
+        json_list =  BeautifulSoup(buffer.getvalue(), "lxml").text
+        
+        #json_list = get_url_clean(cert_url).split("\n")
         json_list = [c for c in json_list if "Golden" in c and "era" not in c and "Cert_C" in c]
         json_list = [[cc for cc in c.split(" ") if cc.startswith("Cert_C") and cc.endswith("json")][0] for c in json_list]
 
     return json_list
 
 def get_golden_json(dataset):
-    ''' 
+    """ 
     Get the flattened golden json with highest 
     lumi range based on the dataset name.
-    '''
+    """
 
     golden_flat = {}
 
@@ -66,7 +81,7 @@ def get_golden_json(dataset):
     cert_url = base_cert_url + cert_type + "/"
     web_fallback = not os.path.isdir(cert_path)
 
-    json_list = get_json_list(dataset,cert_type,web_fallback)
+    json_list = get_json_list(cert_type,web_fallback)
 
     # the larger the better, assuming file naming schema
     # Cert_X_RunStart_RunFinish_Type.json
