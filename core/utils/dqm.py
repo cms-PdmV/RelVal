@@ -1,24 +1,73 @@
-from bs4 import BeautifulSoup
-import pycurl
-from io import BytesIO
-import os
-import ast
-import numpy as np
 import json
+import os
+
+import numpy as np
+import requests
+from bs4 import BeautifulSoup
+from requests.exceptions import HTTPError
 
 base_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification/"
 base_cert_path = "/eos/user/c/cmsdqm/www/CAF/certification/"
 
-def get_url_clean(url):
-    
-    buffer = BytesIO()
-    c = pycurl.Curl()
-    c.setopt(c.URL, url)
-    c.setopt(c.WRITEDATA, buffer)
-    c.perform()
-    c.close()
-    
-    return BeautifulSoup(buffer.getvalue(), "lxml").text
+def list_certification_files(cert_type: str) -> list[str]:
+    """
+    List all the certification files related to a certification type
+    in the CMS DQM certification server.
+
+    Args:
+        cert_type: Certification type. This corresponds to the folder
+            name available in the server.
+
+    Returns:
+        All the JSON certification file names.
+
+    Raises:
+        HTTPError: If it is not possible to retrieve the index HTML
+            page related to the certification type from the server.
+    """
+    dqm_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification"
+    page_content = requests.get(url=f"{dqm_cert_url}/{cert_type}/")
+    if page_content.status_code != 200:
+        raise HTTPError(
+            "Unable to retrieve the content related to: %s",
+            cert_type,
+            response=page_content
+        )
+
+    # Parse the HTML and retrieve the file names
+    page_content = BeautifulSoup(page_content.text, "lxml").text
+
+    file_names = []
+    for file_line in page_content.strip().split("\n"):
+        if file_line and ".json" in file_line:
+            metadata = file_line.strip().split(" ")
+            file_name = metadata[0]
+            if file_name.endswith(".json"):
+                file_names.append(file_name)
+
+    return file_names
+
+def get_certification_file(path: str) -> dict:
+    """
+    Get a certification file from the CMS DQM certification
+    server.
+
+    Args:
+        path: Path to the certification file on the server.
+
+    Returns:
+        Golden JSON file
+    """
+    dqm_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification"
+    file = requests.get(url=f"{dqm_cert_url}/{path}")
+    if file.status_code != 200:
+        raise HTTPError(
+            "Unable to retrieve the content related to: %s",
+            path,
+            response=file
+        )
+
+    return file.json()
 
 def get_cert_type(dataset):
 
@@ -46,10 +95,14 @@ def get_json_list(dataset,cert_type,web_fallback):
         json_list = [c for c in json_list if c.startswith("Cert_C") and c.endswith("json")]
     ## ... if not we go to the website
     else:
-        cert_url = base_cert_url + cert_type + "/"
-        json_list = get_url_clean(cert_url).split("\n")
-        json_list = [c for c in json_list if "Golden" in c and "era" not in c and "Cert_C" in c]
-        json_list = [[cc for cc in c.split(" ") if cc.startswith("Cert_C") and cc.endswith("json")][0] for c in json_list]
+        json_list = list_certification_files(cert_type=cert_type)
+        json_list = [
+            file_name
+            for file_name in json_list
+            if "Golden" in file_name 
+            and "Cert_C" in file_name
+            and "era" not in file_name 
+        ]
 
     return json_list
 
@@ -63,7 +116,6 @@ def get_golden_json(dataset):
 
     cert_type = get_cert_type(dataset)
     cert_path = base_cert_path + cert_type + "/"
-    cert_url = base_cert_url + cert_type + "/"
     web_fallback = not os.path.isdir(cert_path)
 
     json_list = get_json_list(dataset,cert_type,web_fallback)
@@ -77,8 +129,7 @@ def get_golden_json(dataset):
         with open(cert_path + "/" + best_json) as js:
             golden = json.load(js)
     else:
-        golden = get_url_clean(cert_url + best_json)
-        golden = ast.literal_eval(golden) #converts string to dict
+        golden = get_certification_file(path=f"{cert_type}/{best_json}")
     
     # golden json with all the lumisections one by one
     for k in golden:
