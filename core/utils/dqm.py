@@ -9,24 +9,25 @@ from requests.exceptions import HTTPError
 base_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification/"
 base_cert_path = "/eos/user/c/cmsdqm/www/CAF/certification/"
 
-def list_certification_files(cert_type: str) -> list[str]:
+def list_certification_files(cert_type):
     """
     List all the certification files related to a certification type
     in the CMS DQM certification server.
 
     Args:
-        cert_type: Certification type. This corresponds to the folder
+        cert_type (str): Certification type. This corresponds to the folder
             name available in the server.
 
     Returns:
-        All the JSON certification file names.
+        list[str]: All the JSON certification file names.
 
     Raises:
         HTTPError: If it is not possible to retrieve the index HTML
             page related to the certification type from the server.
     """
     dqm_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification"
-    page_content = requests.get(url=f"{dqm_cert_url}/{cert_type}/")
+    url = "%s/%s/" % (dqm_cert_url, cert_type)
+    page_content = requests.get(url=url)
     if page_content.status_code != 200:
         raise HTTPError(
             "Unable to retrieve the content related to: %s",
@@ -47,19 +48,20 @@ def list_certification_files(cert_type: str) -> list[str]:
 
     return file_names
 
-def get_certification_file(path: str) -> dict:
+def get_certification_file(path):
     """
     Get a certification file from the CMS DQM certification
     server.
 
     Args:
-        path: Path to the certification file on the server.
+        path (str): Path to the certification file on the server.
 
     Returns:
-        Golden JSON file
+        dict: Golden JSON file
     """
     dqm_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification"
-    file = requests.get(url=f"{dqm_cert_url}/{path}")
+    url = "%s/%s" % (dqm_cert_url, path)
+    file = requests.get(url=url)
     if file.status_code != 200:
         raise HTTPError(
             "Unable to retrieve the content related to: %s",
@@ -129,7 +131,8 @@ def get_golden_json(dataset):
         with open(cert_path + "/" + best_json) as js:
             golden = json.load(js)
     else:
-        golden = get_certification_file(path=f"{cert_type}/{best_json}")
+        path = "%s/%s" % (cert_type, best_json)
+        golden = get_certification_file(path=path)
     
     # golden json with all the lumisections one by one
     for k in golden:
