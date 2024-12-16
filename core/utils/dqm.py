@@ -6,7 +6,6 @@ import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
 
-base_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification/"
 base_cert_path = "/eos/user/c/cmsdqm/www/CAF/certification/"
 
 def list_certification_files(cert_type):
@@ -57,7 +56,7 @@ def get_certification_file(path):
         path (str): Path to the certification file on the server.
 
     Returns:
-        dict: Golden JSON file
+        dict: Golden JSON file.
     """
     dqm_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification"
     url = "%s/%s" % (dqm_cert_url, path)
@@ -73,7 +72,16 @@ def get_certification_file(path):
 
 def get_cert_type(dataset):
     """
-    Get the type of certification linked to a dataset
+    List all the certification files related to a certification type
+    in the CMS DQM certification server.
+
+    Args:
+        dataset: the dataset name as a string '/PD/GTString/DATA-TIER'.
+
+    Returns:
+        str: The type of certification we seek (Collisions, HI, Cosmics 
+            or Commisioning).
+
     """
     year = dataset.split("Run")[1][2:4] # from 20XX to XX
     PD = dataset.split("/")[1]
@@ -89,9 +97,19 @@ def get_cert_type(dataset):
 
 def get_json_list(cert_type,web_fallback):
     """
-    Get the list of Golden jsons given the type of
-    certification we are looking for (Collisions,Cosmics,Commisioning,HI)
+    List all the certification files related to a certification type
+    either stored on CMS DQM EOS either, as a fallback,
+    in the CMS DQM certification server.
+
+    Args:
+        dataset: the dataset name as a string '/PD/GTString/DATA-TIER'.
+        web_fallback: a bool flag enabling looking for the list on CMS DQM server.
+
+    Returns:
+        list[str]: All the JSON certification file names.
+
     """
+    
     ## if we have access to eos we get from there ...
     if not web_fallback:
         cert_path = base_cert_path + cert_type + "/"
@@ -116,8 +134,17 @@ def get_json_list(cert_type,web_fallback):
 
 def get_golden_json(dataset):
     """ 
-    Get the flattened golden json with highest 
-    lumi range based on the dataset name.
+    Output a the golden certification dictionary (json) for a specific datasets. 
+    In case of multiple json files available, the one with the highest 
+    lumi range is selected. The dictionary maps each run number with a complete list
+    of the correspondinig golden lumisections. 
+
+    Args:
+       dataset: the dataset name as a string '/PD/GTString/DATA-TIER'
+
+    Returns:
+        dict: Golden Run-Lumisection dictionary.
+
     """
 
     golden_flat = {}

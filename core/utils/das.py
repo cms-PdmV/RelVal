@@ -6,11 +6,14 @@ import numpy as np
 
 def get_lumi_ranges(i):
     """
-    Having in input a list of lumis this outputs a list of list
-    grouping contigous elements in a single rangel-like list.
-    E.g.
-     > input = [4,5,6,7,8,200,201,202,222]
-     > output = [[4, 8], [200, 202], [222, 222]]
+    An helper to transform a list of lumisections into a list of lists (ranges).
+    It groups contigous elements in a single rangel-like list.
+
+    Args:
+        i: a list of ints.
+    
+    Returns:
+       list[list[int]]: a single rangel-like list.
     """
     result = []
     for _, b in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
@@ -18,21 +21,36 @@ def get_lumi_ranges(i):
         result.append([b[0][1],b[-1][1]]) 
     return result
 
-def das_do_command(cmd):
+def das_do_command(query):
     """
-    A simple wrapper for dasgoclient
+    A simple wrapper for dasgoclient.
+
+    Args:
+        cmd: a dasgoclient query.
+    
+    Returns:
+       list[str]: the dasgoclient command output split by newlines.
+    
     """
+    cmd = 'dasgoclient --query="%s"'%(query)
     out = subprocess.check_output(cmd, shell=True, executable="/bin/bash").decode('utf8')
     return out.split("\n")
 
-def das_file_data(dataset,opt=""):
+def das_file_data(dataset):
     """
-    Given a dataset create a pandas DataFrame
-    with the list of file names and number 
-    of events per file
+    Given a dataset create a pandas DataFrame with the 
+    list of file names and number of events per file.
+
+    Args:
+        dataset: the dataset anme '/PD/GTString/DATA-TIER'
+
+    Returns:
+        A pandas DataFrame having for each row a single file and as columns: 
+        - the file name;
+        - the number of events in each file.
     """
-    cmd = "dasgoclient --query='file dataset=%s %s| grep file.name, file.nevents'"%(dataset,opt)
-    out = das_do_command(cmd)
+    query = 'file dataset=%s | grep file.name, file.nevents'%(dataset)
+    out = das_do_command(query)
     out = [np.array(r.split(" "))[[0,3]] for r in out if len(r) > 0]
 
     df = pd.DataFrame(out,columns=["file","events"])
@@ -40,7 +58,7 @@ def das_file_data(dataset,opt=""):
     
     return df
 
-def das_lumi_data(dataset,opt=""):
+def das_lumi_data(dataset):
     """
     Produces a file by file+lumi+run pandas DataFrame
 
@@ -50,12 +68,12 @@ def das_lumi_data(dataset,opt=""):
     Returns:
         A pandas DataFrame having for each row a single file and as columns: 
         - the file name;
-        - the lumisections;
+        - the lumisections.
     
     """
-    cmd = "dasgoclient --query='file,lumi,run dataset=%s %s'"%(dataset,opt)
+    query = 'file,lumi,run dataset=%s '%(dataset)
     
-    out = das_do_command(cmd)
+    out = das_do_command(query)
     out = [r.split(" ") for r in out if len(r)>0]
     
     df = pd.DataFrame(out,columns=["file","run","lumis"])
@@ -69,7 +87,7 @@ def get_events_df(golden,dataset,events):
 
     Args:
         golden: a run by run certification json
-        dataset: the dataset anme '/PD/GTString/DATA-TIER'
+        dataset: the dataset name as a string '/PD/GTString/DATA-TIER'
         events: max number of events (an int).
 
     Returns:

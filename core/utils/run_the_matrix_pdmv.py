@@ -185,7 +185,7 @@ def make_relval_step(workflow_step, workflow_step_name, wmsplit):
         step_input = workflow_step['INPUT']
         lumisections = step_input.ls
 
-        if not step_input.ls and step_input.events:
+        if not step_input.ls and step_input.events and step_input.label:
             lumisections = get_lumi_ranges_from_dict(step_input)
 
         step['input'] = {'dataset': step_input.dataSet,
