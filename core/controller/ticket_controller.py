@@ -365,7 +365,7 @@ class TicketController(ControllerBase):
             "core/utils/run_the_matrix_pdmv.py",
             f"{remote_directory}/run_the_matrix_pdmv.py",
         )
-        
+
         ssh_executor.upload_file(
             "core/utils/dqm.py",
             f"{remote_directory}/dqm.py",

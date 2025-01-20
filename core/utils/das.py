@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-import pandas as pd
-import subprocess
 import itertools
-import numpy as np
+import subprocess
+
+import numpy as np  # pylint: disable=import-error
+import pandas as pd  # pylint: disable=import-error
+
 
 def get_lumi_ranges(i):
     """
@@ -11,14 +13,14 @@ def get_lumi_ranges(i):
 
     Args:
         i: a list of ints.
-    
+
     Returns:
        list[list[int]]: a single rangel-like list.
     """
     result = []
     for _, b in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
         b = list(b)
-        result.append([b[0][1],b[-1][1]]) 
+        result.append([b[0][1],b[-1][1]])
     return result
 
 def das_do_command(query):
@@ -27,10 +29,10 @@ def das_do_command(query):
 
     Args:
         query: a dasgoclient query.
-    
+
     Returns:
        list[str]: the dasgoclient command output split by newlines.
-    
+
     """
     cmd = 'dasgoclient --query="%s"'%(query)
     out = subprocess.check_output(cmd, shell=True, executable="/bin/bash").decode('utf8')
@@ -38,14 +40,14 @@ def das_do_command(query):
 
 def das_file_data(dataset):
     """
-    Given a dataset create a pandas DataFrame with the 
+    Given a dataset create a pandas DataFrame with the
     list of file names and number of events per file.
 
     Args:
         dataset: the dataset name '/PD/GTString/DATA-TIER'
 
     Returns:
-        A pandas DataFrame having for each row a single file and as columns: 
+        A pandas DataFrame having for each row a single file and as columns:
         - the file name;
         - the number of events in each file.
     """
@@ -55,7 +57,7 @@ def das_file_data(dataset):
 
     df = pd.DataFrame(out,columns=["file","events"])
     df.events = df.events.values.astype(int)
-    
+
     return df
 
 def das_lumi_data(dataset):
@@ -64,20 +66,20 @@ def das_lumi_data(dataset):
 
     Args:
         dataset: the dataset name '/PD/GTString/DATA-TIER'
-    
+
     Returns:
-        A pandas DataFrame having for each row a single file and as columns: 
+        A pandas DataFrame having for each row a single file and as columns:
         - the file name;
         - the lumisections.
-    
+
     """
     query = 'file,lumi,run dataset=%s '%(dataset)
-    
+
     out = das_do_command(query)
     out = [r.split(" ") for r in out if len(r)>0]
-    
+
     df = pd.DataFrame(out,columns=["file","run","lumis"])
-    
+
     return df
 
 def get_events_df(golden,dataset,events):
@@ -91,7 +93,7 @@ def get_events_df(golden,dataset,events):
         events: max number of events (an int).
 
     Returns:
-        A pandas DataFrame having for each row a single file and as columns: 
+        A pandas DataFrame having for each row a single file and as columns:
         - the file name;
         - the lumisections;
         - the run;
@@ -103,12 +105,15 @@ def get_events_df(golden,dataset,events):
     file_df = das_file_data(dataset)
 
     df = lumi_df.merge(file_df,on="file",how="inner") # merge file informations with run and lumis
-    df["lumis"] = [[int(ff) for ff in f.replace("[","").replace("]","").split(",")] for f in df.lumis.values]
-    
+    df["lumis"] = [
+        [int(ff) for ff in f.replace("[","").replace("]","").split(",")]
+        for f in df.lumis.values
+    ]
+
     df_rs = []
 
     for r in golden:
-        cut = (df["run"] == r)
+        cut = df["run"] == r
         if not any(cut):
             continue
 
@@ -124,7 +129,7 @@ def get_events_df(golden,dataset,events):
 
     if len(df_rs)==0:
         return pd.DataFrame([])
-    elif len(df_rs)==1:
+    if len(df_rs)==1:
         df = df_rs
     else:
         df = pd.concat(df_rs)
@@ -140,13 +145,13 @@ def get_events_df(golden,dataset,events):
     df = df[df["sum_evs"] < events]
 
     return df
-    
+
 def get_run_lumi(df):
     """
     Produces the lumi mask dict starting from a pandas DataFrame
 
     Args:
-        df: a pandas DataFrame having for each row a single file and as columns: 
+        df: a pandas DataFrame having for each row a single file and as columns:
             - the file name;
             - the lumisections;
             - the run;
@@ -162,8 +167,15 @@ def get_run_lumi(df):
         return {}
 
     run_list = np.unique(df.run.values).tolist()
-    lumi_list = [get_lumi_ranges(np.sort(np.concatenate(df.loc[df["run"]==r,"lumis"].values).ravel()).tolist()) for r in run_list]
-    
+    lumi_list = [
+        get_lumi_ranges(
+            np.sort(
+                np.concatenate(df.loc[df["run"]==r,"lumis"].values).ravel()
+            ).tolist()
+        )
+        for r in run_list
+    ]
+
     lumi_ranges = dict(zip(run_list,lumi_list))
 
     return lumi_ranges
@@ -181,7 +193,7 @@ def get_lumi_dict(golden,dataset,events):
         A "CMS"-like lumi mask dict mapping:
         - the run number;
         - to the list of good lumisection ranges.
-        
+
         E.g. {run : [[lumi_1,lumi_2],[lumi_3,lumi_4]]}
     """
 
@@ -189,4 +201,3 @@ def get_lumi_dict(golden,dataset,events):
     lumi = get_run_lumi(df)
 
     return lumi
-    

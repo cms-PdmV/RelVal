@@ -1,10 +1,14 @@
+import codecs
 import json
 import os
 
+#pylint: disable=import-error
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
+
+#pylint: enable=import-error
 
 base_cert_path = "/eos/user/c/cmsdqm/www/CAF/certification/"
 
@@ -26,13 +30,10 @@ def list_certification_files(cert_type):
     """
     dqm_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification"
     url = "%s/%s/" % (dqm_cert_url, cert_type)
-    page_content = requests.get(url=url)
+    page_content = requests.get(url=url, timeout=30)
     if page_content.status_code != 200:
-        raise HTTPError(
-            "Unable to retrieve the content related to: %s",
-            cert_type,
-            response=page_content
-        )
+        error_msg = f"Unable to retrieve the content related to {cert_type}"
+        raise HTTPError(error_msg, response=page_content)
 
     # Parse the HTML and retrieve the file names
     page_content = BeautifulSoup(page_content.text, "lxml").text
@@ -60,13 +61,10 @@ def get_certification_file(path):
     """
     dqm_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification"
     url = "%s/%s" % (dqm_cert_url, path)
-    file = requests.get(url=url)
+    file = requests.get(url=url, timeout=30)
     if file.status_code != 200:
-        raise HTTPError(
-            "Unable to retrieve the content related to: %s",
-            path,
-            response=file
-        )
+        error_msg = f"Unable to retrieve the content related to {path}"
+        raise HTTPError(error_msg, response=file)
 
     return file.json()
 
@@ -79,12 +77,12 @@ def get_cert_type(dataset):
         dataset: the dataset name as a string '/PD/GTString/DATA-TIER'.
 
     Returns:
-        str: The type of certification we seek (Collisions, HI, Cosmics 
+        str: The type of certification we seek (Collisions, HI, Cosmics
             or Commisioning).
 
     """
     year = dataset.split("Run")[1][2:4] # from 20XX to XX
-    PD = dataset.split("/")[1]
+    PD = dataset.split("/")[1] # pylint: disable=invalid-name
     cert_type = "Collisions" + str(year)
     if "Cosmics" in dataset:
         cert_type = "Cosmics" + str(year)
@@ -92,7 +90,7 @@ def get_cert_type(dataset):
         cert_type = "Commisioning2020"
     elif "HI" in PD:
         cert_type = "Collisions" + str(year) + "HI"
-    
+
     return cert_type
 
 def get_json_list(cert_type,web_fallback):
@@ -109,35 +107,32 @@ def get_json_list(cert_type,web_fallback):
         list[str]: All the JSON certification file names.
 
     """
-    
+
     ## if we have access to eos we get from there ...
     if not web_fallback:
         cert_path = base_cert_path + cert_type + "/"
         json_list = os.listdir(cert_path)
-        if len(json_list) == 0:
-            web_fallback == True
         json_list = [c for c in json_list if "Golden" in c and "era" not in c]
         json_list = [c for c in json_list if c.startswith("Cert_C") and c.endswith("json")]
     ## ... if not we go to the website
     else:
-
         json_list = list_certification_files(cert_type=cert_type)
         json_list = [
             file_name
             for file_name in json_list
-            if "Golden" in file_name 
+            if "Golden" in file_name
             and "Cert_C" in file_name
-            and "era" not in file_name 
+            and "era" not in file_name
         ]
 
     return json_list
 
 def get_golden_json(dataset):
-    """ 
-    Output a the golden certification dictionary (json) for a specific datasets. 
-    In case of multiple json files available, the one with the highest 
+    """
+    Output a the golden certification dictionary (json) for a specific datasets.
+    In case of multiple json files available, the one with the highest
     lumi range is selected. The dictionary maps each run number with a complete list
-    of the correspondinig golden lumisections. 
+    of the correspondinig golden lumisections.
 
     Args:
        dataset: the dataset name as a string '/PD/GTString/DATA-TIER'
@@ -161,18 +156,17 @@ def get_golden_json(dataset):
     latest_json = np.array(json_list[np.argmax(run_ranges)]).reshape(1,-1)[0].astype(str)
     best_json = str(latest_json[0])
     if not web_fallback:
-        with open(cert_path + "/" + best_json) as js:
+        with codecs.open(cert_path + "/" + best_json, encoding="utf-8") as js:
             golden = json.load(js)
     else:
         path = "%s/%s" % (cert_type, best_json)
         golden = get_certification_file(path=path)
-    
+
     # golden json with all the lumisections one by one
     for k in golden:
-        R = []
+        R = [] # pylint: disable=invalid-name
         for r in golden[k]:
-            R = R + [f for f in range(r[0],r[1]+1)]
+            R = R + list(range(r[0], r[1] + 1)) # pylint: disable=invalid-name
         golden_flat[k] = R
 
     return golden_flat
-

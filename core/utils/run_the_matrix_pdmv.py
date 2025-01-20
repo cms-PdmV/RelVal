@@ -2,18 +2,20 @@
 PdmV's simplified implementation of runTheMatrix.py
 """
 from __future__ import print_function
-import sys
+
 import argparse
-import json
 import importlib
 import inspect
+import json
 import re
-from das import get_lumi_dict
-from dqm import get_golden_json
-from os import environ as env
+import sys
+
 #pylint: disable=wrong-import-position,import-error
 import Configuration.PyReleaseValidation.relval_steps as steps_module
 from Configuration.PyReleaseValidation.MatrixInjector import MatrixInjector
+from das import get_lumi_dict
+from dqm import get_golden_json
+
 #pylint: enable=wrong-import-position,import-error
 
 
@@ -163,7 +165,7 @@ def get_lumi_ranges_from_dict(step_input):
     """
     golden = get_golden_json(step_input.dataSet)
     lumi = get_lumi_dict(golden,step_input.dataSet,step_input.events)
-    
+
     return lumi
 
 def make_relval_step(workflow_step, workflow_step_name, wmsplit):

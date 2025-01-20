@@ -1,9 +1,10 @@
 """
 Module that contains RelValStep class
 """
-import weakref
 import json
+import weakref
 from copy import deepcopy
+
 from core.model.model_base import ModelBase
 from core_lib.utils.common_utils import get_scram_arch
 
@@ -111,14 +112,14 @@ class RelValStep(ModelBase):
                 json_input['gpu'] = schema.get('gpu')
                 json_input['gpu']['requires'] = 'forbidden'
                 step_input = json_input['input']
-             
+
                 for key, default_value in schema['input'].items():
                     if key not in step_input:
                         step_input[key] = default_value
             else:
                 json_input['driver'] = {k.lstrip('-'): v for k, v in json_input['driver'].items()}
                 json_input['input'] = schema.get('input')
-         
+
                 if json_input.get('gpu', {}).get('requires') not in ('optional', 'required'):
                     json_input['gpu'] = schema.get('gpu')
                     json_input['gpu']['requires'] = 'forbidden'
@@ -282,8 +283,6 @@ class RelValStep(ModelBase):
                 command += f'--query "file dataset={dataset} run in [{run_chunk}]" '
                 command += f'>> {files_name}\n'
             return (comment + '\n' + command).strip()
-
-        events = input_dict['events']
 
         return f'# Step {step_index + 1} is input dataset for next step: {dataset}'
 

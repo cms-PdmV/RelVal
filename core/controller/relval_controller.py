@@ -284,7 +284,7 @@ class RelValController(ControllerBase):
 
             if step.get("lumis_per_job") != "":
                 task_dict["LumisPerJob"] = int(step.get("lumis_per_job"))
-                
+
         task_dict["TaskName"] = step.get_short_name()
         task_dict["ConfigCacheID"] = step.get("config_id")
         task_dict["KeepOutput"] = step.get("keep_output")
@@ -330,7 +330,7 @@ class RelValController(ControllerBase):
                 priority
             )
             return priority
-            
+
         if "HighPrio" in campaign:
             priority = 500000
             self.logger.info(
@@ -338,7 +338,7 @@ class RelValController(ControllerBase):
                 priority
             )
             return priority
-            
+
         return 450000
 
     def get_job_dict(self, relval):
