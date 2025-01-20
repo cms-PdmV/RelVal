@@ -2,15 +2,16 @@ import codecs
 import json
 import os
 
-#pylint: disable=import-error
+# pylint: disable=import-error
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
 
-#pylint: enable=import-error
+# pylint: enable=import-error
 
 base_cert_path = "/eos/user/c/cmsdqm/www/CAF/certification/"
+
 
 def list_certification_files(cert_type):
     """
@@ -48,6 +49,7 @@ def list_certification_files(cert_type):
 
     return file_names
 
+
 def get_certification_file(path):
     """
     Get a certification file from the CMS DQM certification
@@ -68,6 +70,7 @@ def get_certification_file(path):
 
     return file.json()
 
+
 def get_cert_type(dataset):
     """
     List all the certification files related to a certification type
@@ -81,8 +84,8 @@ def get_cert_type(dataset):
             or Commisioning).
 
     """
-    year = dataset.split("Run")[1][2:4] # from 20XX to XX
-    PD = dataset.split("/")[1] # pylint: disable=invalid-name
+    year = dataset.split("Run")[1][2:4]  # from 20XX to XX
+    PD = dataset.split("/")[1]  # pylint: disable=invalid-name
     cert_type = "Collisions" + str(year)
     if "Cosmics" in dataset:
         cert_type = "Cosmics" + str(year)
@@ -93,7 +96,8 @@ def get_cert_type(dataset):
 
     return cert_type
 
-def get_json_list(cert_type,web_fallback):
+
+def get_json_list(cert_type, web_fallback):
     """
     List all the certification files related to a certification type
     either stored on CMS DQM EOS either, as a fallback,
@@ -113,7 +117,9 @@ def get_json_list(cert_type,web_fallback):
         cert_path = base_cert_path + cert_type + "/"
         json_list = os.listdir(cert_path)
         json_list = [c for c in json_list if "Golden" in c and "era" not in c]
-        json_list = [c for c in json_list if c.startswith("Cert_C") and c.endswith("json")]
+        json_list = [
+            c for c in json_list if c.startswith("Cert_C") and c.endswith("json")
+        ]
     ## ... if not we go to the website
     else:
         json_list = list_certification_files(cert_type=cert_type)
@@ -126,6 +132,7 @@ def get_json_list(cert_type,web_fallback):
         ]
 
     return json_list
+
 
 def get_golden_json(dataset):
     """
@@ -148,12 +155,14 @@ def get_golden_json(dataset):
     cert_path = base_cert_path + cert_type + "/"
     web_fallback = not os.path.isdir(cert_path)
 
-    json_list = get_json_list(cert_type,web_fallback)
+    json_list = get_json_list(cert_type, web_fallback)
 
     # the larger the better, assuming file naming schema
     # Cert_X_RunStart_RunFinish_Type.json
     run_ranges = [int(c.split("_")[3]) - int(c.split("_")[2]) for c in json_list]
-    latest_json = np.array(json_list[np.argmax(run_ranges)]).reshape(1,-1)[0].astype(str)
+    latest_json = (
+        np.array(json_list[np.argmax(run_ranges)]).reshape(1, -1)[0].astype(str)
+    )
     best_json = str(latest_json[0])
     if not web_fallback:
         with codecs.open(cert_path + "/" + best_json, encoding="utf-8") as js:
@@ -164,9 +173,9 @@ def get_golden_json(dataset):
 
     # golden json with all the lumisections one by one
     for k in golden:
-        R = [] # pylint: disable=invalid-name
+        R = []  # pylint: disable=invalid-name
         for r in golden[k]:
-            R = R + list(range(r[0], r[1] + 1)) # pylint: disable=invalid-name
+            R = R + list(range(r[0], r[1] + 1))  # pylint: disable=invalid-name
         golden_flat[k] = R
 
     return golden_flat

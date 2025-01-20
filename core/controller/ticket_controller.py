@@ -1,6 +1,7 @@
 """
 Module that contains TicketController class
 """
+
 import json
 from copy import deepcopy
 from environment import (
