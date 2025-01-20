@@ -33,7 +33,7 @@ def list_certification_files(cert_type):
     url = "%s/%s/" % (dqm_cert_url, cert_type)
     page_content = requests.get(url=url, timeout=30)
     if page_content.status_code != 200:
-        error_msg = f"Unable to retrieve the content related to {cert_type}"
+        error_msg = "Unable to retrieve the content related to %s" % cert_type
         raise HTTPError(error_msg, response=page_content)
 
     # Parse the HTML and retrieve the file names
@@ -65,7 +65,7 @@ def get_certification_file(path):
     url = "%s/%s" % (dqm_cert_url, path)
     file = requests.get(url=url, timeout=30)
     if file.status_code != 200:
-        error_msg = f"Unable to retrieve the content related to {path}"
+        error_msg = "Unable to retrieve the content related to %s" % path
         raise HTTPError(error_msg, response=file)
 
     return file.json()

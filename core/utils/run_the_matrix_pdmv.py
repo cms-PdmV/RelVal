@@ -4,6 +4,7 @@ PdmV's simplified implementation of runTheMatrix.py
 from __future__ import print_function
 
 import argparse
+import codecs
 import importlib
 import inspect
 import json
@@ -312,7 +313,7 @@ def main():
     print('All workflows:')
     print(json.dumps(workflows, indent=2, sort_keys=True))
     if opt.output_file:
-        with open(opt.output_file, 'w', encoding='utf-8') as workflows_file:
+        with codecs.open(opt.output_file, 'w', encoding='utf-8') as workflows_file:
             json.dump(workflows, workflows_file)
 
 
