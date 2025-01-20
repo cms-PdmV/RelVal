@@ -1,6 +1,7 @@
 """
 Module that contains TicketController class
 """
+
 import json
 from copy import deepcopy
 from environment import (
@@ -365,12 +366,28 @@ class TicketController(ControllerBase):
             "core/utils/run_the_matrix_pdmv.py",
             f"{remote_directory}/run_the_matrix_pdmv.py",
         )
+
+        ssh_executor.upload_file(
+            "core/utils/dqm.py",
+            f"{remote_directory}/dqm.py",
+        )
+        ssh_executor.upload_file(
+            "core/utils/das.py",
+            f"{remote_directory}/das.py",
+        )
+        command = [
+            f"cd {remote_directory}",
+            "voms-proxy-init -voms cms --valid 4:00 --out $(pwd)/proxy.txt",
+        ]
+        ssh_executor.execute_command(command)
+
         # Defined a name for output file
         file_name = f"{ticket_prepid}.json"
         # Execute run_the_matrix_pdmv.py
         matrix_command = run_commands_in_cmsenv(
             [
                 f"cd {remote_directory}",
+                "export X509_USER_PROXY=$(pwd)/proxy.txt",
                 "$PYTHON_INT run_the_matrix_pdmv.py "
                 f"-l={workflow_ids} "
                 f"-w={matrix} "

@@ -2,15 +2,20 @@
 PdmV's simplified implementation of runTheMatrix.py
 """
 from __future__ import print_function
-import sys
+
 import argparse
-import json
 import importlib
 import inspect
+import json
 import re
+import sys
+
 #pylint: disable=wrong-import-position,import-error
 import Configuration.PyReleaseValidation.relval_steps as steps_module
 from Configuration.PyReleaseValidation.MatrixInjector import MatrixInjector
+from das import get_lumi_dict
+from dqm import get_golden_json
+
 #pylint: enable=wrong-import-position,import-error
 
 
@@ -153,11 +158,21 @@ def merge_additional_command(workflow_step, command):
     print('Merging to %s' % (workflow_step))
     return steps_module.merge([command_dict, workflow_step])
 
+def get_lumi_ranges_from_dict(step_input):
+    """
+    Given the dict of an INPUT step outputs the lumi mask to be used
+    taking into account the max number of events to be processed
+    """
+    golden = get_golden_json(step_input.dataSet)
+    lumi = get_lumi_dict(golden,step_input.dataSet,step_input.events)
+
+    return lumi
 
 def make_relval_step(workflow_step, workflow_step_name, wmsplit):
     """
     Build one workflow step - either input dataset or cmsDriver
     """
+    print(workflow_step)
     step = {'name': workflow_step_name}
     if workflow_step_name in wmsplit:
         step['lumis_per_job'] = wmsplit[workflow_step_name]
@@ -170,8 +185,13 @@ def make_relval_step(workflow_step, workflow_step_name, wmsplit):
     if 'INPUT' in workflow_step:
         # This step has input dataset
         step_input = workflow_step['INPUT']
+        lumisections = step_input.ls
+
+        if not step_input.ls and step_input.events and step_input.label:
+            lumisections = get_lumi_ranges_from_dict(step_input)
+
         step['input'] = {'dataset': step_input.dataSet,
-                         'lumisection': step_input.ls,
+                         'lumisection': lumisections,
                          'run': step_input.run,
                          'label': step_input.label,
                          'events': step_input.events}

@@ -1,0 +1,9 @@
+# Just for reference, the following are the packages
+# and versions used for the development of some modules.
+# However, the runtime environment may contain different
+# versions pre-included in the `cms-sw` container.
+#
+# For releases different than `el9` it is not possible to
+# update the installed packages to match these versions.
+pandas==2.0.1
+numpy==1.24.3
