@@ -26,7 +26,7 @@ def das_do_command(query):
     A simple wrapper for dasgoclient.
 
     Args:
-        cmd: a dasgoclient query.
+        query: a dasgoclient query.
     
     Returns:
        list[str]: the dasgoclient command output split by newlines.
@@ -42,7 +42,7 @@ def das_file_data(dataset):
     list of file names and number of events per file.
 
     Args:
-        dataset: the dataset anme '/PD/GTString/DATA-TIER'
+        dataset: the dataset name '/PD/GTString/DATA-TIER'
 
     Returns:
         A pandas DataFrame having for each row a single file and as columns: 
@@ -63,7 +63,7 @@ def das_lumi_data(dataset):
     Produces a file by file+lumi+run pandas DataFrame
 
     Args:
-        dataset: the dataset anme '/PD/GTString/DATA-TIER'
+        dataset: the dataset name '/PD/GTString/DATA-TIER'
     
     Returns:
         A pandas DataFrame having for each row a single file and as columns: 
@@ -170,11 +170,11 @@ def get_run_lumi(df):
 
 def get_lumi_dict(golden,dataset,events):
     """
-    Produces a lumi mask for a given datasets, up to envets, using a certification json
+    Produces a lumi mask for a given dataset, up to events, using a certification json
 
     Args:
         golden: a run by run certification json
-        dataset: the dataset anme '/PD/GTString/DATA-TIER'
+        dataset: the dataset name '/PD/GTString/DATA-TIER'
         events: max number of events (an int).
 
     Returns:
