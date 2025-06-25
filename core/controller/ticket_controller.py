@@ -458,6 +458,8 @@ class TicketController(ControllerBase):
             step_steps = [x.split(":")[0] for x in new_step["driver"]["step"]]
             if gpu_steps and (set(gpu_steps) & set(step_steps)):
                 new_step["gpu"] = deepcopy(gpu_dict)
+            if not gpu_steps and gpu_dict and gpu_dict.get("requires") in ("optional", "required"):
+                new_step["gpu"] = deepcopy(gpu_dict)
 
             if new_step["driver"].get("relval"):
                 events, events_per_job = new_step["driver"]["relval"].split(",", 1)
