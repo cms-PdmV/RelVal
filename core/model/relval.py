@@ -59,6 +59,9 @@ class RelVal(ModelBase):
         'workflow_name': '',
         # ReqMgr2 names
         'workflows': [],
+        # Execute `cmsRun` when preparing the
+        # configuration file
+        'execute_steps': False,
     }
 
     lambda_checks = {
@@ -323,3 +326,21 @@ class RelVal(ModelBase):
             return f'{cmssw_release}__{batch_name}-{campaign_timestamp}'
 
         return f'{cmssw_release}__{batch_name}'
+    
+    def execute_steps_for_configuration(self) -> bool:
+        """
+        Determine if the `cmsRun` command should be executed
+        when generating the Python configuration.
+        """
+        execute_steps = None
+        try:
+            execute_steps = self.get('execute_steps')
+        except Exception as e:
+            self.logger.error("Unable to retrieve the execute_steps attribute: %s", e)
+
+        self.logger.debug('Execute steps is set: %s', execute_steps)
+        # If the document does not set it
+        if not isinstance(execute_steps, bool):
+            return False
+
+        return execute_steps
