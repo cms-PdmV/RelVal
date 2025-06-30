@@ -135,6 +135,7 @@ class RelValController(ControllerBase):
         editing_info["workflow_id"] = False
         editing_info["workflow_name"] = is_new
         editing_info["steps"] = is_new
+        editing_info["execute_steps"] = True
 
         return editing_info
 
